@@ -246,10 +246,11 @@
     }
     g.putImageData(im, 0, 0);
     ctx.drawImage(c, RX0, RY0);
-    // Gravel path to the bell pavilion.
-    for (let y = 166; y < 178; y++) for (let x = 158; x < 182; x++) {
-      const hh = S.hash(x, y, 48);
-      if (hh > 0.35) D(ctx, x, y, hh > 0.85 ? STONE.hi : hh > 0.6 ? '#b7ad9b' : '#9d9483');
+    // Stepping stones from the courtyard to the bell pavilion.
+    for (const [x, y] of [[164, 174], [171, 170], [178, 175]]) {
+      groundShadow(ctx, x + 1, y + 1, 3, 1, 0.25);
+      R(ctx, x - 3, y - 1, 6, 3, STONE.base); R(ctx, x - 3, y - 1, 6, 1, STONE.hi); R(ctx, x - 2, y + 2, 4, 1, STONE.dark);
+      if (s === 'winter') R(ctx, x - 2, y - 1, 3, 1, P.snow);
     }
     // Fallen leaves (autumn) / petals (spring) scattered on the turf.
     if (s === 'autumn' || s === 'spring') {
@@ -311,7 +312,7 @@
     const mossC = rgb(winter ? P.snow : C.mix(P.grassDark[s], '#4d6a34', 0.4));
     const leafC = rgb(s === 'autumn' ? '#c8502c' : s === 'spring' ? P.leafAlt.spring : P.grassDark[s]);
     const olC = rgb('#2a2433'), snowC = rgb(P.snow), snowS = rgb('#c9d7e4');
-    const waterA = rgb(P.waterLight), waterB = rgb(P.foam), waterD = rgb(P.water);
+    const waterA = rgb(winter ? '#d4e8f3' : P.waterLight), waterB = rgb(winter ? '#ffffff' : P.foam), waterD = rgb(winter ? '#9fc6dd' : P.water);
     const put = (x, y, col, a = 255) => { const i = (y * (X1 - X0) + (x - X0)) * 4; d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = a; };
     for (let x = X0; x < X1; x++) {
       const top = Math.round(cliffTop(x)), bot = faceBottom(x), base = cliffBase(x);
@@ -536,7 +537,7 @@
       const bot = y0 + h - 1 - curl;
       top = Math.min(top, bot - 2);
       const hip = d > rh, left = x + 0.5 < cx;
-      const sdepth = snow ? 2 + (S.hash(x, y0, 71) > 0.5 ? 1 : 0) + (hip ? 0 : 1) : 0;
+      const sdepth = snow ? Math.round((h - 3) * (hip ? 0.45 : 0.4)) + (S.hash(x, y0, 71) > 0.5 ? 1 : 0) - (S.hash(x >> 1, y0, 72) > 0.8 ? 2 : 0) : 0;
       for (let y = top; y <= bot; y++) {
         const fb = bot - y, rib = (((x - icx) % 3) + 3) % 3;
         let col;
@@ -554,7 +555,7 @@
           if (fb < 5) t -= 1;
           col = tones[clamp(t, 0, 4)];
         }
-        if (snow && y < top + sdepth && fb > 2) col = left || !hip ? P.snow : '#cbd8e4';
+        if (snow && y < top + sdepth && fb > 2) col = y === top + sdepth - 1 ? '#b9c9d8' : (left || !hip) && rib !== 2 ? P.snow : '#dbe5ee';
         D(g, x, y, col);
       }
       if (d > eh - 1.5) D(g, x, top - 1, P.gold);   // gold tip on each upturned eave
@@ -1063,7 +1064,7 @@
   // 100: waterfall streaks and pool foam.
   S.registerDynamic(100, (ctx, t) => {
     const winter = season() === 'winter';
-    const speed = rm ? 14 : 46;
+    const speed = winter ? 4 : rm ? 14 : 46;
     for (let x = FALL.x0; x < FALL.x1; x++) {
       const top = Math.round(cliffTop(x)), bot = faceBottom(x);
       const off = Math.floor(t * speed + S.hash(x, 0, 120) * 20);

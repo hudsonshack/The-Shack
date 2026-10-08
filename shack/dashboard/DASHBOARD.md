@@ -36,6 +36,7 @@ _No cycles yet._
 
 | SHA | At | Subject |
 |---|---|---|
+| 4b8b9b0 | 2026-10-08T01:41:14+00:00 | Use the renamed repo The-Shack and drop old commit subjects from the world |
 | 89ff68d | 2026-10-08T01:40:56+00:00 | Add Highland Monastery world module (in progress) |
 | b6ecd62 | 2026-10-08T01:35:21+00:00 | Name the fidget store Fidgetly in config and the Social-Ops spec |
 | 995d6be | 2026-10-08T01:30:27+00:00 | Ignore the built world page and commit the world shell |
