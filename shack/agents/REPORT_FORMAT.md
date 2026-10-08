@@ -15,6 +15,7 @@ Every spoke ends its reply with exactly one fenced `json` block:
   "relay": [
     {"to": "ledger-fi", "fact": "Client 'Joe's Pizza' paid $200 retainer on 2026-10-07"}
   ],
+  "hermes_drafts": 0,
   "alerts": [
     {"level": "info|warn|critical", "msg": "..."}
   ]

@@ -1,68 +1,68 @@
-# The Shack: world spec (builder contract)
+# The Shack: world spec v2 (floating islands)
 
-The Shack is a living 16-bit pixel world that shows a hub-and-spoke team of AI agents working for **Hudson**, a high-school student in **Cold Spring, NY** (on the Hudson River, in the Hudson Highlands). It is published as a single HTML page (a claude.ai Artifact) and viewed mostly on a **MacBook** (about 1440×800 usable), but must also work on a phone.
+The Shack is a living 16-bit pixel world showing a hub-and-spoke team of AI agents working for **Hudson**, a high-school student. It is published as one HTML page (a claude.ai Artifact) and viewed mostly on a **MacBook** (about 1440×800), and must also work on a phone.
 
-Read `src/00-core.js` fully before writing anything. It is the engine and the only shared API. **Do not edit it.** If you truly need a core change, describe it in your final report instead.
+**v2 changes everything spatial:** the world is now **five floating islands in starry space**. There are **no real-world places** (no inn, no school building, no Hudson River): the look is fictional, but every number, bubble and growth stage is driven by real data.
 
-## The people and the places
+Read `src/00-core.js` fully before writing anything. It is the engine and the only shared API. **Do not edit it.** If you need a core change, say so in your final report. Old v1 modules are in `legacy/` (same art style, old coordinates). **Reuse their sprite and drawing code freely**, adapted to the new layout.
 
-| Biome (region id) | Agent id | Character | Look and job | Theme |
-|---|---|---|---|---|
-| `square` (centre) | `hub` | **Mayor Tock** | Clockmaker mayor: top hat, brass monocle, waistcoat. Keeps the clock tower, rings the bell that starts each cycle, reads the reports. | Town square: cobblestones, fountain, clock tower, quest board, mail post |
-| `monastery` (north-west) | `academic-core` | **Abbot Quill** | Calm monk scholar: jade-and-saffron robe, shaved head or hood, lantern, scroll satchel. Tracks school deadlines, sets study blocks, writes Quizlet sets. | Highland Monastery: cliffside temple in the Hudson Highlands, stone stairs, lanterns, study garden |
-| `mine` (south-east) | `ledger-fi` | **Grit Copperpot** | Stout dwarf: braided copper beard, mining helmet with lamp, pickaxe, ledger book. Tracks money, Friday paychecks, savings goals, odd charges. | Copperpot Mine: dwarven gold mine canyon, ore veins, minecarts on rails, vault door |
-| `market` (north-east) | `social-ops` | **Lumi** | Night-market creator: glowing neon jacket, headphones, camera. Runs social media for the client **Angie's** (Cold Spring, NY) and for Hudson's **fidget store** (TikTok, Instagram Reels, YouTube Shorts). | Neon Night Market: lanterns, billboard screens, broadcast tower; posts launch as fireworks |
-| `port` (south-west, on the river) | `hustle-engine` | **Cap'n Twirl** | Harbour merchant captain: tricorn, striped coat, always spinning a fidget spinner. Runs the Shopify **fidget store**, researches arbitrage. | River Port Bazaar: Hudson River docks, cargo ships bringing orders, crates of fidgets |
-| `savings` (south-centre) | `ledger-fi` | — | Savings Row: **apartment under construction** (Apartment fund), **garage with a shield** (Car insurance), **investment tree** (Invest). Each grows with its goal's % saved. | |
-| `riverside` (west-centre) | — | — | **Hudson House Inn**, where Hudson works as a busboy. Paycheck is direct-deposited **every Friday**; on Fridays a cart carries coins from the Inn to the mine vault. | |
-| `north` (north-centre) | `academic-core` | — | **School**: Classroom alerts arrive at the monastery by carrier bird from here. | |
-| player | — | **Hudson** | A simple player character with a name tag, wandering the square. | |
+## The islands (tile coords; the world is 80×50 tiles of 16 px = 1280×800 native px)
 
-Real places, real names: Hudson House Inn, Angie's, Cold Spring. Everything else is invented.
+| id | Name | Agent · character | Top rect (x, y, w, h) | Underside depth | Transport to Clockspire |
+|---|---|---|---|---|---|
+| `square` | **Clockspire** | hub · **Mayor Tock** | 30, 15, 20, 17 | 6 | (the hub: four docks) |
+| `monastery` | **Lantern Peak** | academic-core · **Abbot Quill** | 3, 2, 23, 16 | 6 | **paper kites and gliders** |
+| `market` | **Neon Hollow** | social-ops · **Lumi** | 54, 2, 23, 16 | 6 | **neon blimp** |
+| `port` | **Spindrift Harbor** | hustle-engine · **Cap'n Twirl** | 3, 29, 23, 15 | 5 | **sky-ship** |
+| `mine` | **Copperhold** | ledger-fi · **Grit Copperpot** | 54, 29, 23, 15 | 5 | **minecart on a sky-rail bridge** |
 
-## Art direction: 16-bit cozy
-- Stardew Valley / SNES-era top-down with a 3/4 view: you see roofs **and** front walls. Light comes from the **top-left**, and every solid object gets a soft dark shadow toward the bottom-right (`S.PAL.shadow`).
-- Objects have a **1 px dark outline** (`S.PAL.outline` or a darkened local colour) and at least 3 tones (shadow, base, highlight). Use dithering (`S.px.dither`) and `S.hash` noise for texture, never flat untextured blocks.
-- Use `S.PAL` for anything shared (water, dirt, cobble, grass by season, skin tones, gold, neon, lantern). Biome-specific colours are yours, chosen to match the theme table.
-- Every biome must read at a glance from the fitted view (zoom about 1.2–1.4, whole map visible) **and** reward zooming in to 3× (small details: books, coins, fidget spinners, steam, flags).
-- Seasons (`S.time.season`): it is autumn now. Foliage uses `S.PAL.leaf[season]` and `S.PAL.leafAlt[season]`. Winter adds snow on roofs and ground.
-- Growth (`S.status[biome].growth`, 0–3): the biome visibly develops at higher growth (more buildings, more stalls, deeper shafts, more ships). Growth 0 must still look complete and charming, just smaller.
-- Status (`S.status[biome].level`: `ok`, `idle`, `warn`, `critical`): the atmosphere module turns this into weather. Biome modules may add one small in-world cue (for example a red flag on the temple at `critical`).
+- Each island's **walkable top** is drawn with an organic, ragged edge **inside** its top rect (keep about 1 tile of margin for the edge). Below the top's south edge hangs a **rocky underside** `depth` tiles tall that tapers to a point. The underside has **hanging roots and glowing crystals**, lit from the top-left, with darker strata lower down.
+- **Waterfalls spill off island edges** into space and fade out as they fall. The port's river pours off its west edge, and every island has at least one small spring or waterfall.
+- Islands **bob** a couple of pixels (`S.bob(id)`); the core handles it for static art, `registerDynamic(…, {island})` layers and entities with `.island`.
+- `S.islandBox(id)` is the pixel box each island's static art is cut into (2 tiles of margin left and right, 3 above, the underside plus 1 below). **Static art outside every island box is discarded.** Anything spanning space (the sky-rail bridge, ropes, vehicles) is dynamic.
+- Hub-and-spoke is physical: biome islands connect **only** to Clockspire, never to each other. `S.route(a, b)` returns legs (`walk` per island, then `kite | blimp | ship | rail`).
+
+### Landmarks (`S.landmarks`) and nav nodes (`S.nav.nodes`)
+- Clockspire: `clockTower` (39,19), `fountain` (39,26), `questBoard` (35,22), `mailPost` (43,22), `chronicle` (43,28), the Chronicle lectern where Mayor Tock's recaps live, plus four docks: `dockNW` (31,17) kite landing, `dockNE` (48,17) blimp mast, `dockSW` (31,29) sky-ship pier, `dockSE` (48,29) rail station.
+- Lantern Peak: `temple` (13,7), `studyGarden` (19,13), `kitePad` (23,13).
+- Neon Hollow: `billboard` (66,4), `broadcastTower` (73,6), `angiesStall` (61,9), `fidgetStall` (69,13) for **Fidgetly**, `blimpMast` (56,13).
+- Spindrift Harbor: `bazaar` (13,37), `skyDock` (23,33), `warehouse` (7,41).
+- Copperhold: `mineEntrance` (71,32), `vault` (64,41), three **savings crystals** `crystalInvest` (59,39, gold), `crystalCar` (62,39, blue), `crystalHome` (65,39, violet) that grow with each goal's `current / target` from `metrics.savings`, and `railStation` (56,33).
+- Paths: every walk edge in `S.nav.edges`, 2 tiles wide (`S.onRoad`).
+
+## Art direction: 16-bit cozy, in space
+- Stardew / SNES 3/4 top-down view (roofs **and** front walls). Light from the **top-left**. 1 px dark outlines, at least 3 tones, dithering and `S.hash` noise for texture, never flat blocks.
+- Space: deep indigo-to-violet nebula gradients, layered stars, a **ringed planet**, a **moon in the real current phase**, and **shooting stars**. By day (`S.time.light` high) space brightens to a softer blue-violet with a warm sun glow from the top-left. At night it's deep and full of stars.
+- Seasons still apply to island foliage (`S.time.season`, autumn now).
+- Growth (`S.status[id].growth` 0–3) visibly develops each island. Growth 0 must still look complete and charming.
+- Readability first: from the fit view (about zoom 1.1, the whole map visible) each island, its name-defining landmark and its characters must read clearly against space.
+
+## Characters (the villagers module)
+- **1.5× the v1 size**: about 18–24 px wide and 27–33 px tall native, original sprites, 4-direction walk cycles.
+- **Bouncy walk + footstep dust puffs**, so movement catches the eye.
+- **Name tags always on** via `S.label(entity, name, {color: S.AGENTS[agent].color})`.
+- Agents commute by their island's transport: Abbot Quill hangs from a **paper kite / glider**, Grit rides a **minecart** along the sky-rail, Lumi rides the **neon blimp**, Cap'n Twirl sails the **sky-ship**. Mayor Tock stays on Clockspire.
 
 ## Engine rules (from 00-core.js)
-- Native resolution is 1024×640 (64×40 tiles of 16 px). Draw in native pixels with integer coordinates. No anti-aliased canvas shapes (`arc`, `ellipse`, rotated images): use `S.px.*` helpers or `fillRect`. Text inside the canvas is avoided; labels and speech go through DOM (`S.bubble`, hotspot `label`).
-- **Static layers** (`S.registerStatic(order, fn(ctx))`) are drawn once into a cached background. Put everything that doesn't move there.
-  - 0 base ground and river (terrain) · 5–8 biome ground (monastery 5, mine 6, market 7, port 8) · 10 roads (terrain) · 12 rails (mine) · 20 monastery buildings · 21 mine buildings · 22 market buildings · 23 port buildings · 30 savings row (mine module) · 40 town square, inn, school (terrain) · 50 scattered trees and decor (terrain)
-- **Dynamic layers** (`S.registerDynamic(order, fn(ctx, t, dt))`) draw every frame, at 30 fps. Keep each module's per-frame cost small (< 1.5 ms). Cache pre-rendered sprites in offscreen canvases.
-  - 100 water and ground animation · 200 decor under people · 300 entities (the core y-sorts and draws `S.addEntity` objects) · 400 above people (birds, gulls, smoke, flags) · 500 weather · 600 darkness and lights · 700 glows over the dark (neon signs, billboard, fireworks, clock face) · 800 markers
-- `S.reserve(tx, ty, w, h)`: call it **at module load** for every tile your buildings and solid props occupy. Terrain's scattered decor uses `S.isFree()` to avoid them. Never draw solid things on road tiles (`S.onRoad`).
-- `S.addLight({x, y, r, color, intensity, flicker, nightOnly})` for windows, lanterns, fires, neon (native px). The atmosphere module cuts these out of the night darkness. The market's neon uses `nightOnly: false`.
-- `S.addHotspot({id: 'landmark:<key>', kind: 'landmark', landmark: '<key>', biome, agent, label, x, y, w, h, priority: 1})` for each landmark you own (keys in `S.landmarks`). The UI opens a panel for it. Biome-wide clicks already fall back to `kind: 'biome'`.
-- Data: `S.data` (the state JSON), `S.thread(agentId)`, `S.metrics(agentId)`, `S.status`, `S.time`, `S.cycle`. **Show only real data.** When something is empty (it often is: the system just started), show an honest empty state: empty crates, a quiet stall, a "waiting for first cycle" bubble. Never invent deadlines, money or orders in the shipped page. `S.data.sample === true` only in previews.
-- Events: `S.on('boot')`, `S.on('ceremony:start')`, `S.on('ceremony:end')`. `S.CEREMONY_BEATS` defines the timing.
-- Wrap your module in an IIFE with `'use strict'`. Use only `window.SHACK`. Don't add globals.
-- Respect `S.reducedMotion` (fewer and slower particles, no flashing).
+- Native 1280×800. Integer pixels, no anti-aliased shapes; text only through DOM (`S.bubble`, `S.label`, hotspot `label`).
+- **Static layers:** order < 0 is space (sky module only). Order ≥ 0 is island art: 0 island bases (islands module), 5 ground overlays per island (monastery 5, mine 6, market 7, port 8), 10 paths (islands module), 15 Clockspire buildings, 20–23 biome buildings (monastery 20, mine 21, market 22, port 23), 50 scattered decor (islands module).
+- **Dynamic layers:** < 90 space animation (behind islands), 100 water and ground animation, 200 decor under people, 300 entities, 400 above people, 500 weather, 600 darkness, 700 glow, 800 markers. Use `{island: id}` for island-bound dynamic art.
+- `S.reserve(tx, ty, w, h)` at load for solid things. Decor uses `S.isFree()`.
+- `S.addLight({x, y, r, color, intensity, flicker, nightOnly, island})`: always pass `island` so the light bobs.
+- `S.addHotspot({id: 'landmark:<key>', kind: 'landmark', landmark, biome: <island id>, agent, label, x, y, w, h, priority: 1})`.
+- Data: `S.data`, `S.thread(agent)`, `S.metrics(agent)`, `S.status`, `S.time`, `S.cycle`. **Real data only** in the shipped page, with honest empty states. `S.data.sample === true` only in previews.
+- IIFE + `'use strict'`; only `window.SHACK`; respect `S.reducedMotion`; zero console errors.
 
-## Module ownership (one owner per file; edit only your own files)
+## Fonts and UI
+- Clean, highly readable UI font: **Atkinson Hyperlegible** (Google Fonts) for all panels, numbers, bubbles and name tags. **Pixelify Sans** only for big titles (THE SHACK, island names in panel headers).
+- Larger base sizes (body 15–16 px, labels never under 12 px), high contrast.
 
-| File | Owner | Owns |
-|---|---|---|
-| `src/00-core.js` | lead | engine (read only) |
-| `src/10-terrain.js` | Terrain & Square | base ground by season, the Hudson River (west edge, animated, harbour bay at the port), shoreline, roads along `S.nav.edges` (styled per region: cobble in the square, stone steps in the monastery, planks in the port, neon-trim tiles in the market, gravel in the mine, dirt elsewhere), East Meadow and Riverside decor, scattered trees/rocks/flowers via `S.isFree`, the **Town Square** (plaza, fountain with animated water, **clock tower whose face shows the real New York time**, quest board with one pinned note per open "you" task, mail post, benches, flower beds, lamp posts as lights), **Hudson House Inn** (riverside, warm windows, sign), **School** (north, flag, bell). Hotspots: `clockTower`, `fountain`, `questBoard`, `mailPost`, `inn`, `school`. |
-| `src/20-monastery.js` | Monastery | Highlands cliffs and peaks along the north edge, stone stairs, temple with curved jade roof and vermilion pillars, bell or pagoda, lanterns (lights), study garden (raked sand, bonsai, stones), a scroll board whose glowing scrolls = upcoming deadlines (count from `metrics.deadlines`), growth stages, incense smoke and prayer flags (dynamic). Hotspots: `temple`, `studyGarden`. |
-| `src/21-mine.js` | Mine & Savings | canyon ground, cliffs, mine entrance with timber supports and lamp, ore veins that sparkle, **minecart rails along `S.nav.rails`**, vault door with coin piles sized by `month_income`, growth stages (more shafts and carts), and **Savings Row**: apartment under construction (floors built ∝ Apartment fund %, scaffolding, crane), garage with a shield emblem (shield fill ∝ Car insurance %), investment tree (size, leaves and gold fruit ∝ Invest %). Savings % = `current / target` from `metrics.savings`; with no target, show the starting state (foundation only, empty shield, sapling). Hotspots: `mineEntrance`, `vault`, `apartment`, `garage`, `investTree`. |
-| `src/22-market.js` | Night Market | night-plum pavement that always looks lit, stalls with awnings: **Angie's stall** and the **fidget store promo stall**, string lights, neon signs (layer 700), **billboard** showing a scrolling real metric (posts queued, videos planned), **broadcast tower** with a blinking beacon, fireworks when posts go out (rate from `scheduled_posts_7d`, plus a burst during the ceremony), growth stages (more stalls and screens). Hotspots: `broadcastTower`, `angiesStall`, `fidgetStall`, `billboard`. |
-| `src/23-port.js` | Port Bazaar | wooden docks and piers into the harbour bay, moored cargo ships (count from `shopify.orders_7d`, at least one, and empty-looking when there are none), crate stacks for inventory (a red tag on low-stock items from `shopify.low_stock`), bazaar stalls with striped awnings selling colourful **fidgets** (spinners, cubes, pop-its), a warehouse, a crane, gulls (layer 400), water ripples around the piers, an ambient sailboat on the river. Hotspots: `bazaar`, `dock`, `warehouse`. |
-| `src/40-villagers.js` | Villagers | all characters (Mayor Tock, Abbot Quill, Grit Copperpot, Lumi, Cap'n Twirl, Hudson) as original pixel sprites about 12–16 px wide and 18–22 px tall, with 4-direction walk cycles and idle animations. Also 3–4 ambient townsfolk (for example a baker, a kid with a kite, a cat). Daily routines along `S.route()`; real-data speech bubbles via `S.bubble` (from `metrics.world.bubbles`, thread summaries and alerts, honest empty-state lines otherwise); **delivery network** (carrier birds from the school to the monastery to the square, minecarts on the rails, floating lanterns from the market, a boat to the dock then a porter with a crate); the **cycle ceremony** (Tock rings the bell, everyone walks to the fountain, hands over their item, disperses) driven by `S.cycle.ceremony` and `S.CEREMONY_BEATS`; the **Friday payday cart** from the Inn to the vault when `S.time.isPayday`; night behaviour (most villagers head home late at night with a "Zzz"). Villager hotspots (`kind: 'villager'`, `agent`, label = character name and role) that follow the sprite. |
-| `src/50-atmosphere.js` | Atmosphere | day/night: a darkness overlay at layer 600 driven by `S.time.light`, warm dawn/dusk tint, light holes for `S.lights` (soft, pixel-dithered edges, flicker), cloud shadows drifting by day, season particles (autumn leaves, winter snow, spring petals, summer-night fireflies), **per-biome weather from `S.status[biome].level`** (`idle` light mist, `warn` rain under a grey cloud over that region, `critical` storm with heavy rain and occasional lightning, `ok` clear), all confined to the biome's region with soft edges. Reduced motion means far fewer particles and no lightning flashes. |
-| `src/60-ui.js` + `shell.html` (HUD, drawer and CSS only) | UI | HUD: THE SHACK title, New York clock with weekday, season and weather icon, next cycle name and countdown, alert count, buttons (Quest board, Replay cycle → `S.startCeremony()`, Sound → `S.audio.toggle()`, zoom −/fit/+). The drawer implements `S.ui.open(hotspot)` and `S.ui.hudUpdate()`, with panels for each biome (character, phase, pending/blocked/done, summary, then the domain data: deadlines, study blocks, Quizlet sets; income, spend, categories with budget bars, savings goals, anomalies, last paycheck; clients, posts queued, store ads metrics, prospects; Shopify orders, revenue, low stock, opportunities), villager panels, landmark panels (Inn: Friday payday and last paycheck; School: Classroom feed; Savings buildings: their goal; Clock tower: cycle schedule and recent runs; Mail post: recent commits), and the **Quest board**. The quest board uses the `db` capability: `const db = await claude.use('db')`; collection `quests` (docs `{text, biome, status: 'new'\|'accepted'\|'done'\|'declined', created, reply?, task_id?}`) where Hudson posts requests and sees Mayor Tock's replies; collection `checks` (doc id = task id, `{done: true, at}`) to tick off "you" tasks (`autonomy === 'human'`). When `window.claude` or db is unavailable (local preview), show the you-tasks read-only with a one-line note. Keyboard: Q quest board, Esc close, 1–4 focus biomes, F fit. Show a small "SAMPLE DATA" badge when `S.data.sample`. Dense, small, pixel-crisp type, minimal chrome. |
-| `src/70-audio.js` | Audio | WebAudio chiptune, **off by default**, generated in code with no audio files. `S.audio = {enabled, toggle(), sfx(name), setBiome(id)}`. An ambient loop per biome under the camera centre with crossfade: monastery = slow pentatonic bells, mine = bouncy bass and pick clinks, market = synthwave arps, port = 6/8 shanty plus soft wave noise, square = gentle town waltz. Quieter and slower at night. SFX: `bell`, `coin`, `click`, `firework`, `chirp`, `cart`, `splash`. Remember the toggle in localStorage (wrapped in try/catch). Audio can only start from a user gesture. |
-
-## Testing your module
+## Testing
 ```
 node shack/world/tools/preview.mjs --out /tmp/<you>-1.png --sample --zoom 3 --center <tx>,<ty>
-node shack/world/tools/preview.mjs --out /tmp/<you>-2.png --sample --time 2026-10-09T21:30:00-04:00   # night
+node shack/world/tools/preview.mjs --out /tmp/<you>-2.png --sample --time 2026-10-09T21:30:00-04:00
 node shack/world/tools/preview.mjs --out /tmp/<you>-3.png --sample --season winter
-node shack/world/tools/preview.mjs --out /tmp/<you>-4.png                     # real (mostly empty) data
+node shack/world/tools/preview.mjs --out /tmp/<you>-4.png                       # real (mostly empty) data
+node shack/world/tools/preview.mjs --out /tmp/<you>-5.png --sample --only 05-space.js,10-islands.js,<yours>.js
 ```
-Look at your screenshots with the Read tool (it shows images). The harness prints page errors: your module must produce **zero** errors and warnings. Other builders work at the same time, so their modules may be missing or half-done. Use `--only 10-terrain.js,<yours>.js` to isolate when needed. Iterate on the visuals until they genuinely look good. Put your screenshots in `/tmp/`, never in the repo.
+Look at every screenshot with the Read tool. Zero errors or warnings from your module. Other builders work in parallel, so use `--only` to isolate. Screenshots go in `/tmp/` only.

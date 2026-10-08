@@ -12,7 +12,7 @@
 (function () {
   'use strict';
 
-  const TILE = 16, COLS = 64, ROWS = 40;
+  const TILE = 16, COLS = 80, ROWS = 50;
   const W = TILE * COLS, H = TILE * ROWS;
   const DEBUG = window.SHACK_DEBUG || {};
 
@@ -31,149 +31,193 @@
   }
   S.data = readData();
 
-  /* --------------------------------------------------------------- the map
-   * Biome regions (tile rects, inclusive x/y, exclusive x+w/y+h). The river
-   * (the Hudson) runs down the west edge and opens into a harbour bay by the
-   * port, like the real river at Cold Spring.
+  /* ----------------------------------------------------------- the islands
+   * The world is five floating islands in starry space. Each island has a
+   * walkable top (a tile rect; the islands module draws its organic edge
+   * inside it) and a rocky underside `depth` tiles tall below its south edge.
+   * Island ids keep the agent-biome names; display names come from here.
+   * Hub-and-spoke: every biome island connects only to Clockspire (square).
    */
-  S.regions = {
-    monastery: { x: 6, y: 0, w: 20, h: 15, name: 'Highland Monastery', agent: 'academic-core' },
-    market:    { x: 40, y: 0, w: 24, h: 16, name: 'Neon Night Market', agent: 'social-ops' },
-    square:    { x: 25, y: 13, w: 15, h: 13, name: 'Town Square', agent: 'hub' },
-    port:      { x: 6, y: 26, w: 19, h: 14, name: 'River Port Bazaar', agent: 'hustle-engine' },
-    mine:      { x: 40, y: 25, w: 24, h: 15, name: 'Copperpot Mine', agent: 'ledger-fi' },
-    savings:   { x: 25, y: 27, w: 15, h: 13, name: 'Savings Row', agent: 'ledger-fi' },
-    meadow:    { x: 40, y: 16, w: 24, h: 9, name: 'East Meadow', agent: null },
-    riverside: { x: 6, y: 15, w: 19, h: 11, name: 'Riverside', agent: null },
-    north:     { x: 26, y: 0, w: 14, h: 13, name: 'School Hill', agent: 'academic-core' },
+  S.islands = {
+    square:    { x: 30, y: 15, w: 20, h: 17, depth: 6, name: 'Clockspire',       agent: 'hub',           bob: { amp: 2, period: 7.0, phase: 0.0 } },
+    monastery: { x: 3,  y: 2,  w: 23, h: 16, depth: 6, name: 'Lantern Peak',     agent: 'academic-core', bob: { amp: 2, period: 6.1, phase: 1.3 } },
+    market:    { x: 54, y: 2,  w: 23, h: 16, depth: 6, name: 'Neon Hollow',      agent: 'social-ops',    bob: { amp: 2, period: 6.6, phase: 2.6 } },
+    port:      { x: 3,  y: 29, w: 23, h: 15, depth: 5, name: 'Spindrift Harbor', agent: 'hustle-engine', bob: { amp: 2, period: 5.7, phase: 3.9 } },
+    mine:      { x: 54, y: 29, w: 23, h: 15, depth: 5, name: 'Copperhold',       agent: 'ledger-fi',     bob: { amp: 2, period: 6.3, phase: 5.1 } },
   };
-  S.BIOMES = ['monastery', 'market', 'port', 'mine']; // the four agent biomes
+  S.ISLANDS = ['square', 'monastery', 'market', 'port', 'mine'];
+  S.BIOMES = ['monastery', 'market', 'port', 'mine']; // the four agent islands
+  S.regions = S.islands;                              // old name, same objects
 
-  /** West bank of the river: tiles with x < riverEdge(y) are water. */
-  S.riverEdge = function (ty) {
-    const base = 4 + Math.round(Math.sin(ty * 0.35) * 0.8 + Math.sin(ty * 0.11 + 1) * 0.6);
-    if (ty >= 29) return base + Math.min(6, ty - 28); // harbour bay by the port
-    return base;
-  };
-  S.isWater = (tx, ty) => tx < S.riverEdge(ty);
-
-  /** Which region a tile belongs to (water returns 'river'). */
-  S.biomeAt = function (tx, ty) {
-    if (S.isWater(tx, ty)) return 'river';
-    for (const id of ['square', 'monastery', 'market', 'port', 'mine', 'savings', 'north', 'riverside', 'meadow']) {
-      const r = S.regions[id];
+  /** Island id whose walkable top contains tile (tx, ty), or null (space). */
+  S.islandAt = function (tx, ty) {
+    for (const id of S.ISLANDS) {
+      const r = S.islands[id];
       if (tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h) return id;
     }
-    return 'meadow';
+    return null;
+  };
+  S.biomeAt = (tx, ty) => S.islandAt(tx, ty) || 'void';
+  S.isVoid = (tx, ty) => !S.islandAt(tx, ty);
+  S.isWater = () => false; // water belongs to the island modules now (rivers, waterfalls)
+
+  /** Pixel box an island's static art is cut into (room for roofs above, underside below). */
+  S.islandBox = function (id) {
+    const r = S.islands[id];
+    const x0 = Math.max(0, (r.x - 2) * TILE), y0 = Math.max(0, (r.y - 3) * TILE);
+    const x1 = Math.min(W, (r.x + r.w + 2) * TILE), y1 = Math.min(H, (r.y + r.h + r.depth + 1) * TILE);
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  };
+  /** Island whose box contains native pixel (x, y), preferring the one whose top contains it. */
+  S.islandAtPx = function (x, y) {
+    const top = S.islandAt(Math.floor(x / TILE), Math.floor(y / TILE));
+    if (top) return top;
+    for (const id of S.ISLANDS) { const b = S.islandBox(id); if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) return id; }
+    return null;
   };
 
-  /** Landmark anchor points (tile coords, the spot in front of the door). */
+  /* Bobbing: each island drifts up and down a couple of pixels. */
+  const bobs = {};
+  for (const id of S.ISLANDS) bobs[id] = 0;
+  S.bob = (id) => (id && bobs[id]) || 0;
+  /** Vertical offset between two islands at fraction u (0 = a, 1 = b), for things spanning space (rail bridges, ropes). */
+  S.bobBetween = (a, b, u) => Math.round(S.bob(a) + (S.bob(b) - S.bob(a)) * u);
+  function updateBobs(t) {
+    for (const id of S.ISLANDS) {
+      const b = S.islands[id].bob;
+      bobs[id] = S.reducedMotion || DEBUG.noBob ? 0 : Math.round(Math.sin((t / b.period) * Math.PI * 2 + b.phase) * b.amp);
+    }
+  }
+
+  /** Landmark anchor points (tile coords). All fictional; real data drives them. */
   S.landmarks = {
-    clockTower:     { x: 32, y: 16, region: 'square', label: 'Clock Tower' },
-    fountain:       { x: 32, y: 21, region: 'square', label: 'Fountain' },
-    questBoard:     { x: 28, y: 19, region: 'square', label: 'Quest Board' },
-    mailPost:       { x: 36, y: 19, region: 'square', label: 'Mail Post' },
-    temple:         { x: 15, y: 6, region: 'monastery', label: 'Monastery Temple' },
-    studyGarden:    { x: 21, y: 10, region: 'monastery', label: 'Study Garden' },
-    school:         { x: 29, y: 6, region: 'north', label: 'School' },
-    broadcastTower: { x: 58, y: 5, region: 'market', label: 'Broadcast Tower' },
-    angiesStall:    { x: 46, y: 9, region: 'market', label: "Angie's stall" },
-    fidgetStall:    { x: 52, y: 12, region: 'market', label: 'Fidget store promo stall' },
-    billboard:      { x: 51, y: 3, region: 'market', label: 'Billboard' },
-    bazaar:         { x: 15, y: 32, region: 'port', label: 'Bazaar' },
-    dock:           { x: 9, y: 34, region: 'port', label: 'Dock' },
-    warehouse:      { x: 20, y: 36, region: 'port', label: 'Warehouse' },
-    mineEntrance:   { x: 56, y: 28, region: 'mine', label: 'Mine Entrance' },
-    vault:          { x: 48, y: 35, region: 'mine', label: 'Vault' },
-    inn:            { x: 10, y: 19, region: 'riverside', label: 'Hudson House Inn' },
-    apartment:      { x: 28, y: 33, region: 'savings', label: 'Apartment (Apartment fund)' },
-    garage:         { x: 32, y: 36, region: 'savings', label: 'Garage (Car insurance)' },
-    investTree:     { x: 37, y: 32, region: 'savings', label: 'Investment tree (Invest)' },
+    clockTower:     { x: 39, y: 19, island: 'square', label: 'Clock Tower' },
+    fountain:       { x: 39, y: 26, island: 'square', label: 'Fountain' },
+    questBoard:     { x: 35, y: 22, island: 'square', label: 'Quest Board' },
+    mailPost:       { x: 43, y: 22, island: 'square', label: 'Mail Post' },
+    chronicle:      { x: 43, y: 28, island: 'square', label: "The Chronicle (Mayor Tock's recaps)" },
+    dockNW:         { x: 31, y: 17, island: 'square', label: 'Kite landing (from Lantern Peak)' },
+    dockNE:         { x: 48, y: 17, island: 'square', label: 'Blimp mast (from Neon Hollow)' },
+    dockSW:         { x: 31, y: 29, island: 'square', label: 'Sky-ship pier (from Spindrift Harbor)' },
+    dockSE:         { x: 48, y: 29, island: 'square', label: 'Rail station (from Copperhold)' },
+    temple:         { x: 13, y: 7,  island: 'monastery', label: 'Monastery Temple' },
+    studyGarden:    { x: 19, y: 13, island: 'monastery', label: 'Study Garden' },
+    kitePad:        { x: 23, y: 13, island: 'monastery', label: 'Kite launch' },
+    broadcastTower: { x: 73, y: 6,  island: 'market', label: 'Broadcast Tower' },
+    angiesStall:    { x: 61, y: 9,  island: 'market', label: "Angie's stall" },
+    fidgetStall:    { x: 69, y: 13, island: 'market', label: 'Fidgetly promo stall' },
+    billboard:      { x: 66, y: 4,  island: 'market', label: 'Billboard' },
+    blimpMast:      { x: 56, y: 13, island: 'market', label: 'Blimp mast' },
+    bazaar:         { x: 13, y: 37, island: 'port', label: 'Bazaar' },
+    skyDock:        { x: 23, y: 33, island: 'port', label: 'Sky-ship dock' },
+    warehouse:      { x: 7,  y: 41, island: 'port', label: 'Warehouse' },
+    mineEntrance:   { x: 71, y: 32, island: 'mine', label: 'Mine Entrance' },
+    vault:          { x: 64, y: 41, island: 'mine', label: 'Vault' },
+    crystalInvest:  { x: 59, y: 39, island: 'mine', label: 'Invest crystal' },
+    crystalCar:     { x: 62, y: 39, island: 'mine', label: 'Car insurance crystal' },
+    crystalHome:    { x: 65, y: 39, island: 'mine', label: 'Apartment fund crystal' },
+    railStation:    { x: 56, y: 33, island: 'mine', label: 'Rail station' },
   };
 
-  /** Navigation graph. Nodes are tile coords; edges are orthogonal polylines
-   * (tile points) that the terrain draws as roads and villagers walk along. */
+  /** Navigation graph. Nodes are tile coords. Walk edges are orthogonal
+   * polylines drawn as paths (2 tiles wide); transport edges cross space:
+   *   kite  Lantern Peak ↔ Clockspire      blimp Neon Hollow ↔ Clockspire
+   *   ship  Spindrift Harbor ↔ Clockspire  rail  Copperhold ↔ Clockspire (sky-rail bridge)
+   */
   S.nav = {
     nodes: {
-      SQ: [32, 20], SQN: [32, 15], SQW: [26, 20], SQE: [38, 20], SQS: [32, 25],
-      JW: [20, 20], JN: [32, 11], JE: [45, 20], JS: [32, 29],
-      MON: [15, 9], SCHOOL: [29, 7], INN: [10, 20],
-      MKT: [51, 10], PORT: [15, 31], DOCK: [9, 33],
-      MINE: [52, 31], MINEDOOR: [56, 29],
-      APT: [28, 31], GAR: [32, 34], TREE: [37, 31],
-      QUEST: [28, 20], MAIL: [36, 20], TOWER: [32, 17],
+      SQ: [39, 23], TOWER: [39, 19], QUEST: [35, 23], MAIL: [43, 23], CHRON: [43, 27],
+      D_NW: [31, 17], D_NE: [48, 17], D_SW: [31, 29], D_SE: [48, 29],
+      MON: [13, 10], GARDEN: [19, 13], KITE: [23, 13],
+      MKT: [65, 10], BLIMP: [56, 13],
+      PORT: [14, 36], SHIP: [23, 33],
+      MINE: [66, 36], MINEDOOR: [71, 32], STATION: [56, 33],
     },
+    island: {
+      SQ: 'square', TOWER: 'square', QUEST: 'square', MAIL: 'square', CHRON: 'square', D_NW: 'square', D_NE: 'square', D_SW: 'square', D_SE: 'square',
+      MON: 'monastery', GARDEN: 'monastery', KITE: 'monastery', MKT: 'market', BLIMP: 'market',
+      PORT: 'port', SHIP: 'port', MINE: 'mine', MINEDOOR: 'mine', STATION: 'mine',
+    },
+    // [a, b, points, mode]  (mode defaults to 'walk')
     edges: [
-      ['SQ', 'SQN', [[32, 20], [32, 15]]],
-      ['SQ', 'SQW', [[32, 20], [26, 20]]],
-      ['SQ', 'SQE', [[32, 20], [38, 20]]],
-      ['SQ', 'SQS', [[32, 20], [32, 25]]],
-      ['SQ', 'QUEST', [[32, 20], [28, 20]]],
-      ['SQ', 'MAIL', [[32, 20], [36, 20]]],
-      ['SQN', 'TOWER', [[32, 15], [32, 17]]],
-      ['SQN', 'JN', [[32, 15], [32, 11]]],
-      ['JN', 'SCHOOL', [[32, 11], [29, 11], [29, 7]]],
-      ['SQW', 'JW', [[26, 20], [20, 20]]],
-      ['JW', 'MON', [[20, 20], [20, 13], [15, 13], [15, 9]]],
-      ['JW', 'INN', [[20, 20], [10, 20]]],
-      ['JW', 'PORT', [[20, 20], [20, 27], [15, 27], [15, 31]]],
-      ['PORT', 'DOCK', [[15, 31], [15, 33], [9, 33]]],
-      ['SQE', 'JE', [[38, 20], [45, 20]]],
-      ['JE', 'MKT', [[45, 20], [45, 14], [51, 14], [51, 10]]],
-      ['JE', 'MINE', [[45, 20], [45, 31], [52, 31]]],
-      ['MINE', 'MINEDOOR', [[52, 31], [56, 31], [56, 29]]],
-      ['SQS', 'JS', [[32, 25], [32, 29]]],
-      ['JS', 'APT', [[32, 29], [28, 29], [28, 31]]],
-      ['JS', 'GAR', [[32, 29], [32, 34]]],
-      ['JS', 'TREE', [[32, 29], [37, 29], [37, 31]]],
+      ['SQ', 'TOWER', [[39, 23], [39, 19]]],
+      ['SQ', 'QUEST', [[39, 23], [35, 23]]],
+      ['SQ', 'MAIL', [[39, 23], [43, 23]]],
+      ['MAIL', 'CHRON', [[43, 23], [43, 27]]],
+      ['QUEST', 'D_NW', [[35, 23], [33, 23], [33, 17], [31, 17]]],
+      ['QUEST', 'D_SW', [[35, 23], [33, 23], [33, 29], [31, 29]]],
+      ['MAIL', 'D_NE', [[43, 23], [46, 23], [46, 17], [48, 17]]],
+      ['MAIL', 'D_SE', [[43, 23], [46, 23], [46, 29], [48, 29]]],
+      ['MON', 'GARDEN', [[13, 10], [13, 13], [19, 13]]],
+      ['GARDEN', 'KITE', [[19, 13], [23, 13]]],
+      ['MKT', 'BLIMP', [[65, 10], [65, 13], [56, 13]]],
+      ['PORT', 'SHIP', [[14, 36], [14, 33], [23, 33]]],
+      ['MINE', 'MINEDOOR', [[66, 36], [71, 36], [71, 32]]],
+      ['MINE', 'STATION', [[66, 36], [66, 33], [56, 33]]],
+      ['KITE', 'D_NW', [[23, 13], [31, 17]], 'kite'],
+      ['BLIMP', 'D_NE', [[56, 13], [48, 17]], 'blimp'],
+      ['SHIP', 'D_SW', [[23, 33], [31, 29]], 'ship'],
+      ['STATION', 'D_SE', [[56, 33], [52, 33], [52, 29], [48, 29]], 'rail'],
     ],
-    /** Minecart rails from the mine yard to the square (drawn by the mine module). */
-    rails: [[52, 32], [46, 32], [46, 23], [39, 23]],
-    /** River lane boats sail along (tile x, from north to south). */
-    riverLaneX: 2,
+    /** The sky-rail bridge from Copperhold to Clockspire (the mine module draws it). */
+    rails: [[56, 33], [52, 33], [52, 29], [48, 29]],
+    /** Which transport serves each biome island. */
+    transport: { monastery: 'kite', market: 'blimp', port: 'ship', mine: 'rail' },
   };
 
-  /** Shortest path between two nav nodes as a list of tile points. */
+  /**
+   * Route between two nav nodes as legs:
+   *   [{mode: 'walk', island, pts: [[tx,ty], ...]}, {mode: 'kite'|'blimp'|'ship'|'rail', from, to, pts}, ...]
+   * Consecutive walk edges on the same island merge into one leg.
+   */
   S.route = function (from, to) {
-    if (from === to) return [S.nav.nodes[from].slice()];
     const adj = {};
-    for (const [a, b, pts] of S.nav.edges) {
-      (adj[a] = adj[a] || []).push([b, pts]);
-      (adj[b] = adj[b] || []).push([a, pts.slice().reverse()]);
+    for (const [a, b, pts, mode] of S.nav.edges) {
+      (adj[a] = adj[a] || []).push([b, pts, mode || 'walk']);
+      (adj[b] = adj[b] || []).push([a, pts.slice().reverse(), mode || 'walk']);
     }
+    if (from === to) return [{ mode: 'walk', island: S.nav.island[from], pts: [S.nav.nodes[from].slice()] }];
     const prev = { [from]: null }, queue = [from];
     while (queue.length) {
       const n = queue.shift();
       if (n === to) break;
-      for (const [m, pts] of adj[n] || []) if (!(m in prev)) { prev[m] = [n, pts]; queue.push(m); }
+      for (const [m, pts, mode] of adj[n] || []) if (!(m in prev)) { prev[m] = [n, pts, mode]; queue.push(m); }
     }
-    if (!(to in prev)) return [S.nav.nodes[from].slice()];
+    if (!(to in prev)) return [{ mode: 'walk', island: S.nav.island[from], pts: [S.nav.nodes[from].slice()] }];
     const chain = [];
-    for (let n = to; prev[n]; n = prev[n][0]) chain.unshift(prev[n][1]);
-    const out = [];
-    for (const pts of chain) for (const p of pts) {
-      const last = out[out.length - 1];
-      if (!last || last[0] !== p[0] || last[1] !== p[1]) out.push(p.slice());
+    for (let n = to; prev[n]; n = prev[n][0]) chain.unshift({ a: prev[n][0], b: n, pts: prev[n][1], mode: prev[n][2] });
+    const legs = [];
+    for (const e of chain) {
+      const last = legs[legs.length - 1];
+      if (e.mode === 'walk' && last && last.mode === 'walk' && last.island === S.nav.island[e.a]) {
+        for (const p of e.pts) { const q = last.pts[last.pts.length - 1]; if (q[0] !== p[0] || q[1] !== p[1]) last.pts.push(p.slice()); }
+      } else if (e.mode === 'walk') legs.push({ mode: 'walk', island: S.nav.island[e.a], pts: e.pts.map((p) => p.slice()) });
+      else legs.push({ mode: e.mode, from: e.a, to: e.b, pts: e.pts.map((p) => p.slice()) });
     }
-    return out;
+    return legs;
   };
 
   /** Tiles that buildings and props occupy. Modules call S.reserve() at load
-   * time for everything solid they draw; scattered decor (trees, rocks,
-   * flowers) checks S.isFree() so it never lands on someone else's building. */
+   * time for everything solid they draw; scattered decor checks S.isFree()
+   * so it never lands on someone else's building. */
   const reserved = new Uint8Array(COLS * ROWS);
   S.reserve = (tx, ty, w = 1, h = 1) => {
     for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++)
       if (x >= 0 && y >= 0 && x < COLS && y < ROWS) reserved[y * COLS + x] = 1;
   };
-  /** True if a tile is on a road (any nav edge, 2 tiles wide: the line tile and the one right/below it). */
+  /** True if a tile is on a walking path (2 tiles wide: the line tile and the one right/below it). */
   const roadTiles = new Uint8Array(COLS * ROWS);
   S.onRoad = (tx, ty) => tx >= 0 && ty >= 0 && tx < COLS && ty < ROWS && roadTiles[ty * COLS + tx] === 1;
   S.isReserved = (tx, ty) => tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS || reserved[ty * COLS + tx] === 1;
-  S.isFree = (tx, ty) => !S.isReserved(tx, ty) && !S.onRoad(tx, ty) && !S.isWater(tx, ty);
-
-  // Mark road tiles: every nav edge segment, 2 tiles wide.
-  for (const [, , pts] of S.nav.edges) {
+  /** Free for decor: on an island top, at least one tile in from its edge, not reserved, not a path. */
+  S.isFree = (tx, ty) => {
+    const id = S.islandAt(tx, ty);
+    if (!id || S.isReserved(tx, ty) || S.onRoad(tx, ty)) return false;
+    const r = S.islands[id];
+    return tx > r.x && tx < r.x + r.w - 1 && ty > r.y && ty < r.y + r.h - 1;
+  };
+  for (const [, , pts, mode] of S.nav.edges) {
+    if (mode && mode !== 'walk') continue;
     for (let i = 0; i + 1 < pts.length; i++) {
       const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
       for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++)
@@ -185,18 +229,17 @@
     }
   }
 
-
   S.tileToPx = (tx, ty) => ({ x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 });
-  S.regionCenterPx = (id) => { const r = S.regions[id]; return { x: (r.x + r.w / 2) * TILE, y: (r.y + r.h / 2) * TILE }; };
+  S.regionCenterPx = (id) => { const r = S.islands[id]; return { x: (r.x + r.w / 2) * TILE, y: (r.y + r.h / 2) * TILE }; };
 
   /* ------------------------------------------------------------- agents */
 
   const AGENTS = {
-    'academic-core': { biome: 'monastery', character: 'Abbot Quill', home: 'MON', item: 'scroll', courier: 'bird' },
-    'ledger-fi':     { biome: 'mine', character: 'Grit Copperpot', home: 'MINE', item: 'coins', courier: 'cart' },
-    'social-ops':    { biome: 'market', character: 'Lumi', home: 'MKT', item: 'poster', courier: 'lantern' },
-    'hustle-engine': { biome: 'port', character: "Cap'n Twirl", home: 'PORT', item: 'crate', courier: 'boat' },
-    hub:             { biome: 'square', character: 'Mayor Tock', home: 'TOWER', item: 'bell', courier: null },
+    'academic-core': { biome: 'monastery', character: 'Abbot Quill', home: 'MON', item: 'scroll', transport: 'kite', color: '#86d0b0' },
+    'ledger-fi':     { biome: 'mine', character: 'Grit Copperpot', home: 'MINE', item: 'coins', transport: 'rail', color: '#f2c94c' },
+    'social-ops':    { biome: 'market', character: 'Lumi', home: 'MKT', item: 'poster', transport: 'blimp', color: '#ff5fb0' },
+    'hustle-engine': { biome: 'port', character: "Cap'n Twirl", home: 'PORT', item: 'crate', transport: 'ship', color: '#63b4e6' },
+    hub:             { biome: 'square', character: 'Mayor Tock', home: 'TOWER', item: 'bell', transport: null, color: '#e8b75a' },
   };
   S.AGENTS = AGENTS;
   S.agentForBiome = (biome) => Object.keys(AGENTS).find((a) => AGENTS[a].biome === biome) || null;
@@ -430,27 +473,37 @@
   };
 
   /* --------------------------------------------------------------- layers
-   * Static layers are drawn once into a cached background (call
-   * S.invalidateStatic() if something they depend on changes).
-   * Dynamic layers draw every frame, in ascending order:
+   * STATIC layers are drawn once (call S.invalidateStatic() if something
+   * they depend on changes):
+   *   order < 0   space: drawn into the sky canvas (never bobs)
+   *   order >= 0  islands: drawn into one full-size canvas, then cut into one
+   *               canvas per island (S.islandBox) so each island can bob.
+   *               Anything drawn outside every island box is discarded, so
+   *               things spanning space (the rail bridge, ropes) belong in a
+   *               dynamic layer using S.bobBetween().
+   * DYNAMIC layers draw every frame, in ascending order:
+   *   < 90 space animation (behind the islands: twinkles, shooting stars, planets)
+   *   -- the islands are drawn here, each at its bob offset --
    *   100 water & ground animation   200 decor under people
-   *   300 ENTITIES (y-sorted by the core)   400 things above people (birds, canopies)
-   *   500 weather   600 lighting/darkness   700 glow effects over the dark (fireworks, neon)
+   *   300 ENTITIES (y-sorted by the core)   400 things above people (birds, flags, smoke)
+   *   500 weather   600 lighting/darkness   700 glow over the dark (fireworks, neon)
    *   800 in-canvas markers
+   * registerDynamic(order, fn, {island: id}) translates the context by that
+   * island's bob before calling fn, so island-bound art bobs with it.
    */
   const statics = [], dynamics = [], entities = [];
   S.registerStatic = (order, fn) => { statics.push({ order, fn }); statics.sort((a, b) => a.order - b.order); staticDirty = true; };
-  S.registerDynamic = (order, fn) => { dynamics.push({ order, fn }); dynamics.sort((a, b) => a.order - b.order); };
-  /** Entity: {x, y (native px at the feet), update?(dt,t), draw(ctx,t), hidden?} */
+  S.registerDynamic = (order, fn, opts = {}) => { dynamics.push({ order, fn, island: opts.island || null }); dynamics.sort((a, b) => a.order - b.order); };
+  /** Entity: {x, y (native px at the feet), island? (bobs with it; null while flying), update?(dt,t), draw(ctx,t), hidden?} */
   S.addEntity = (e) => { entities.push(e); return e; };
   S.removeEntity = (e) => { const i = entities.indexOf(e); if (i >= 0) entities.splice(i, 1); };
   S.entities = entities;
   let staticDirty = true;
   S.invalidateStatic = () => { staticDirty = true; };
 
-  /** Light sources for the night overlay: {x, y, r, color, intensity 0..1, flicker?, nightOnly? (default true), on?() } */
+  /** Light sources for the night overlay: {x, y, r, color, intensity 0..1, flicker?, nightOnly? (default true), on?(), island?} */
   S.lights = [];
-  S.addLight = (l) => { S.lights.push(Object.assign({ intensity: 1, nightOnly: true }, l)); return l; };
+  S.addLight = (l) => { const o = Object.assign({ intensity: 1, nightOnly: true }, l); S.lights.push(o); return o; };
 
   /* -------------------------------------------------------------- hotspots
    * Clickable world areas: {id, kind:'biome'|'villager'|'landmark', label,
@@ -458,7 +511,7 @@
    * Clicks call S.ui.open(hotspot). Hover shows the label as a tooltip.
    */
   const hotspots = [];
-  S.addHotspot = (h) => { hotspots.push(Object.assign({ priority: 0 }, h)); return h; };
+  S.addHotspot = (h) => { if (h.priority == null) h.priority = 0; hotspots.push(h); return h; };
   S.hotspots = hotspots;
   function hitTest(wx, wy) {
     let best = null;
@@ -470,11 +523,10 @@
       }
     }
     if (best) return best;
-    const tx = Math.floor(wx / TILE), ty = Math.floor(wy / TILE);
-    const b = S.biomeAt(tx, ty);
-    if (S.BIOMES.includes(b) || b === 'square' || b === 'savings' || b === 'north') {
-      const reg = S.regions[b];
-      return { id: 'biome:' + b, kind: 'biome', biome: b, label: reg.name, agent: reg.agent };
+    const id = S.islandAtPx(wx, wy);
+    if (id) {
+      const r = S.islands[id];
+      return { id: 'biome:' + id, kind: 'biome', biome: id, island: id, label: r.name, agent: r.agent };
     }
     return null;
   }
@@ -492,6 +544,10 @@
   const ctx = buffer.getContext('2d');
   const bg = document.createElement('canvas'); bg.width = W; bg.height = H;
   const bgx = bg.getContext('2d');
+  const sky = document.createElement('canvas'); sky.width = W; sky.height = H;
+  const skyx = sky.getContext('2d');
+  /** Per-island static art: [{id, canvas, x, y, w, h}] (filled after the static draw). */
+  S.islandLayers = [];
   S.canvas = canvas; S.buffer = buffer; S.ctx = ctx;
 
   /* --------------------------------------------------------------- camera
@@ -518,13 +574,14 @@
   S.screenToWorld = (sx, sy) => ({ x: cam.x + (sx - viewW / 2) / cam.z, y: cam.y + (sy - viewH / 2) / cam.z });
   S.worldToScreen = (wx, wy) => ({ x: (wx - cam.x) * cam.z + viewW / 2, y: (wy - cam.y) * cam.z + viewH / 2 });
   S.zoomTo = (z, sx = viewW / 2, sy = viewH / 2) => {
+    panAnim = null;
     const before = S.screenToWorld(sx, sy);
     cam.z = z; clampCam();
     const after = S.screenToWorld(sx, sy);
     cam.x += before.x - after.x; cam.y += before.y - after.y; clampCam();
   };
   S.zoomBy = (f, sx, sy) => S.zoomTo(cam.z * f, sx, sy);
-  S.fitView = () => { cam.z = cam.fitZ; cam.x = W / 2; cam.y = H / 2; cam.follow = null; clampCam(); };
+  S.fitView = () => { panAnim = null; cam.z = cam.fitZ; cam.x = W / 2; cam.y = H / 2; cam.follow = null; clampCam(); };
   /** Smoothly centre on a world point (and optionally zoom). */
   let panAnim = null;
   S.panTo = (wx, wy, z) => { panAnim = { x: wx, y: wy, z: z || cam.z, t: 0 }; cam.follow = null; };
@@ -613,7 +670,7 @@
     el.className = 'bubble' + (opts.tone ? ' bubble--' + opts.tone : '') + (opts.biome ? ' bubble--' + opts.biome : '');
     el.textContent = text;
     overlay.appendChild(el);
-    const b = { el, anchor, born: performance.now(), ms: opts.ms || 4200, dy: opts.dy == null ? 26 : opts.dy };
+    const b = { el, anchor, born: performance.now(), ms: opts.ms || 4200, dy: opts.dy == null ? 40 : opts.dy };
     bubbles.push(b);
     return b;
   };
@@ -623,7 +680,7 @@
       const b = bubbles[i];
       const age = now - b.born;
       if (age > b.ms || (b.anchor && b.anchor.removed)) { b.el.remove(); bubbles.splice(i, 1); continue; }
-      const p = S.worldToScreen(b.anchor.x, b.anchor.y - b.dy);
+      const p = S.worldToScreen(b.anchor.x, b.anchor.y - b.dy + S.bob(b.anchor.island));
       const off = p.x < -60 || p.y < -40 || p.x > viewW + 60 || p.y > viewH + 40;
       b.el.hidden = off;
       if (!off) {
@@ -634,49 +691,100 @@
     }
   }
 
+  /**
+   * Persistent name tag that follows an anchor (an entity or {x, y, island}).
+   * opts: {color, dy (native px above the feet, default 34), className}.
+   * Returns {el, setText(text), remove()}. Hidden automatically when the
+   * anchor is hidden or zoomed far out.
+   */
+  const labels = [];
+  S.label = function (anchor, text, opts = {}) {
+    if (!overlay) return { setText() {}, remove() {} };
+    const el = document.createElement('div');
+    el.className = 'nametag' + (opts.className ? ' ' + opts.className : '');
+    if (opts.color) el.style.setProperty('--tag', opts.color);
+    el.textContent = text;
+    overlay.appendChild(el);
+    const L = { el, anchor, dy: opts.dy == null ? 34 : opts.dy, setText(t) { el.textContent = t; }, remove() { el.remove(); const i = labels.indexOf(L); if (i >= 0) labels.splice(i, 1); } };
+    labels.push(L);
+    return L;
+  };
+  function updateLabels() {
+    const show = cam.z >= 0.75;
+    for (const L of labels) {
+      const a = L.anchor;
+      if (!show || a.hidden || a.removed || a.hideLabel) { L.el.hidden = true; continue; }
+      const p = S.worldToScreen(a.x, a.y - L.dy + S.bob(a.island));
+      const off = p.x < -80 || p.y < -40 || p.x > viewW + 80 || p.y > viewH + 40;
+      L.el.hidden = off;
+      if (!off) L.el.style.transform = `translate(${Math.round(p.x)}px, ${Math.round(p.y)}px) translate(-50%, -100%)`;
+    }
+  }
+
   /* ---------------------------------------------------------------- loop */
   let last = performance.now(), acc = 0, t = 0, booted = false;
   const FRAME = 1000 / 30;
   S.frame = 0;
 
   function drawStatic() {
+    skyx.clearRect(0, 0, W, H);
     bgx.clearRect(0, 0, W, H);
-    for (const s of statics) {
-      bgx.save();
-      try { s.fn(bgx, S); } catch (e) { console.error('static layer', s.order, e); }
-      bgx.restore();
+    for (const st of statics) {
+      const c = st.order < 0 ? skyx : bgx;
+      c.save();
+      try { st.fn(c, S); } catch (e) { console.error('static layer', st.order, e); }
+      c.restore();
     }
+    // Cut the island art into one canvas per island so each can bob on its own.
+    S.islandLayers = S.ISLANDS.map((id) => {
+      const b = S.islandBox(id);
+      const cv = document.createElement('canvas'); cv.width = b.w; cv.height = b.h;
+      cv.getContext('2d').drawImage(bg, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
+      return { id, canvas: cv, x: b.x, y: b.y, w: b.w, h: b.h };
+    });
     staticDirty = false;
+    S.emit('static:ready');
   }
+
+  /** Background colour shown beyond the world edge (the sky module may change it). */
+  S.spaceColor = '#07060f';
 
   function render(dt) {
     if (staticDirty) drawStatic();
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, W, H);
-    ctx.drawImage(bg, 0, 0);
-    let entitiesDrawn = false;
+    ctx.drawImage(sky, 0, 0);
+    let islandsDrawn = false, entitiesDrawn = false;
+    const drawIslands = () => {
+      for (const L of S.islandLayers) ctx.drawImage(L.canvas, L.x, L.y + S.bob(L.id));
+      islandsDrawn = true;
+    };
     const drawEntities = () => {
       entities.sort((a, b) => a.y - b.y);
       for (const e of entities) {
         if (e.hidden) continue;
         ctx.save();
+        if (e.island) ctx.translate(0, S.bob(e.island));
         try { e.draw(ctx, t); } catch (err) { console.error('entity draw', err); e.hidden = true; }
         ctx.restore();
       }
       entitiesDrawn = true;
     };
     for (const d of dynamics) {
+      if (!islandsDrawn && d.order >= 90) drawIslands();
       if (!entitiesDrawn && d.order >= 300) drawEntities();
       ctx.save();
+      if (d.island) ctx.translate(0, S.bob(d.island));
       try { d.fn(ctx, t, dt); } catch (e) { console.error('dynamic layer', d.order, e); }
       ctx.restore();
     }
+    if (!islandsDrawn) drawIslands();
     if (!entitiesDrawn) drawEntities();
 
     // Blit to screen.
     screen.setTransform(1, 0, 0, 1, 0, 0);
     screen.imageSmoothingEnabled = false;
-    screen.fillStyle = '#0d0b14';
+    screen.fillStyle = S.spaceColor;
     screen.fillRect(0, 0, canvas.width, canvas.height);
     const z = cam.z * dpr;
     const sx = (viewW / 2 - cam.x * cam.z) * dpr, sy = (viewH / 2 - cam.y * cam.z) * dpr;
@@ -693,6 +801,7 @@
     if (!S.debug.paused) t += dt;
     S.t = t; S.frame++;
     updateTime();
+    updateBobs(t);
     updateCycle(dt);
     if (panAnim) {
       panAnim.t = Math.min(1, panAnim.t + dt * 2.2);
@@ -704,6 +813,7 @@
     if (!S.debug.paused) for (const e of entities) { if (e.update) { try { e.update(dt, t); } catch (err) { console.error('entity update', err); e.update = null; } } }
     render(dt);
     updateBubbles();
+    updateLabels();
     if (S.frame % 15 === 0) { try { S.ui.hudUpdate(); } catch (e) { console.error(e); } }
   }
 

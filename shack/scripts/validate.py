@@ -113,6 +113,26 @@ def check_config():
         err("shack/config.json", f"priority_weights add up to {sum(weights.values())}, not 100")
 
 
+def check_recaps():
+    path = OPS / "state" / "recaps.json"
+    data = load(path)
+    if data is None:
+        return
+    where = path.relative_to(REPO)
+    for kind, keep in (("daily", 30), ("weekly", 12), ("monthly", 12)):
+        items = data.get(kind)
+        if not isinstance(items, list):
+            err(where, f"{kind} must be a list")
+            continue
+        if len(items) > keep:
+            err(where, f"{kind} keeps at most {keep} entries (has {len(items)})")
+        for i, r in enumerate(items):
+            if not isinstance(r, dict) or not r.get("period") or not r.get("chronicle"):
+                err(where, f"{kind}[{i}] needs period and chronicle")
+            elif not isinstance(r.get("stats", {}), dict):
+                err(where, f"{kind}[{i}].stats must be an object")
+
+
 def staged_files():
     out = subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"],
                          cwd=REPO, capture_output=True, text=True, check=True).stdout
@@ -142,6 +162,7 @@ def main():
     check_config()
     check_tasks()
     check_agents()
+    check_recaps()
     if "--staged" in sys.argv:
         scan(staged_files())
     if errors:

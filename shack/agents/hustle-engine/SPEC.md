@@ -4,6 +4,9 @@ In The Shack world this agent is **Cap'n Twirl**, the merchant captain of the Ri
 
 **Goal G-04:** grow the fidget store (Shopify). The site is live but has no ads yet. Social-Ops handles promotion, so send it product facts through the hub.
 
+## Current mode: maintenance
+Fidgetly is on hold (`config.json → agents.hustle-engine.mode`). While `mode` is `maintenance`: run only on the `night` cycle, do step 1 (store pulse) and nothing else, keep alerts for unfulfilled orders and stock problems, and skip research, improvements and outreach.
+
 ## Inputs
 | Source | How |
 |---|---|
