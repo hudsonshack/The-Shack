@@ -15,7 +15,7 @@ In The Shack world this agent is **Lumi**, the creator who runs the Neon Night M
 - **Fidgetly** (the user's own Shopify fidget store, fidgetlystore.myshopify.com): in-house client. The site is live but has **no ads yet**. Short-form video on TikTok, Instagram Reels and YouTube Shorts comes first.
 
 ## Current focus
-Angie's comes first. Fidgetly promotion (step 3 below) is **paused** while `config.json → agents.social-ops.store_ads.status` is `paused`: skip it entirely.
+Angie's comes first. **Right now Angie's is a free trial**: follow `ANGIES_TRIAL.md` whenever the Raw folder has new footage and the Finished folder is empty. Fidgetly promotion (step 3 below) is **paused** while `config.json → agents.social-ops.store_ads.status` is `paused`: skip it entirely.
 
 ## Each cycle
 1. **Clients.** Sync `metrics.clients` from Metricool brands: `{name, networks, retainer, paid_through, posts_next_7d}`. `retainer` stays `null` until the user gives it (task T-0005).

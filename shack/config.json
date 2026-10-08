@@ -162,7 +162,19 @@
           "name": "Angie's",
           "location": "Cold Spring, NY",
           "type": "client",
-          "retainer": null
+          "retainer": null,
+          "status": "free trial (sample package)",
+          "owner": "he",
+          "accounts": [
+            "Instagram",
+            "TikTok",
+            "Facebook"
+          ],
+          "trial": "Shoot on Thursday 2026-10-08; deliver a finished sample package. See agents/social-ops/ANGIES_TRIAL.md",
+          "drive": {
+            "raw": "135ES_1QnMHb6aOjy9dECt3H4fTubD3Jz",
+            "finished": "1vEAQUTHR-L5PeIcie_kZGFGNz65ZpZkc"
+          }
         },
         {
           "name": "Fidgetly (own Shopify store)",
