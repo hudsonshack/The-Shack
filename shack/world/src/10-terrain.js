@@ -65,7 +65,7 @@
   const FLAG = { x: 442, base: 126, top: 66 };
   const FIELD = { x0: 568, y0: 24, x1: 632, y1: 150 };
   const POND = { x: 676, y: 292, rx: 22, ry: 11 };
-  const LAMPS = [[502, 318], [554, 318], [618, 366], [427, 366], [618, 318], [327, 316], [264, 316]];
+  const LAMPS = [[502, 318], [554, 318], [618, 366], [427, 366], [618, 318], [309, 316], [264, 316]];
   const BENCHES = [[449, 372], [469, 384], [600, 284], [410, 228], [592, 228]];
   const PLANTERS = [[430, 386, 34, 14], [596, 398, 26, 12]];
 
@@ -116,7 +116,7 @@
   S.addLight({ x: 480, y: 96, r: 26, color: P.lantern, intensity: 0.6 });
 
   /** Window panes that glow at night (drawn at 700): [x, y, w, h]. Filled while drawing. */
-  const GLOW = [];
+  const GLOW = [], GLOW_STATIC = [];
 
   /* ------------------------------------------------------------ river geometry */
   const edgeX = new Float32Array(H);
@@ -404,9 +404,15 @@
       else c = dirtPx(x, y, dd, tl);
       if (!c) continue;
       if (winter && style !== 'neon') {
-        const n = nM(x, y), b = bay(x, y);
-        const cover = style === 'cobble' ? (dd <= 5 ? 0.55 : n > 0.68 ? 0.4 : 0) : (dd <= 3 ? 0.8 : n > 0.5 ? (n - 0.5) * 3 : 0.1);
-        if (b < cover) c = b < cover * 0.35 ? snowD : snow;
+        const n = nM(x, y), hv = hash(x >> 1, y >> 1, 91) * 0.65 + hash(x, y, 92) * 0.35;
+        if (style === 'cobble') {
+          if (c === cob.m || c === cob.o) c = hv < 0.7 ? snow : snowD;   // snow packed into the cracks
+          else if (dd <= 3 + n * 4 && hv < 0.75) c = snow;
+        } else {
+          // packed snow, worn down along the middle of the path
+          const cover = dd <= 2 ? 0.95 : dd <= 4 ? 0.7 : n > 0.55 ? 0.35 + (n - 0.55) * 2 : 0.12;
+          if (hv < cover) c = hv < cover * 0.25 ? snowD : snow;
+        }
       }
       set(k * 4, c);
     }
@@ -805,8 +811,21 @@
   /* ======================================================================
    * Square furniture
    * ==================================================================== */
-  function drawLamp(c, x, base) {
-    shadow(c, x + 3, base, 4, 1);
+  /** Lamp posts are y-sorted entities (people walk both in front of and behind them). */
+  let lampCv = null, lampSeason = null;
+  function lampSprite() {
+    if (lampCv && lampSeason === season) return lampCv;
+    lampSeason = season; lampCv = mk(12, 38);
+    const c = lampCv.getContext('2d');
+    c.translate(5, 37);
+    drawLampAt(c, 0, 0);
+    return lampCv;
+  }
+  for (const [x, y] of LAMPS) {
+    S.addEntity({ x: x + 1, y, kind: 'prop', draw(ctx) { ctx.drawImage(lampSprite(), x - 5, y - 37); } });
+    GLOW_STATIC.push([x - 1, y - 29, 4, 5]);
+  }
+  function drawLampAt(c, x, base) {
     R(c, x - 2, base - 3, 6, 3, P.outline); R(c, x - 1, base - 3, 4, 2, '#4a4458');
     R(c, x - 1, base - 22, 4, 20, P.outline); R(c, x, base - 22, 2, 20, '#3c3648'); R(c, x, base - 22, 1, 20, '#5d566c');
     R(c, x - 2, base - 22, 6, 1, P.outline);
@@ -814,7 +833,6 @@
     R(c, x - 3, base - 31, 8, 9, P.outline);
     R(c, x - 2, base - 30, 6, 7, '#3c3648');
     R(c, x - 1, base - 29, 4, 5, '#f3dfa6'); D(c, x - 1, base - 29, '#fff7d8');
-    GLOW.push([x - 1, base - 29, 4, 5]);
     R(c, x - 4, base - 33, 10, 2, P.outline); R(c, x - 3, base - 33, 8, 1, '#5d566c');
     R(c, x, base - 35, 2, 2, P.outline); D(c, x, base - 35, P.gold);
     if (isWinter()) R(c, x - 3, base - 34, 8, 1, P.snow);
@@ -1230,7 +1248,7 @@
     drawMailPost(ctx);
     drawFountain(ctx, isWinter());
     for (const [x, y] of BENCHES) drawBench(ctx, x, y);
-    for (const [x, y] of LAMPS) drawLamp(ctx, x, y);
+    for (const [x, y] of LAMPS) shadow(ctx, x + 3, y, 4, 1);
     drawSchool(ctx);
     drawFlagPole(ctx);
     drawInn(ctx);
@@ -1623,7 +1641,6 @@
     return items;
   }
   let decorItems = null;
-  S._dbgDecor = () => decorItems;
 
   S.registerStatic(50, (ctx) => {
     if (!decorItems) decorItems = placeDecor();
@@ -1666,25 +1683,27 @@
   /* ======================================================================
    * static 95: which river pixels are still open water (after everyone drew)
    * ==================================================================== */
-  let waterMask = null, readbacks = 0, waterFrames = null;
+  let waterMask = null, waterFrames = null, readCv = null, readCtx = null;
   function fallbackMask() {
     const m = new Uint8Array(WB * H);
+    const margin = isWinter() ? 12 : 1;
     for (let y = 0; y < H; y++) for (let x = 0; x < WB; x++) {
       const tx = (x / TILE) | 0, ty = (y / TILE) | 0;
-      if (x < edgeX[y] - 1 && !S.isReserved(tx, ty)) m[y * WB + x] = 1;
+      if (x < edgeX[y] - margin && !S.isReserved(tx, ty)) m[y * WB + x] = 1;
     }
     return m;
   }
   S.registerStatic(95, (ctx) => {
     let m = null;
-    if (readbacks < 2) {
-      try {
-        readbacks++;
-        const id = ctx.getImageData(0, 0, WB, H).data;
-        m = new Uint8Array(WB * H);
-        for (let i = 0, k = 0; k < WB * H; k++, i += 4) if (id[i + 3] === 255 && WATER_SET.has((id[i] << 16) | (id[i + 1] << 8) | id[i + 2])) m[k] = 1;
-      } catch (e) { m = null; }
-    }
+    try {
+      // Copy the river strip into our own read-optimised canvas, then read it back.
+      if (!readCv) { readCv = mk(WB, H); readCtx = readCv.getContext('2d', { willReadFrequently: true }); }
+      readCtx.clearRect(0, 0, WB, H);
+      readCtx.drawImage(ctx.canvas, 0, 0, WB, H, 0, 0, WB, H);
+      const id = readCtx.getImageData(0, 0, WB, H).data;
+      m = new Uint8Array(WB * H);
+      for (let i = 0, k = 0; k < WB * H; k++, i += 4) if (id[i + 3] === 255 && WATER_SET.has((id[i] << 16) | (id[i + 1] << 8) | id[i + 2])) m[k] = 1;
+    } catch (e) { m = null; }
     waterMask = m || fallbackMask();
     waterFrames = null; // rebuilt lazily
   });
@@ -1741,6 +1760,15 @@
     ctx.drawImage(waterFrames[f], 0, 0);
   });
 
+  function drawDuck(c, x, y, left, kind) {
+    const f = left ? -1 : 1, body = kind ? '#8a6a4a' : '#f4efe4', head = kind ? '#8a6a4a' : '#2f6e4a';
+    R(c, x - 3, y + 2, 7, 1, P.waterLight);
+    R(c, x - 3, y - 1, 7, 3, P.outline); R(c, x - 2, y - 1, 5, 2, body);
+    D(c, x - 2, y - 1, sh(body, 0.25));
+    const hx = x + f * 2;
+    R(c, hx - 1, y - 4, 3, 3, P.outline); D(c, hx, y - 3, head); D(c, hx, y - 4, head);
+    D(c, hx + f * 2, y - 3, '#f2a33a');
+  }
   /* ======================================================================
    * dynamic 200: fountain water, payday bunting on the inn
    * ==================================================================== */
@@ -1749,6 +1777,15 @@
       if (!fountainFrames) buildFountainFrames();
       const f = Math.floor(t * (S.reducedMotion ? 3 : 10)) % fountainFrames.frames.length;
       ctx.drawImage(fountainFrames.frames[f], fountainFrames.ox, fountainFrames.oy);
+    }
+    if (!isWinter()) { // two ducks paddling on the meadow pond
+      for (let i = 0; i < 2; i++) {
+        const ph = t * (S.reducedMotion ? 0.05 : 0.18) + i * 2.6;
+        const dx = Math.round(Math.sin(ph) * 12), dy = Math.round(Math.sin(ph * 1.7 + i) * 3);
+        const x = POND.x - 3 + dx + i * 4, y = POND.y - 1 + dy, left = Math.cos(ph) < 0;
+        const bob = (Math.floor(t * 2 + i) & 1);
+        drawDuck(ctx, x, y + bob, left, i);
+      }
     }
     if (S.time.isPayday) { // Friday: gold bunting across the inn porch (pay is direct-deposited every Friday)
       const y0 = 297, x0 = INN.x0 + 2, x1 = INN.x1 - 2;
@@ -1798,7 +1835,7 @@
     const a = clamp((0.62 - light) / 0.35, 0, 1);
     if (a > 0.02) {
       ctx.globalAlpha = a;
-      for (const [x, y, w, h] of GLOW) {
+      for (const list of [GLOW, GLOW_STATIC]) for (const [x, y, w, h] of list) {
         R(ctx, x, y, w, h, '#ffcf6e');
         if (w > 2 && h > 2) { R(ctx, x, y, w, 1, '#ffe7a8'); R(ctx, x, y + h - 1, w, 1, '#f0a84a'); }
       }
