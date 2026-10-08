@@ -1,0 +1,14 @@
+{
+  "agent": "social-ops",
+  "phase": "uninit",
+  "last_run": null,
+  "next_run": null,
+  "summary": "Waiting for first cycle.",
+  "alerts": [],
+  "metrics": {
+    "clients": [],
+    "scheduled_posts_7d": 0,
+    "drafts_pending": 0,
+    "prospects": []
+  }
+}

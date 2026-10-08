@@ -1,0 +1,17 @@
+{
+  "agent": "hustle-engine",
+  "phase": "uninit",
+  "last_run": null,
+  "next_run": null,
+  "summary": "Waiting for first cycle.",
+  "alerts": [],
+  "metrics": {
+    "shopify": {
+      "orders_7d": null,
+      "revenue_7d": null,
+      "low_stock": []
+    },
+    "opportunities": [],
+    "dm_drafts": 0
+  }
+}

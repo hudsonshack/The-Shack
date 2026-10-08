@@ -1,138 +1,63 @@
-# J.A.R.V.I.S. Live
+# J.A.R.V.I.S. Ops
 
-A real-time voice AI assistant powered by the **Gemini Live API** with a futuristic HUD interface. Speak to it, and it speaks back — with tool use, live web search, weather, system control, file access, and more.
+A hub-and-spoke team of Claude agents that runs school, money, social media clients and a Shopify store. It runs on its own three times a day.
 
----
+**Live dashboard:** https://claude.ai/artifact/EF5JTPV7CQnZa2jJZ6aFnH (private to your Claude account) · fallback: [`jarvis-ops/dashboard/DASHBOARD.md`](jarvis-ops/dashboard/DASHBOARD.md)
 
-## Features
+**First time?** Do [SETUP.md](SETUP.md).
 
-- **Real-time voice conversation** — Gemini 2.5 Flash Native Audio (low-latency two-way audio)
-- **Barge-in / interruption** — talk over JARVIS and it stops immediately
-- **30 voice options** — switch voices live mid-session without disconnecting
-- **Live web search** — asks DuckDuckGo for current prices, news, scores, and facts
-- **Weather** — current conditions + 7-day forecast for any city (Open-Meteo, no API key needed)
-- **System monitoring** — CPU, RAM, GPU, disk, top processes, uptime
-- **File system tools** — read, write, move, search files via voice
-- **System control** — launch/close apps, keyboard shortcuts, volume, clipboard, power control
-- **Browser control** — open URLs and Gmail via voice
-- **Telegram integration** (optional) — chat with JARVIS over Telegram with full tool access
-- **Futuristic HUD** — animated canvas core, waveform meters, chat transcript, telemetry panels
-- **Auto-reconnect** — recovers from dropped Gemini sessions automatically
-
----
-
-## Requirements
-
-- Python 3.11+
-- Windows (uses WMI and Windows audio APIs for system monitoring)
-- A [Google Gemini API key](https://aistudio.google.com/apikey) with Live API access
-- A microphone
-
----
-
-## Setup
-
-### 1. Clone the repo
-
-```bash
-git clone https://github.com/your-username/jarvis-live.git
-cd jarvis-live
-```
-
-### 2. Create a virtual environment
-
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-### 3. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-> **Note:** `pycaw` is optional — it enables precise volume control. Without it, volume commands fall back to key events.
-> `python-telegram-bot` is optional — only needed if you want the Telegram integration.
-
-### 4. Configure your environment
-
-Copy the example env file and fill it in:
-
-```bash
-copy .env.example .env
-```
-
-Open `.env` and set at minimum:
+## Architecture
 
 ```
-GEMINI_API_KEY=your_key_here
-JARVIS_OWNER_NAME=YourName
+            Claude Routine (05:46 · 15:16 · 20:46 America/New_York)
+                                  │
+                         ┌────────▼────────┐
+                         │       HUB       │  plan → verify → execute → verify
+                         │ hub/DIRECTOR.md │  only writer of state/tasks.json
+                         └────────┬────────┘
+     ┌───────────────┬────────────┴──┬────────────────┐   parallel, no cross-talk
+┌────▼────────┐ ┌────▼─────┐ ┌───────▼────┐ ┌─────────▼─────┐
+│Academic-Core│ │Ledger-Fi │ │ Social-Ops │ │ Hustle-Engine │
+│ Classroom   │ │ M&T alert│ │ Metricool  │ │ Shopify,      │
+│ emails, GCal│ │ emails   │ │            │ │ web research  │
+└─────────────┘ └──────────┘ └────────────┘ └───────────────┘
+                                  │
+          commit → ops/state branch → dashboard re-render → live page
 ```
 
-See `.env.example` for all available options.
+| Agent | Priority | Does automatically | Never does |
+|---|---|---|---|
+| Academic-Core | 40% | Reads forwarded Classroom emails, tracks deadlines, puts spaced-repetition study blocks on Google Calendar, writes Quizlet import files | Touch the school account |
+| Social-Ops | 25% | Syncs clients from Metricool, drafts and schedules posts, weekly reports, invoice drafts, finds prospects and drafts DMs | Send DMs, like, follow or comment |
+| Ledger-Fi | 20% | Rebuilds month-to-date income and spending from M&T alert emails, categorizes, tracks savings goals, flags unusual charges | Move money, store account numbers |
+| Hustle-Engine | 15% | Store pulse (orders, revenue, low stock), arbitrage research with margin math, improvement ideas, DM drafts | Buy, change prices, publish |
 
-### 5. Run
-
-```bash
-venv\Scripts\python app.py
-```
-
-Then open **http://localhost:8080** in your browser, click **INITIALIZE**, and start talking.
-
----
-
-## Personalisation (.env options)
-
-| Variable | Description | Default |
-|---|---|---|
-| `GEMINI_API_KEY` | Your Gemini API key **(required)** | — |
-| `JARVIS_OWNER_NAME` | Your name — JARVIS will address you by this | `Boss` |
-| `JARVIS_CPU` | Describe your CPU for JARVIS to reference | `a high-performance CPU` |
-| `JARVIS_RAM` | Describe your RAM | `high-capacity RAM` |
-| `JARVIS_GPU` | Describe your GPU | `a dedicated GPU` |
-| `JARVIS_STORAGE` | Describe your storage | `fast NVMe SSD storage` |
-| `JARVIS_OS` | Your OS | `Windows` |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot token (optional) | — |
-| `TELEGRAM_ALLOWED_USER_ID` | Your Telegram user ID to restrict access (optional) | — |
-
----
-
-## Project Structure
+## Layout
 
 ```
-jarvis-live/
-├── app.py                  ← Flask server + Gemini Live proxy + all tools
-├── templates/
-│   └── index.html          ← HUD layout
-├── static/
-│   ├── css/style.css       ← Dark cyan sci-fi theme
-│   └── js/app.js           ← AudioWorklet, WebSocket, canvas animation
-├── .env.example            ← Environment variable template
-├── requirements.txt        ← Python dependencies
-└── README.md
+jarvis-ops/
+├── config.json              settings from the setup questionnaire
+├── hub/DIRECTOR.md          the hub's cycle procedure
+├── hub/RULEBOOK.md          autonomy, privacy and failure rules
+├── agents/<name>/SPEC.md    each spoke's job
+├── agents/<name>/state.json each spoke's latest summary (no raw data)
+├── agents/<name>/outbox/    Quizlet sets, reports, research notes
+├── state/tasks.json         shared task list (hub writes it)
+├── dashboard/               template.html → dashboard.html + DASHBOARD.md
+├── logs/runs.jsonl          one line per cycle
+├── scripts/                 validate.py, render_dashboard.py, log_run.py, install-hooks.sh
+└── private/                 gitignored scratch space for raw data
+.githooks/                   pre-commit, post-commit, pre-push
 ```
 
----
+## Commands
 
-## Tech Stack
+```sh
+python3 jarvis-ops/scripts/validate.py          # check state files
+python3 jarvis-ops/scripts/render_dashboard.py  # rebuild DASHBOARD.md + dashboard.html
+sh jarvis-ops/scripts/install-hooks.sh          # enable git hooks in a clone
+```
 
-| Layer | Tech |
-|---|---|
-| Server | Python, Flask, flask-sock (WebSocket) |
-| AI | Google Gemini Live API — `gemini-2.5-flash-native-audio-latest` |
-| SDK | `google-genai >= 2.8` |
-| Web search | DuckDuckGo Instant Answer API (free, no key) |
-| Weather | Open-Meteo API (free, no key) |
-| System monitoring | `psutil`, `wmi`, `nvidia-smi` |
-| Frontend | Vanilla JS + Canvas HUD, Web Audio API |
-| Mic input | 16 kHz PCM via AudioWorklet |
-| Speaker output | 24 kHz PCM via AudioBufferSourceNode queue |
+To change a setting (cycle times, priority split, savings targets, autonomy), edit `jarvis-ops/config.json` or ask Claude to.
 
----
-
-## Notes
-
-- **GPU temperature** requires [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) running in the background on Windows. Without it, JARVIS will note that CPU temp is unavailable.
-- The app binds to `0.0.0.0:8080` so you can access it from your phone on the same network.
-- For best results use Chrome or Edge — Safari has inconsistent AudioWorklet support.
+The previous Windows voice app (Gemini Live HUD) was removed. It is still in git history at commit `d10cf7a`.

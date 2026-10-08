@@ -1,0 +1,14 @@
+{
+  "agent": "academic-core",
+  "phase": "uninit",
+  "last_run": null,
+  "next_run": null,
+  "summary": "Waiting for first cycle.",
+  "alerts": [],
+  "metrics": {
+    "deadlines": [],
+    "study_blocks": [],
+    "prep_sets": [],
+    "classroom_feed": "not connected"
+  }
+}

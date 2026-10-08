@@ -26,3 +26,7 @@ desktop.ini
 
 # Logs
 *.log
+
+# J.A.R.V.I.S. Ops private data (never commit)
+jarvis-ops/private/*
+!jarvis-ops/private/README.md
