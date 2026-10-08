@@ -4,22 +4,22 @@
  "timezone": "America/New_York",
  "next_cycle": {
   "name": "dawn",
-  "at": "2026-10-08T05:46:00-04:00"
+  "at": "2026-10-08T05:45:00-04:00"
  },
  "cycles": [
   {
    "name": "dawn",
-   "local_time": "05:46",
+   "local_time": "05:45",
    "focus": "morning brief, today's deadlines and study blocks"
   },
   {
    "name": "after-school",
-   "local_time": "15:46",
+   "local_time": "15:45",
    "focus": "new assignments, social posts, Shopify orders"
   },
   {
    "name": "night",
-   "local_time": "20:46",
+   "local_time": "20:45",
    "focus": "spending review, tomorrow's plan, outreach drafts"
   }
  ],
@@ -45,7 +45,7 @@
    "pending": 3,
    "blocked": 0,
    "done": 4,
-   "last_run": "2026-10-09T15:46:00-04:00",
+   "last_run": "2026-10-09T15:45:00-04:00",
    "summary": "3 deadlines this week, 6 study blocks placed.",
    "weight": 40
   },
@@ -59,7 +59,7 @@
    "pending": 1,
    "blocked": 0,
    "done": 2,
-   "last_run": "2026-10-09T15:46:00-04:00",
+   "last_run": "2026-10-09T15:45:00-04:00",
    "summary": "Friday paycheck in. Food spending running high.",
    "weight": 20
   },
@@ -73,7 +73,7 @@
    "pending": 2,
    "blocked": 0,
    "done": 3,
-   "last_run": "2026-10-09T15:46:00-04:00",
+   "last_run": "2026-10-09T15:45:00-04:00",
    "summary": "5 posts queued for Angie's, fidget video plan ready.",
    "weight": 25
   },
@@ -87,7 +87,7 @@
    "pending": 1,
    "blocked": 1,
    "done": 1,
-   "last_run": "2026-10-09T15:46:00-04:00",
+   "last_run": "2026-10-09T15:45:00-04:00",
    "summary": "Shopify connector not attached; research done.",
    "weight": 15
   }
@@ -446,7 +446,7 @@
  "runs": [
   {
    "cycle": "after-school",
-   "started": "2026-10-09T15:46-04:00",
+   "started": "2026-10-09T15:45-04:00",
    "finished": "2026-10-09T15:52-04:00",
    "result": "partial",
    "tasks_run": 9,
@@ -454,7 +454,7 @@
   },
   {
    "cycle": "dawn",
-   "started": "2026-10-09T05:46-04:00",
+   "started": "2026-10-09T05:45-04:00",
    "finished": "2026-10-09T05:51-04:00",
    "result": "ok",
    "tasks_run": 7,

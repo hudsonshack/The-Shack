@@ -3,7 +3,7 @@
 After these steps, everything runs by itself three times a day.
 
 ## 1. Give the Routine its repo and connectors
-The hub runs as a Claude Routine named **The Shack: Director cycle** (05:46, 15:46 and 20:46 New York time). A Routine created from a chat can't carry connectors, so add them once:
+The hub runs as a Claude Routine named **The Shack: Director cycle** (05:45, 15:45 and 20:45 New York time). A Routine created from a chat can't carry connectors, so add them once:
 
 1. Open claude.ai → **Code** → **Routines** (or the Routines list in the Claude app) → **The Shack: Director cycle** → edit.
 2. Add the repository `hudsonshack/The-Shack`.

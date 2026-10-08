@@ -1,6 +1,6 @@
 # Routine start-up (read first)
 
-The Routine "The Shack Operations" runs this at 05:46, 15:46 and 20:46 America/New_York. The repo owner set it up and pre-authorized everything below: committing and pushing to the branch `ops/state`, creating Google Calendar study blocks, scheduling Metricool posts, creating Gmail drafts, reading and updating the quest board database of the world artifact, and republishing the world artifact named in `shack/config.json` → `world.artifact_url`.
+The Routine "The Shack Operations" runs this at 05:45, 15:45 and 20:45 America/New_York. The repo owner set it up and pre-authorized everything below: committing and pushing to the branch `ops/state`, creating Google Calendar study blocks, scheduling Metricool posts, creating Gmail drafts, reading and updating the quest board database of the world artifact, and republishing the world artifact named in `shack/config.json` → `world.artifact_url`.
 
 1. Bootstrap the branch:
    - `git fetch origin`
