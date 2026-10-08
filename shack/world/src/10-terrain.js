@@ -83,7 +83,7 @@
   S.reserve(37, 24, 2, 2);   // planter (square SE)
   S.reserve(25, 13, 3, 3);   // square NW garden
   S.reserve(36, 13, 3, 3);   // square NE garden
-  for (const [x, y] of LAMPS) S.reserve((x / TILE) | 0, ((y - 4) / TILE) | 0, 1, 1);
+  for (const [x, y] of LAMPS) S.reserve((x / TILE) | 0, ((y - 4) / TILE | 0) - 1, 1, 2);
   S.reserve(40, 16, 5, 3);   // pond
   S.reserve(48, 19, 8, 5);   // pumpkin field
 
@@ -505,7 +505,12 @@
         for (let yy = y; yy < y + h; yy += 2) D(c, sx + 1, yy, sh(o.shutter, 0.2));
       }
     }
-    if (o.glow !== false) GLOW.push([x + 1, y + 1, w - 2, h - 2]);
+    if (o.glow !== false) { // lit panes, leaving the muntins dark
+      const mx = x + (w >> 1), my = y + (h >> 1), split = o.muntin !== false;
+      if (!split) GLOW.push([x + 1, y + 1, w - 2, h - 2]);
+      else if (h > 7) GLOW.push([x + 1, y + 1, mx - x - 1, my - y - 1], [mx + 1, y + 1, x + w - mx - 2, my - y - 1], [x + 1, my + 1, mx - x - 1, y + h - my - 2], [mx + 1, my + 1, x + w - mx - 2, y + h - my - 2]);
+      else GLOW.push([x + 1, y + 1, mx - x - 1, h - 2], [mx + 1, y + 1, x + w - mx - 2, h - 2]);
+    }
   }
   function snowCap(c, x, y, w, depth, seed = 0) {
     for (let xx = x; xx < x + w; xx++) {
@@ -1145,7 +1150,7 @@
     R(c, x0, wallTop, x1 - x0, 2, trim); R(c, x0, wallTop + 2, x1 - x0, 1, sh(trim, -0.2));
     R(c, x0, base - 4, x1 - x0, 4, '#8a847c'); R(c, x0, base - 4, x1 - x0, 1, '#b9b2a6');
     // tall windows
-    for (const wx of [x0 + 6, x0 + 22, x1 - 22]) windowPx(c, wx, wallTop + 7, 9, 18, { trim });
+    for (const wx of [x0 + 6, x0 + 22, x1 - 22]) windowPx(c, wx, wallTop + 7, 9, 18, { trim, glow: false });
     // entrance bay with pediment
     const ex0 = 466, ex1 = 494;
     R(c, ex0 - 1, wallTop - 10, ex1 - ex0 + 2, base - wallTop + 10, P.outline);
