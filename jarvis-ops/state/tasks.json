@@ -2,17 +2,134 @@
   "version": 1,
   "updated": "2026-10-08T00:00:00-04:00",
   "goals": [
-    {"id": "G-01", "title": "Never miss a Classroom deadline; study ahead of every test", "agent": "academic-core"},
-    {"id": "G-02", "title": "Track every dollar automatically and grow the three savings goals", "agent": "ledger-fi"},
-    {"id": "G-03", "title": "Run social media clients on autopilot and add new clients", "agent": "social-ops"},
-    {"id": "G-04", "title": "Grow the Shopify store", "agent": "hustle-engine"},
-    {"id": "G-00", "title": "Finish one-time setup so every feed runs by itself", "agent": "hub"}
+    {
+      "id": "G-01",
+      "title": "Never miss a Classroom deadline; study ahead of every test",
+      "agent": "academic-core"
+    },
+    {
+      "id": "G-02",
+      "title": "Track every dollar automatically and grow the three savings goals",
+      "agent": "ledger-fi"
+    },
+    {
+      "id": "G-03",
+      "title": "Run social media clients on autopilot and add new clients",
+      "agent": "social-ops"
+    },
+    {
+      "id": "G-04",
+      "title": "Grow the Shopify store",
+      "agent": "hustle-engine"
+    },
+    {
+      "id": "G-00",
+      "title": "Finish one-time setup so every feed runs by itself",
+      "agent": "hub"
+    }
   ],
   "tasks": [
-    {"id": "T-0001", "agent": "hub", "goal_ref": "G-00", "title": "Forward Google Classroom emails from school Gmail to personal Gmail (see SETUP.md step 2)", "phase": "execute", "priority": 1, "due": "2026-10-10", "autonomy": "human", "verify": {"check": "Academic-Core finds a forwarded Classroom email", "passed": null}, "created": "2026-10-08T00:00:00-04:00", "updated": "2026-10-08T00:00:00-04:00", "notes": ""},
-    {"id": "T-0002", "agent": "hub", "goal_ref": "G-00", "title": "Turn on M&T alerts for every purchase and deposit (see SETUP.md step 3)", "phase": "execute", "priority": 1, "due": "2026-10-10", "autonomy": "human", "verify": {"check": "Ledger-Fi parses at least one M&T alert email", "passed": null}, "created": "2026-10-08T00:00:00-04:00", "updated": "2026-10-08T00:00:00-04:00", "notes": ""},
-    {"id": "T-0003", "agent": "hub", "goal_ref": "G-00", "title": "Merge the setup pull request so scheduled runs use main", "phase": "execute", "priority": 1, "due": "2026-10-09", "autonomy": "human", "verify": {"check": "jarvis-ops/ exists on origin/main", "passed": null}, "created": "2026-10-08T00:00:00-04:00", "updated": "2026-10-08T00:00:00-04:00", "notes": ""},
-    {"id": "T-0004", "agent": "ledger-fi", "goal_ref": "G-02", "title": "Set dollar targets and deadlines for Invest, Car insurance, Apartment fund", "phase": "plan", "priority": 2, "due": null, "autonomy": "human", "verify": {"check": "all savings_goals have target set in config.json", "passed": null}, "created": "2026-10-08T00:00:00-04:00", "updated": "2026-10-08T00:00:00-04:00", "notes": "Tell Claude the numbers, or Ledger-Fi will propose targets from your income after two weeks of data."},
-    {"id": "T-0005", "agent": "social-ops", "goal_ref": "G-03", "title": "Record each client's name and monthly retainer", "phase": "plan", "priority": 2, "due": null, "autonomy": "human", "verify": {"check": "social-ops state lists every Metricool brand with a retainer", "passed": null}, "created": "2026-10-08T00:00:00-04:00", "updated": "2026-10-08T00:00:00-04:00", "notes": "Social-Ops will pull the client list from Metricool on its first run and ask only for the amounts."}
+    {
+      "id": "T-0006",
+      "agent": "hub",
+      "goal_ref": "G-00",
+      "title": "Attach the repo and the Gmail, Google Calendar, Google Drive, Shopify and Metricool connectors to the \"J.A.R.V.I.S. Ops hub cycle\" Routine (see SETUP.md step 1)",
+      "phase": "execute",
+      "priority": 1,
+      "due": "2026-10-08",
+      "autonomy": "human",
+      "verify": {
+        "check": "a cycle runs with all five connectors and pushes to ops/state",
+        "passed": null
+      },
+      "created": "2026-10-08T00:00:00-04:00",
+      "updated": "2026-10-08T00:00:00-04:00",
+      "notes": "Routines created from a chat can't carry connectors; they have to be added in the Routines settings."
+    },
+    {
+      "id": "T-0001",
+      "agent": "hub",
+      "goal_ref": "G-00",
+      "title": "Forward Google Classroom emails from school Gmail to personal Gmail (see SETUP.md step 2)",
+      "phase": "execute",
+      "priority": 1,
+      "due": "2026-10-10",
+      "autonomy": "human",
+      "verify": {
+        "check": "Academic-Core finds a forwarded Classroom email",
+        "passed": null
+      },
+      "created": "2026-10-08T00:00:00-04:00",
+      "updated": "2026-10-08T00:00:00-04:00",
+      "notes": ""
+    },
+    {
+      "id": "T-0002",
+      "agent": "hub",
+      "goal_ref": "G-00",
+      "title": "Turn on M&T alerts for every purchase and deposit (see SETUP.md step 3)",
+      "phase": "execute",
+      "priority": 1,
+      "due": "2026-10-10",
+      "autonomy": "human",
+      "verify": {
+        "check": "Ledger-Fi parses at least one M&T alert email",
+        "passed": null
+      },
+      "created": "2026-10-08T00:00:00-04:00",
+      "updated": "2026-10-08T00:00:00-04:00",
+      "notes": ""
+    },
+    {
+      "id": "T-0003",
+      "agent": "hub",
+      "goal_ref": "G-00",
+      "title": "Merge the setup pull request so scheduled runs use main",
+      "phase": "execute",
+      "priority": 1,
+      "due": "2026-10-09",
+      "autonomy": "human",
+      "verify": {
+        "check": "jarvis-ops/ exists on origin/main",
+        "passed": null
+      },
+      "created": "2026-10-08T00:00:00-04:00",
+      "updated": "2026-10-08T00:00:00-04:00",
+      "notes": ""
+    },
+    {
+      "id": "T-0004",
+      "agent": "ledger-fi",
+      "goal_ref": "G-02",
+      "title": "Set dollar targets and deadlines for Invest, Car insurance, Apartment fund",
+      "phase": "plan",
+      "priority": 2,
+      "due": null,
+      "autonomy": "human",
+      "verify": {
+        "check": "all savings_goals have target set in config.json",
+        "passed": null
+      },
+      "created": "2026-10-08T00:00:00-04:00",
+      "updated": "2026-10-08T00:00:00-04:00",
+      "notes": "Tell Claude the numbers, or Ledger-Fi will propose targets from your income after two weeks of data."
+    },
+    {
+      "id": "T-0005",
+      "agent": "social-ops",
+      "goal_ref": "G-03",
+      "title": "Record each client's name and monthly retainer",
+      "phase": "plan",
+      "priority": 2,
+      "due": null,
+      "autonomy": "human",
+      "verify": {
+        "check": "social-ops state lists every Metricool brand with a retainer",
+        "passed": null
+      },
+      "created": "2026-10-08T00:00:00-04:00",
+      "updated": "2026-10-08T00:00:00-04:00",
+      "notes": "Social-Ops will pull the client list from Metricool on its first run and ask only for the amounts."
+    }
   ]
 }

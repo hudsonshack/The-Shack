@@ -2,8 +2,17 @@
 
 After these steps, everything runs by itself three times a day.
 
-## 1. Merge the setup pull request
-Open the pull request on GitHub and merge it. Scheduled cycles read the system from `main` and write their updates to the `ops/state` branch.
+## 1. Give the Routine its repo and connectors
+The hub runs as a Claude Routine named **J.A.R.V.I.S. Ops hub cycle** (05:46, 15:46 and 20:46 New York time). A Routine created from a chat can't carry connectors, so add them once:
+
+1. Open claude.ai → **Code** → **Routines** (or the Routines list in the Claude app) → **J.A.R.V.I.S. Ops hub cycle** → edit.
+2. Add the repository `hudsonshack/Chi-King-J.A.R.V.I.S`.
+3. Add the connectors **Gmail**, **Google Calendar**, **Google Drive**, **Shopify** and **Metricool**.
+4. Save. Optional: use **Run now** to test it.
+
+Until this is done, cycles still run, but they mark every task that needs a connector as blocked.
+
+Then merge the setup pull request on GitHub. Cycles read the system from `main` (falling back to the setup branch until it's merged) and write their updates to the `ops/state` branch.
 
 ## 2. Forward Google Classroom emails (Academic-Core)
 Your school blocks Claude from opening Google Classroom, but Classroom emails you about every new assignment and due date. Forwarding those emails to your personal Gmail lets Academic-Core read them.

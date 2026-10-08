@@ -9,7 +9,7 @@ A hub-and-spoke team of Claude agents that runs school, money, social media clie
 ## Architecture
 
 ```
-            Claude Routine (05:46 · 15:16 · 20:46 America/New_York)
+            Claude Routine (05:46 · 15:46 · 20:46 America/New_York)
                                   │
                          ┌────────▼────────┐
                          │       HUB       │  plan → verify → execute → verify
