@@ -1,9 +1,9 @@
 {
   "agent": "hustle-engine",
   "phase": "idle",
-  "last_run": "2026-10-08T23:00:00-04:00",
+  "last_run": "2026-10-08T05:50:00-04:00",
   "next_run": null,
-  "summary": "Night cycle (read-only): 0 orders, $0 revenue in 7d. 55 variants at or below 5 units, 12 at zero (Pop It Bracelets E/F/H, Turbo Car Shifter Red/Silver, Spiral w/ Hook L, Fidget Spinners sets 5/6, 4 dumpling buns). Dumpling/butter/popsicle squishies carry placeholder quantities (99,9xx). No research (after-school only).",
+  "summary": "Skipped: maintenance mode, not the night cycle",
   "alerts": [
     {
       "level": "warn",
@@ -34,9 +34,7 @@
     "dm_drafts": 0,
     "world": {
       "bubbles": [
-        "No orders yet - the bazaar is quiet",
-        "12 stalls sold out, 55 shelves running thin",
-        "Placeholder stock counts need real numbers"
+        "Fidgetly on hold"
       ],
       "deliveries": 0,
       "growth": 0

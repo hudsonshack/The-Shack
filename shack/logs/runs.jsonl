@@ -1,2 +1,3 @@
 {"cycle": "night", "started": "2026-10-07T21:59-04:00", "finished": "2026-10-07T21:59-04:00", "result": "partial", "tasks_run": 4, "notes": "No Classroom/M&T/Metricool feeds connected; quest board db not declared; Fidgetly 14 zero-stock variants"}
 {"cycle": "night", "started": "2026-10-07T22:02-04:00", "finished": "2026-10-07T22:02-04:00", "result": "partial", "tasks_run": 4, "notes": "No Classroom/M&T/Metricool networks connected; quest board db not declared; Fidgetly 12 zero-stock, 0 orders"}
+{"cycle": "dawn", "started": "2026-10-08T05:47-04:00", "finished": "2026-10-08T05:47-04:00", "result": "ok", "tasks_run": 0, "notes": "All 4 spokes skipped (empty feeds); quest board empty; Hermes unavailable"}

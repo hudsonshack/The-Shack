@@ -1,9 +1,9 @@
 {
   "agent": "ledger-fi",
   "phase": "idle",
-  "last_run": "2026-10-08",
+  "last_run": "2026-10-08T05:50:00-04:00",
   "next_run": null,
-  "summary": "Night cycle: Gmail searched twice since 2026-10-01 (config query widened to month start, plus broad from:mtb.com/mandtbank.com); 0 threads. Bank feed not connected (T-0002). No amounts guessed. Sender still unconfirmed. Savings targets still unset (T-0004).",
+  "summary": "Skipped: no M&T alert mail this month, not the 1st",
   "alerts": [
     {
       "level": "warn",
