@@ -77,6 +77,7 @@
   S.reserve(6, 13, 9, 7);    // Hudson House Inn + sign
   S.reserve(4, 22, 7, 4);    // inn patio, jetty
   S.reserve(25, 1, 8, 7);    // school + flag + bike rack
+  S.reserve(25, 8, 4, 1);    // school front yard
   S.reserve(35, 1, 5, 9);    // school field
   S.reserve(26, 22, 4, 4);   // planter + benches (square SW)
   S.reserve(37, 24, 2, 2);   // planter (square SE)
@@ -1520,15 +1521,22 @@
     for (let k = 2; k < w; k += 2) R(c, x + k, y - h + 1, 1, h - 1, '#b85a17');
     R(c, x + (w >> 1), y - h - 1, 1, 2, '#4f6a2a');
   }
-  function haybale(c, x, y) {
-    shadow(c, x + 7, y + 1, 7, 2);
-    ell(c, x + 5, y - 5, 6, 5, P.outline);
-    ell(c, x + 5, y - 5, 5, 4, '#d9b24a');
-    ell(c, x + 4, y - 6, 3, 2, '#efd27a');
-    for (let r = 1; r < 4; r++) D(c, x + 5 + r, y - 5, '#a8822a');
-    R(c, x + 5, y - 10, 8, 1, P.outline); R(c, x + 11, y - 9, 2, 9, P.outline);
-    R(c, x + 5, y - 9, 6, 9, '#c9a03a'); R(c, x + 6, y - 8, 4, 1, '#efd27a');
-    if (isWinter()) { R(c, x, y - 11, 13, 2, P.snow); }
+  function haybale(c, x, y, stack) {
+    // square straw bale(s): lit top face, striated front face, two twine bands
+    const one = (bx, by) => {
+      R(c, bx - 1, by - 10, 15, 11, P.outline);
+      R(c, bx, by - 9, 13, 3, '#f0d27a');
+      for (let i = 0; i < 13; i += 2) D(c, bx + i, by - 9, '#fbe6a4');
+      R(c, bx, by - 6, 13, 6, '#d6ac48');
+      for (let i = 0; i < 13; i++) for (let j = 0; j < 6; j++) if (hash(bx + i, by + j, 9) < 0.28) D(c, bx + i, by - 6 + j, (i + j) % 3 ? '#b88d32' : '#e8c45e');
+      R(c, bx, by - 1, 13, 1, '#a07a2a');
+      for (const tx of [bx + 3, bx + 9]) { R(c, tx, by - 9, 1, 9, '#7a5a2a'); }
+      R(c, bx + 12, by - 6, 1, 6, '#a07a2a');
+      if (isWinter()) R(c, bx, by - 10, 13, 2, P.snow);
+    };
+    shadow(c, x + 9, y + 1, 9, 2);
+    one(x, y);
+    if (stack) { shadow(c, x + 15, y + 9, 7, 2); one(x + 7, y + 8); }
   }
   function scarecrow(c, x, y) {
     shadow(c, x + 3, y, 5, 1);
@@ -1608,7 +1616,7 @@
     // fixed features first: orchard, hay, wall
     const orchard = [[58, 18], [61, 18], [57, 21], [60, 21], [63, 21]];
     for (const [tx, ty] of orchard) if (decorOk(tx, ty)) { items.push({ type: 'tree', kind: 4, v: tx % 3, x: tx * TILE + 8, base: ty * TILE + 14 }); mark(tx, ty); mark(tx, ty - 1); mark(tx - 1, ty); mark(tx + 1, ty); }
-    for (const [tx, ty] of [[56, 23], [57, 24]]) if (decorOk(tx, ty)) { items.push({ type: 'hay', x: tx * TILE + 1, base: ty * TILE + 13 }); mark(tx, ty); }
+    for (const [tx, ty, st] of [[56, 23, 1], [59, 24, 0]]) if (decorOk(tx, ty)) { items.push({ type: 'hay', st, x: tx * TILE + 1, base: ty * TILE + 6 }); mark(tx, ty); mark(tx + 1, ty); }
     // riverside willows by the water
     for (const [tx, ty] of [[5, 16], [16, 24]]) if (decorOk(tx, ty) && decorOk(tx, ty - 1)) { items.push({ type: 'willow', x: tx * TILE + 8, base: ty * TILE + 14 }); for (let dx = -1; dx <= 1; dx++) for (let dy = -2; dy <= 0; dy++) mark(tx + dx, ty + dy); }
     // pass 1: trees, clustered into groves by low-frequency noise
@@ -1676,7 +1684,7 @@
       else if (it.type === 'willow') drawSprite(ctx, willowSprite(), it.x, it.base);
       else if (it.type === 'bush') { shadow(ctx, it.x + 3, it.base, 8, 2); drawSprite(ctx, bushSprite(it.v), it.x, it.base); }
       else if (it.type === 'rock') { shadow(ctx, it.x + 2, it.base, 6, 2); drawSprite(ctx, rockSprite(it.v), it.x, it.base); }
-      else if (it.type === 'hay') haybale(ctx, it.x, it.base);
+      else if (it.type === 'hay') haybale(ctx, it.x, it.base, it.st);
     }
   });
 
