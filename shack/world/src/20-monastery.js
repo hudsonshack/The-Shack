@@ -956,16 +956,20 @@
   }
 
   function drawDovecote(ctx, x, y) {
-    // Carrier-bird roost: a little birdhouse on a post (birds from the School land here).
-    groundShadow(ctx, x + 4, y + 1, 5, 2, 0.25);
-    R(ctx, x + 3, y - 12, 2, 13, WOOD.dark); D(ctx, x + 3, y - 12, WOOD.light);
-    R(ctx, x - 1, y - 20, 10, 8, PLAS.base); R(ctx, x - 1, y - 20, 1, 8, PLAS.light); R(ctx, x + 8, y - 20, 1, 8, PLAS.dark);
-    R(ctx, x + 1, y - 17, 2, 3, '#2a1a12'); R(ctx, x + 5, y - 17, 2, 3, '#2a1a12');
-    R(ctx, x - 1, y - 13, 10, 1, WOOD.base);
-    for (let k = 0; k < 4; k++) R(ctx, x - 2 + k, y - 21 - k, 12 - k * 2, 1, k < 2 ? JADE.base : JADE.light);
-    R(ctx, x - 2, y - 21, 12, 1, JADE.dark);
-    if (season() === 'winter') R(ctx, x, y - 24, 8, 2, P.snow);
-    R(ctx, x - 3, y - 13, 1, 1, OUT); R(ctx, x + 10, y - 13, 1, 1, OUT);
+    // Carrier-bird roost: a little dovecote on a post (birds from the School land here).
+    groundShadow(ctx, x + 6, y, 6, 2, 0.25);
+    const spr = cached('dovecote:' + season(), () => build(16, 26, (g) => {
+      R(g, 7, 13, 2, 13, WOOD.base); R(g, 7, 13, 1, 13, WOOD.light); R(g, 5, 24, 6, 2, WOOD.dark);
+      R(g, 2, 7, 12, 8, PLAS.base); R(g, 2, 7, 2, 8, PLAS.light); R(g, 12, 7, 2, 8, PLAS.dark);
+      R(g, 4, 9, 3, 4, '#2a1a12'); R(g, 9, 9, 3, 4, '#2a1a12'); D(g, 4, 9, '#4a3020'); D(g, 9, 9, '#4a3020');
+      R(g, 1, 14, 14, 2, WOOD.base); R(g, 1, 14, 14, 1, WOOD.hi);
+      for (let k = 0; k < 5; k++) R(g, 0 + k, 6 - k, 16 - k * 2, 1, k === 0 ? JADE.deep : k < 3 ? JADE.base : JADE.light);
+      D(g, 0, 5, P.gold); D(g, 15, 5, P.gold);
+      if (season() === 'winter') R(g, 3, 1, 10, 2, P.snow);
+      // A resting carrier dove on the perch.
+      R(g, 11, 12, 3, 2, '#f4f1ea'); D(g, 14, 12, '#f4f1ea'); D(g, 13, 11, '#f4f1ea'); D(g, 14, 11, '#3a2f2a'); D(g, 15, 12, P.gold); D(g, 11, 13, '#c9c3cf');
+    }, OUT));
+    place(ctx, spr, x, y - 26, [2, 1, 0.22]);
   }
 
   function drawFlagPoles(ctx) {

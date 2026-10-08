@@ -468,19 +468,9 @@
    "subject": "Run all cycles from one Routine and document attaching its connectors"
   },
   {
-   "sha": "e4b43f8",
-   "at": "2026-10-08T00:37:08+00:00",
-   "subject": "Replace voice app with J.A.R.V.I.S. Ops hub-and-spoke agent team"
-  },
-  {
    "sha": "d10cf7a",
    "at": "2026-06-15T20:37:01-04:00",
    "subject": "Add mobile connection guide"
-  },
-  {
-   "sha": "9d173a0",
-   "at": "2026-06-15T19:25:34-04:00",
-   "subject": "Initial commit: J.A.R.V.I.S. Live HUD Workstation Companion"
   }
  ],
  "player": {

@@ -50,7 +50,7 @@ def recent_runs(limit=8):
 def recent_commits(limit=8):
     try:
         out = subprocess.run(
-            ["git", "log", f"-{limit}", "--date=iso-strict", "--pretty=format:%h\x1f%ad\x1f%s"],
+            ["git", "log", f"-{limit}", "--date=iso-strict", "--pretty=format:%h\x1f%ad\x1f%s", "--", "shack"],
             cwd=REPO, capture_output=True, text=True, check=True).stdout
     except (subprocess.CalledProcessError, FileNotFoundError):
         return []

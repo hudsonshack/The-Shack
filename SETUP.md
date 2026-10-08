@@ -6,7 +6,7 @@ After these steps, everything runs by itself three times a day.
 The hub runs as a Claude Routine named **The Shack: Director cycle** (05:46, 15:46 and 20:46 New York time). A Routine created from a chat can't carry connectors, so add them once:
 
 1. Open claude.ai → **Code** → **Routines** (or the Routines list in the Claude app) → **The Shack: Director cycle** → edit.
-2. Add the repository `hudsonshack/Chi-King-J.A.R.V.I.S`.
+2. Add the repository `hudsonshack/The-Shack`.
 3. Add the connectors **Gmail**, **Google Calendar**, **Google Drive**, **Shopify** and **Metricool**.
 4. Save. Optional: use **Run now** to test it.
 
@@ -43,8 +43,8 @@ Check: in the world, click Copperpot Mine. Its bank feed reads `connected` after
 Only needed if you also edit this repo on your Mac. Install Git (`xcode-select --install`) if you haven't.
 
 ```sh
-git clone https://github.com/hudsonshack/Chi-King-J.A.R.V.I.S.git
-cd Chi-King-J.A.R.V.I.S
+git clone https://github.com/hudsonshack/The-Shack.git
+cd The-Shack
 sh shack/scripts/install-hooks.sh
 ```
 
@@ -54,6 +54,3 @@ The hooks check state files and block secrets before every commit. They also re-
 These show as **your tasks** on the town-square quest board, where you can tick them off:
 - Savings targets and deadlines for Invest, Car insurance and Apartment fund
 - Angie's monthly retainer
-
-## 6. Optional: rename the GitHub repo
-The repo is still called `Chi-King-J.A.R.V.I.S`. To finish the rename, open GitHub → the repo → **Settings** → **Repository name**, change it (for example to `the-shack`) and save. GitHub redirects the old name, so the Routine keeps working. Then tell Claude so the docs and the Routine prompt use the new name.
