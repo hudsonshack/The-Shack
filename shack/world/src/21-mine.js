@@ -242,10 +242,12 @@
       for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) if (!S.onRoad(tx, ty)) S.reserve(tx, ty);
     };
     S.reserve(40, 25, 24, 4);                      // cliff band (roads stay roads)
+    S.reserve(54, 23, 6, 2);                       // rocky crest above the mine mouth
     rpx(MX0, 464, 70, 176);                        // west canyon floor
     rpx(VAULT.x - 8, VAULT.y, VAULT.w + 24, 70);   // vault, lectern and coins
     rpx(EX - 40, 464, 88, 32);                     // yard by the mouth
     rpx(840, 530, 184, 110);                       // east yard (growth sites)
+    rpx(960, 464, 64, 66);                         // bench, timber stack by the cottage
     // rails off-road (by the square)
     const r = S.nav.rails;
     for (let i = 0; i + 1 < r.length; i++) {
@@ -313,8 +315,9 @@
         const q = v * 3.2 + (bayer(wx, wy) - 0.5) * 0.8 + 0.45;
         let col = fl[clamp(Math.floor(q), 0, 4)];
         if (winter) {
-          const sn = vnoise(wx * 0.05, wy * 0.05, 91) + (bayer(wx, wy) - 0.5) * 0.25;
-          if (sn > 0.42) col = sn > 0.5 ? snow : snowS;
+          let sn = vnoise(wx * 0.08, wy * 0.08, 91) * 0.75 + vnoise(wx * 0.3, wy * 0.3, 92) * 0.25 + (bayer(wx, wy) - 0.5) * 0.18;
+          if (ci >= 0 && ci < NCOL && CBOT[ci] - CTOP[ci] > 4 && wy - CBOT[ci] < 6) sn -= 0.25;
+          if (sn > 0.2) col = sn > 0.27 ? snow : snowS;
         }
         set(i, col);
       }
@@ -366,12 +369,21 @@
         R(ctx, x - 1, y - 1, 3, 2, ramp.base); D(ctx, x - 1, y - 1, ramp.hi); D(ctx, x, y - 1, ramp.light); D(ctx, x + 1, y, ramp.dark);
       }
     }
+    // rubble at the cliff ends by the cutting and the west rim
+    for (const [x, w] of [[646, 7], [CUT0 - 6, 8], [CUT1 + 6, 8]]) talusCone(ctx, x, CBOT[clamp(x - MX0, 0, NCOL - 1)] + 3, w, winter);
     // talus at the cliff foot
     for (let x = MX0 + 4; x < MX1 - 2; x += 3) {
       const i = x - MX0, hh = CBOT[i] - CTOP[i];
       if (hh < 8 || (x >= 884 && x <= 944) || (x >= 958 && x <= 1016) || S.hash(x, 7, 61) < 0.5) continue;
       const y = CBOT[i] + Math.floor(S.hash(x, 8, 61) * 3) - 1, r = 1 + Math.floor(S.hash(x, 9, 61) * 2.4);
       rock(ctx, x, y, r, S.hash(x, 10, 61) > 0.6 ? STRATA.rust : STRATA.sand, winter);
+    }
+  }
+  function talusCone(ctx, x, y, w, winter) {
+    // rubble spilling from a cliff end: a low mound of mixed stones
+    for (let k = 0; k < w * 3; k++) {
+      const dx = Math.round((S.hash(k, x, 62) - 0.5) * w), dy = Math.round(S.hash(k, y, 63) * 4 * (1 - Math.abs(dx) / w));
+      rock(ctx, x + dx, y - dy, 1 + (S.hash(k, 3, 64) > 0.7 ? 1 : 0), S.hash(k, 4, 64) > 0.5 ? STRATA.sand : STRATA.rust, winter);
     }
   }
   function rock(ctx, x, y, r, ramp, winter) {
@@ -418,11 +430,19 @@
       if (!ok(x, y)) continue;
       D(ctx, x, y, tuft[0]); D(ctx, x + 2, y, tuft[0]); D(ctx, x + 1, y - 1, tuft[1]); D(ctx, x, y - 2, tuft[1]); D(ctx, x + 2, y - 1, tuft[1]);
     }
+    // dry scrub bushes
+    const scrub = winter ? ['#6a7068', '#8a928a', '#f4f8fb'] : s === 'autumn' ? ['#6a5a2a', '#9a8434', '#c4a848'] : s === 'spring' ? ['#3e6a2a', '#5e8e3a', '#8ab85a'] : ['#3a5a26', '#527a32', '#76a046'];
+    for (const [x, y] of [[668, 470], [856, 560], [940, 626], [1012, 470], [700, 590], [800, 632], [976, 560], [748, 600]]) {
+      if (!ok(x, y)) continue;
+      groundShadow(ctx, x + 2, y + 1, 4, 1, 0.25);
+      R(ctx, x - 3, y - 2, 7, 3, scrub[0]); R(ctx, x - 2, y - 4, 5, 3, scrub[1]); D(ctx, x - 2, y - 4, scrub[2]); D(ctx, x, y - 5, scrub[2]); D(ctx, x + 2, y - 3, scrub[0]);
+      D(ctx, x - 4, y - 1, scrub[0]); D(ctx, x + 4, y - 1, scrub[0]); D(ctx, x - 1, y - 3, scrub[2]);
+    }
     // boulders, some gold-flecked
-    const boulders = [[662, 486, 6, 0], [690, 560, 5, 1], [654, 622, 7, 0], [702, 612, 4, 1], [1004, 520, 6, 1], [826, 470, 4, 0], [770, 618, 5, 0], [992, 630, 5, 0], [668, 520, 3, 0]];
+    const boulders = [[662, 486, 6, 0], [690, 560, 5, 1], [654, 622, 7, 0], [702, 612, 4, 1], [958, 524, 5, 1], [826, 470, 4, 0], [770, 618, 5, 0], [992, 630, 5, 0], [668, 520, 3, 0]];
     for (const [x, y, r, au] of boulders) boulder(ctx, x, y, r, au, winter);
     // quartz crystal clusters
-    crystals(ctx, 676, 596); crystals(ctx, 1010, 588);
+    crystals(ctx, 676, 596); crystals(ctx, 1012, 624);
   }
   function boulder(ctx, x, y, r, au, winter) {
     groundShadow(ctx, x + 2, y + 1, r + 1, Math.max(1, r >> 1), 0.28);
@@ -563,6 +583,45 @@
     // end grain
     R(g, x, y, 2, h, TIMBER.light); D(g, x, y + (h >> 1), TIMBER.dark);
     R(g, x + w - 2, y, 2, h, TIMBER.light); D(g, x + w - 1, y + (h >> 1), TIMBER.dark);
+  }
+
+  /** A rocky crest rising above the cliff behind the mouth, so the mine reads from afar. */
+  const CREST = { x0: 868, x1: 956, peak: 22 };
+  const crestTop = (x) => {
+    const u = (x - CREST.x0) / (CREST.x1 - CREST.x0);
+    if (u <= 0 || u >= 1) return 402;
+    const hill = Math.pow(Math.sin(u * Math.PI), 0.8) * CREST.peak + (vnoise(x * 0.18, 2.2, 23) - 0.5) * 5 + (u > 0.3 && u < 0.45 ? 3 : 0);
+    return Math.round(402 - hill);
+  };
+  function crest(ctx, s) {
+    const winter = s === 'winter';
+    const gA = winter ? P.snow : P.grass[s], gB = winter ? '#c9d6e2' : P.grassDark[s];
+    for (let x = CREST.x0; x < CREST.x1; x++) {
+      const top = crestTop(x);
+      if (top >= 401) continue;
+      const slope = crestTop(x + 1) - crestTop(x - 1);       // >0 = falling to the right
+      for (let y = top; y <= 403; y++) {
+        const dd = y - top;
+        const yr = y - 400 + 30 + Math.round(2 * Math.sin(x * 0.07));
+        const b = bandAt(clamp(yr, 0, 80)), ramp = BANDS[b].ramp;
+        const facet = Math.floor((x - CREST.x0) / 9 + vnoise(y * 0.15, x * 0.02, 27) * 1.5);
+        const fShade = (facet & 1) ? -0.45 : 0.15;
+        let tv = 1.15 - dd * 0.025 - slope * 0.35 + fShade + (vnoise(x * 0.2, y * 0.2, 24) - 0.5) * 0.6 + (bayer(x, y) - 0.5) * 0.6;
+        let c = ramp[clamp(Math.round(tv), 0, 2)];
+        if (dd === 0) c = winter ? P.snow : '#f2dcac';
+        else if (dd === 1 && slope <= 0) c = ramp[2];
+        if (S.hash(x, 1, 25) > 0.92 && dd > 3 && vnoise(x * 0.5, y * 0.2, 26) > 0.55) c = '#3a1a12';
+        D(ctx, x, y, c);
+      }
+      D(ctx, x, top - 1, '#3a1a12');
+      // grass tufts / snow cap on the crest
+      if (S.hash(x, 2, 25) > 0.6) { D(ctx, x, top - 1, gA); if (S.hash(x, 3, 25) > 0.6) { D(ctx, x, top - 2, gB); D(ctx, x, top - 3, '#2a3a1a'); } }
+      if (winter) D(ctx, x, top + 1, '#e3ecf2');
+    }
+    // a couple of gold specks on the crest
+    for (const [x, y] of [[884, 396], [930, 392], [941, 397]]) { D(ctx, x, y, GOLD.base); D(ctx, x - 1, y - 1, GOLD.hi); D(ctx, x + 1, y, '#2a120c'); }
+    // shadow line where it meets the cliff top
+    for (let x = CREST.x0 + 4; x < CREST.x1 - 4; x++) if (crestTop(x) < 399) D(ctx, x, 404, 'rgba(40,16,10,0.35)');
   }
 
   function mineEntrance(ctx, s) {
@@ -823,8 +882,7 @@
     R(g, x + 6, by - 5, 2, 4, BURLAP.dark);
     if (coins) { D(g, x + 3, by - 10, GOLD.base); D(g, x + 4, by - 10, GOLD.light); D(g, x + 5, by - 10, GOLD.dark); }
     disc(g, x + 4, by - 3, 1, GOLD.dark); D(g, x + 4, by - 3, GOLD.light);
-    // outline
-    for (let y = by - 10; y <= by; y++) { /* auto-outline happens on the sprite */ }
+
   }
 
   function vault(ctx, s) {
@@ -1004,10 +1062,10 @@
 
   function parkedSpur(ctx, s) {
     // short siding on the west canyon floor with two parked ore carts (they never move)
-    const y = 616;
-    drawRails(ctx, [[652, y], [712, y]], s);
-    drawBuffer(ctx, 650, y);
-    for (const cx of [676, 698]) {
+    const y = 618;
+    drawRails(ctx, [[672, y], [730, y]], s);
+    drawBuffer(ctx, 670, y);
+    for (const cx of [694, 716]) {
       groundShadow(ctx, cx + 2, y + 6, 9, 2, 0.28);
       const spr = build(18, 14, (g) => {
         R(g, 1, 2, 16, 9, IRON.base); R(g, 1, 2, 16, 1, IRON.hi); R(g, 0, 2, 1, 9, IRON.dark); R(g, 17, 2, 1, 9, IRON.dark);
@@ -1020,8 +1078,51 @@
     }
   }
 
+  function timberStack(ctx, x, by, winter) {
+    groundShadow(ctx, x + 12, by, 13, 3, 0.25);
+    const spr = build(24, 12, (g) => {
+      for (let row = 0; row < 3; row++) for (let k = 0; k < 3 - row; k++) {
+        const cx = 4 + k * 8 + row * 4, cy = 8 - row * 4;
+        R(g, cx - 4, cy - 3, 8, 7, TIMBER.base); R(g, cx - 4, cy - 3, 8, 1, TIMBER.hi); R(g, cx - 4, cy + 3, 8, 1, TIMBER.dark);
+        disc(g, cx - 4, cy, 3, TIMBER.light); D(g, cx - 4, cy, TIMBER.dark); D(g, cx - 5, cy - 1, TIMBER.hi);
+      }
+      if (winter) { R(g, 6, 0, 10, 1, P.snow); R(g, 0, 4, 6, 1, P.snow); }
+    }, '#21140e');
+    place(ctx, spr, x, by - 12);
+  }
+  function sluice(ctx, x, by, winter) {
+    // a gold sluice box on trestles, riffles full of gravel, and a panning dish leaning on it
+    groundShadow(ctx, x + 14, by, 15, 3, 0.25);
+    const spr = build(30, 16, (g) => {
+      for (const lx of [4, 24]) { R(g, lx, 8 - (lx >> 3), 2, 8 + (lx >> 3), TIMBER.dark); D(g, lx, 8 - (lx >> 3), TIMBER.light); }
+      for (let i = 0; i < 28; i++) {
+        const y = 3 + Math.round(i * 0.18);
+        R(g, i, y, 1, 5, TIMBER.base); D(g, i, y, TIMBER.hi); D(g, i, y + 4, TIMBER.deep);
+        D(g, i, y + 1, (i % 5 === 0) ? TIMBER.dark : '#6e625a'); D(g, i, y + 2, (i % 5 === 0) ? TIMBER.dark : (S.hash(i, 1, 66) > 0.75 ? GOLD.base : '#8a7c72'));
+        D(g, i, y + 3, TIMBER.light);
+      }
+      // gold pan
+      ellipse(g, 24, 12, 5, 3, IRON.dark); ellipse(g, 24, 12, 4, 2, IRON.light); ellipse(g, 24, 12, 2, 1, IRON.base); D(g, 24, 12, GOLD.base); D(g, 25, 13, GOLD.hi); D(g, 22, 11, IRON.hi);
+      if (winter) R(g, 0, 2, 22, 1, P.snow);
+    }, OUT);
+    place(ctx, spr, x, by - 16);
+  }
+  function bench(ctx, x, by, winter) {
+    groundShadow(ctx, x + 8, by, 9, 2, 0.25);
+    const spr = build(18, 9, (g) => {
+      R(g, 0, 2, 18, 3, TIMBER.light); R(g, 0, 2, 18, 1, TIMBER.hi); R(g, 0, 4, 18, 1, TIMBER.dark);
+      R(g, 2, 5, 2, 4, TIMBER.dark); R(g, 14, 5, 2, 4, TIMBER.dark);
+      // a mug and a small sack of ore samples
+      R(g, 3, 0, 3, 2, '#e8e0d0'); D(g, 6, 1, '#e8e0d0'); D(g, 4, 0, '#f6f0e4');
+      R(g, 11, 0, 4, 2, BURLAP.base); D(g, 12, 0, GOLD.base);
+      if (winter) R(g, 7, 2, 4, 1, P.snow);
+    }, OUT);
+    place(ctx, spr, x, by - 9);
+  }
+
   function drawMine(ctx) {
     const s = season(), winter = s === 'winter';
+    crest(ctx, s);
     adit(ctx, s);
     mineEntrance(ctx, s);
     cottage(ctx, s);
@@ -1040,6 +1141,9 @@
     if (GROWTH >= 3) { smelter(ctx, s); parkedSpur(ctx, s); }
     else { barrel(ctx, 960, 600, winter); crate(ctx, 974, 604, 11, 10, winter); }
     if (GROWTH >= 1) oreHeap(ctx, 690, 530, 6, winter);
+    timberStack(ctx, 984, 534, winter);
+    sluice(ctx, 986, 580, winter);
+    bench(ctx, 992, 482, winter);
   }
 
   /* ============================================================ SAVINGS ROW (30) */
@@ -1317,7 +1421,7 @@
       }, '#1e2a1a'), ox: 11, oy: 24 };
     }
     const sc = 0.35 + 0.65 * pct;
-    const W0 = 72, H0 = 74, cx = 36, by = 70;
+    const W0 = 76, H0 = 76, cx = 38, by = 72;
     const trunkH = Math.round(8 + 18 * sc), trunkW = Math.max(2, Math.round(2 + 4 * sc));
     const Rc = Math.round(7 + 18 * sc);
     const ccy = by - trunkH - Math.round(Rc * 0.45);
@@ -1335,28 +1439,40 @@
       // branches
       const bTop = by - trunkH;
       for (let k = 0; k < Math.round(Rc * 0.55); k++) { D(g, cx - 1 - k, bTop - k * 0.8, TIMBER.base); D(g, cx + 1 + k, bTop - k * 0.7, TIMBER.dark); }
-      // canopy blobs (seasonal leaves; winter: dark evergreen with snow)
-      const blobs = [];
+      // canopy: a cluster of lobes, each shaded as a little sphere lit from the top-left
+      const lobes = [];
       const nb = 4 + Math.round(4 * sc);
       for (let k = 0; k < nb; k++) {
-        const a = (k / nb) * Math.PI * 2 + 0.4, rr = Rc * (0.45 + rnd() * 0.15);
-        blobs.push([cx + Math.cos(a) * Rc * 0.5, ccy + Math.sin(a) * Rc * 0.38, rr]);
+        const a = (k / nb) * Math.PI * 2 + 0.5 + rnd() * 0.4, rr = Rc * (0.42 + rnd() * 0.14);
+        lobes.push([cx + Math.cos(a) * Rc * 0.52, ccy + Math.sin(a) * Rc * 0.36, rr]);
       }
-      blobs.push([cx, ccy - Rc * 0.1, Rc * 0.62]);
-      blobs.sort((a, b) => a[1] - b[1]);
-      for (const [x, y, r] of blobs) disc(g, Math.round(x + 1), Math.round(y + 2), Math.round(r), f.dark);
-      for (const [x, y, r] of blobs) disc(g, Math.round(x), Math.round(y), Math.round(r - 1), f.base);
-      for (const [x, y, r] of blobs) disc(g, Math.round(x - r * 0.3), Math.round(y - r * 0.35), Math.max(1, Math.round(r * 0.5)), f.light);
-      // leaf texture: little leaf clusters
-      for (let k = 0; k < Rc * 7; k++) {
-        const a = rnd() * Math.PI * 2, rr = Math.sqrt(rnd()) * Rc * 0.95;
-        const x = Math.round(cx + Math.cos(a) * rr), y = Math.round(ccy + Math.sin(a) * rr * 0.8);
-        const lit = (x - cx) + (y - ccy) < -Rc * 0.25;
-        D(g, x, y, lit ? f.hi : f.dark); D(g, x + 1, y, lit ? f.light : f.base);
+      lobes.push([cx - Rc * 0.1, ccy - Rc * 0.28, Rc * 0.55], [cx + Rc * 0.12, ccy + Rc * 0.05, Rc * 0.58]);
+      const tones = [f.dark, f.base, f.light, f.hi];
+      const x0 = Math.floor(cx - Rc * 1.3), x1 = Math.ceil(cx + Rc * 1.3), y0 = Math.floor(ccy - Rc * 1.1), y1 = Math.ceil(ccy + Rc * 1.0);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        let best = -9;
+        const edge = (S.hash(x, y, 404) - 0.5) * 1.6;
+        for (const [lx, ly, r] of lobes) {
+          const dx = x - lx, dy = y - ly, rr = r + edge;
+          if (dx * dx + dy * dy > rr * rr) continue;
+          const nx = dx / r, ny = dy / r;
+          const l = -(nx * 0.55 + ny * 0.8) + (ccy - ly) / Rc * 0.6 - (nx * nx + ny * ny) * 0.35;
+          if (l > best) best = l;
+        }
+        if (best === -9) continue;
+        const q = best * 1.5 + 1.35 + (bayer(x, y) - 0.5) * 0.7 + (S.hash(x, y, 405) - 0.5) * 0.5;
+        D(g, x, y, tones[clamp(Math.floor(q), 0, 3)]);
       }
-      // alternate-colour leaves sprinkled in
-      for (let k = 0; k < Rc * 2; k++) { const a = rnd() * Math.PI * 2, rr = Math.sqrt(rnd()) * Rc * 0.8; D(g, Math.round(cx + Math.cos(a) * rr), Math.round(ccy + Math.sin(a) * rr * 0.8), f.alt); }
-      if (winter) for (const [x, y, r] of blobs) { const w = Math.round(r * 0.8); R(g, Math.round(x - w), Math.round(y - r + 1), w * 2, 1, P.snow); R(g, Math.round(x - w + 2), Math.round(y - r), w * 2 - 4, 1, P.snow); }
+      // leaf flecks and the alternate leaf colour
+      for (let k = 0; k < Rc * 3; k++) {
+        const a = rnd() * Math.PI * 2, rr = Math.sqrt(rnd()) * Rc * 0.85;
+        const x = Math.round(cx + Math.cos(a) * rr), y = Math.round(ccy + Math.sin(a) * rr * 0.75);
+        const top = (x - cx) + (y - ccy) < -Rc * 0.2;
+        D(g, x, y, top ? f.hi : f.alt); if (!top) D(g, x + 1, y + 1, f.dark);
+      }
+      // a branch fork showing through the lower canopy
+      for (let k = 0; k < Rc * 0.5; k++) { D(g, cx - 1 - Math.round(k * 0.8), by - trunkH - k, TIMBER.dark); D(g, cx + 1 + Math.round(k * 0.6), by - trunkH - k, TIMBER.deep); }
+      if (winter) for (const [x, y, r] of lobes) { const w = Math.round(r * 0.75); R(g, Math.round(x - w), Math.round(y - r + 1), w * 2, 1, P.snow); R(g, Math.round(x - w + 2), Math.round(y - r), Math.max(1, w * 2 - 4), 1, P.snow); }
       // golden fruit (coins) hanging in the lower half of the canopy
       const spots = [];
       let tries = 0;
@@ -1368,8 +1484,8 @@
       }
       for (const [x, y] of spots) {
         D(g, x, y - 2, TIMBER.dark);
-        R(g, x - 1, y - 1, 3, 3, GOLD.base); D(g, x, y - 1, GOLD.light); D(g, x - 1, y - 1, GOLD.hi); D(g, x + 1, y + 1, GOLD.dark); D(g, x, y + 1, GOLD.dark);
-        D(g, x - 2, y, GOLD.deep); D(g, x + 2, y, GOLD.deep); D(g, x, y + 2, GOLD.deep);
+        R(g, x - 2, y - 1, 5, 3, '#4a2c08'); R(g, x - 1, y - 2, 3, 5, '#4a2c08');
+        R(g, x - 1, y - 1, 3, 3, GOLD.base); D(g, x - 1, y - 1, '#ffffff'); D(g, x, y - 1, GOLD.light); D(g, x + 1, y + 1, GOLD.dark); D(g, x, y + 1, GOLD.dark); D(g, x + 1, y, GOLD.dark);
       }
       tree._fruit = spots.map(([x, y]) => [x - cx, y - by]);
       if (pct >= 1) for (let k = 0; k < 5; k++) { const x = cx - 14 + k * 7, y = by + 1; R(g, x, y - 1, 2, 1, GOLD.base); D(g, x, y - 1, GOLD.hi); }
