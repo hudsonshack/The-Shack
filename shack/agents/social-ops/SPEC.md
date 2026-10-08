@@ -12,7 +12,7 @@ In The Shack world this agent is **Lumi**, the creator who runs the Neon Night M
 
 ## Clients (from `config.json → agents.social-ops.clients`)
 - **Angie's** (Cold Spring, NY): a regular client.
-- **The fidget store** (the user's own Shopify): in-house client. The site is live but has **no ads yet**. Short-form video on TikTok, Instagram Reels and YouTube Shorts comes first.
+- **Fidgetly** (the user's own Shopify fidget store, fidgetlystore.myshopify.com): in-house client. The site is live but has **no ads yet**. Short-form video on TikTok, Instagram Reels and YouTube Shorts comes first.
 
 ## Each cycle
 1. **Clients.** Sync `metrics.clients` from Metricool brands: `{name, networks, retainer, paid_through, posts_next_7d}`. `retainer` stays `null` until the user gives it (task T-0005).

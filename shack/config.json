@@ -165,7 +165,7 @@
           "retainer": null
         },
         {
-          "name": "Fidget store (own Shopify)",
+          "name": "Fidgetly (own Shopify store)",
           "type": "in-house",
           "note": "store is set up but has no advertising yet"
         }
@@ -187,7 +187,7 @@
       ],
       "projects": [
         {
-          "name": "Fidget store (Shopify)",
+          "name": "Fidgetly (Shopify)",
           "sells": "fidget toys",
           "status": "site live, no ads yet",
           "kpis": [
@@ -195,7 +195,8 @@
             "revenue/week",
             "conversion rate",
             "low-stock SKUs"
-          ]
+          ],
+          "domain": "fidgetlystore.myshopify.com"
         }
       ],
       "research_loops": [
