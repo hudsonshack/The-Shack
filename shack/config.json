@@ -174,6 +174,12 @@
           "drive": {
             "raw": "135ES_1QnMHb6aOjy9dECt3H4fTubD3Jz",
             "finished": "1vEAQUTHR-L5PeIcie_kZGFGNz65ZpZkc"
+          },
+          "auto_edit": "on: new files in the Raw folder are edited into a finished package on the next cycle",
+          "autopost": {
+            "enabled": true,
+            "owner_approved": false,
+            "note": "Lumi schedules finished posts automatically only after Hudson confirms the owner approved (quest board or chat)."
           }
         },
         {
@@ -229,45 +235,103 @@
   },
   "world": {
     "artifact_url": "https://claude.ai/artifact/EF5JTPV7CQnZa2jJZ6aFnH",
-    "director": {
-      "character": "Mayor Tock",
-      "biome": "square",
-      "look": "clockmaker mayor who keeps the town-square clock tower and rings the cycle bell"
-    },
-    "biomes": {
+    "sound": "off by default, chiptune + sfx toggle",
+    "quest_board": true,
+    "style": "floating islands in starry space",
+    "islands": {
       "square": {
-        "name": "Town Square",
-        "theme": "cobblestone plaza, fountain, clock tower, quest board, mail post"
+        "name": "Clockspire",
+        "agent": "hub",
+        "character": "Mayor Tock",
+        "transport": null,
+        "theme": "cobblestone town square, clock tower, fountain, quest board, mail post, the Chronicle lectern, four docks"
       },
       "monastery": {
-        "name": "Highland Monastery",
+        "name": "Lantern Peak",
         "agent": "academic-core",
-        "theme": "cliffside temple in the Hudson Highlands, stairs, lanterns, study garden"
-      },
-      "mine": {
-        "name": "Copperpot Mine",
-        "agent": "ledger-fi",
-        "theme": "dwarven gold mine canyon, ore veins, minecarts, vault door"
+        "character": "Abbot Quill",
+        "transport": "paper kites and gliders",
+        "theme": "cliffside temple, stone stairs, lanterns, study garden, scroll board"
       },
       "market": {
-        "name": "Neon Night Market",
+        "name": "Neon Hollow",
         "agent": "social-ops",
-        "theme": "lanterns, billboard screens, broadcast tower, posts launch as fireworks"
+        "character": "Lumi",
+        "transport": "neon blimp",
+        "theme": "night market, Angie's stall, Fidgetly promo stall, billboard, broadcast tower, fireworks"
       },
       "port": {
-        "name": "River Port Bazaar",
+        "name": "Spindrift Harbor",
         "agent": "hustle-engine",
-        "theme": "Hudson River docks, cargo ships with orders, crates of fidgets"
+        "character": "Cap'n Twirl",
+        "transport": "sky-ship",
+        "theme": "sky-ship docks, crates of fidgets, bazaar stalls, a river that pours off the island edge"
+      },
+      "mine": {
+        "name": "Copperhold",
+        "agent": "ledger-fi",
+        "character": "Grit Copperpot",
+        "transport": "minecart on a sky-rail",
+        "theme": "dwarven gold mine, vault, three savings crystals (Invest gold, Car insurance blue, Apartment violet)"
       }
     },
-    "landmarks": [
-      "Hudson House Inn (riverside, Friday payday cart to the mine)",
-      "School (Classroom alerts arrive by carrier bird)",
-      "Apartment under construction (Apartment fund)",
-      "Garage with shield (Car insurance)",
-      "Investment tree (Invest)"
+    "real_places": "none in the world (fictional look); real data still drives everything",
+    "ui": {
+      "font": "clean (Atkinson Hyperlegible) with pixel titles",
+      "character_scale": 1.5,
+      "name_tags": "always on",
+      "movement": "bounce + footstep dust"
+    },
+    "space": {
+      "background": "starry space",
+      "extras": [
+        "shooting stars",
+        "ringed planet",
+        "moon in the real phase"
+      ],
+      "islands": [
+        "gentle bobbing",
+        "waterfalls off edges",
+        "hanging roots and crystals"
+      ]
+    }
+  },
+  "hermes": {
+    "enabled": true,
+    "provider": "openrouter",
+    "model": "auto",
+    "key_env": "OPENROUTER_API_KEY",
+    "use_for": [
+      "Quizlet flashcard drafts",
+      "caption and hashtag variations",
+      "DM and email first drafts",
+      "video hook ideas"
     ],
-    "sound": "off by default, chiptune + sfx toggle",
-    "quest_board": true
+    "rule": "Hermes drafts, Claude reviews and decides. Never send Hermes private data (bank details, grades, client contacts)."
+  },
+  "notifications": {
+    "channel": "push",
+    "morning_brief": {
+      "cycle": "dawn",
+      "about": "~6:00 AM, at the end of the dawn cycle"
+    },
+    "urgent": [
+      "deadline within 24 hours",
+      "critical spending alert",
+      "client problem",
+      "unfulfilled order over 48 hours",
+      "cycle failure"
+    ]
+  },
+  "recaps": {
+    "daily": "night cycle",
+    "weekly": "Sunday night cycle",
+    "monthly": "night cycle on the last day of the month",
+    "style": "Mayor Tock's chronicle + stats",
+    "keep": {
+      "daily": 30,
+      "weekly": 12,
+      "monthly": 12
+    }
   }
 }

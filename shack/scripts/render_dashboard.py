@@ -111,6 +111,10 @@ def collect():
         "payday": config["agents"]["ledger-fi"].get("payday", {}),
         "savings_goals": config["agents"]["ledger-fi"].get("savings_goals", []),
         "weights": config.get("priority_weights", {}),
+        "recaps": read_json(OPS / "state" / "recaps.json", {"daily": [], "weekly": [], "monthly": []}),
+        "hermes": {**{k: v for k, v in config.get("hermes", {}).items() if k in ("enabled", "model", "use_for")},
+                   **read_json(OPS / "state" / "hermes.json", {})},
+        "notifications": config.get("notifications", {}),
     }
 
 

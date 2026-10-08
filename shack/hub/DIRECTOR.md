@@ -35,6 +35,8 @@ The Routine prompt already checked out `ops/state`. If validation fails at this 
 
 Note the cycle name: pick the entry in `config.json → cycles` whose `local_time` is closest to the current time in `America/New_York`.
 
+Check Hermes once: `python3 scripts/hermes.py status`, and write the result to `state/hermes.json` as `{"available": ..., "model": ..., "reason": ..., "checked": "<ISO time>"}`. Tell each spoke in its work order whether Hermes is available.
+
 ### 1. Quest board intake
 The world page has a quest board where the user posts requests and checks off their own tasks. They live in the page's database (the `db` capability of the artifact at `config.json → world.artifact_url`). If the `ArtifactData` tool is available (load it with `ToolSearch` → `select:ArtifactData`):
 
@@ -42,8 +44,9 @@ The world page has a quest board where the user posts requests and checks off th
   - Turn it into a task in `state/tasks.json`: pick the owner spoke from its `biome` field (`monastery` → academic-core, `mine` → ledger-fi, `market` → social-ops, `port` → hustle-engine, `square` or empty → the best fit), pick `goal_ref`, `autonomy` and a `verify.check`.
   - `update` the quest: `{status: "accepted", task_id: "T-####", reply: "<one short line in Mayor Tock's voice saying who took it>", updated: <ISO time>}`.
   - A request the rules forbid (spending money, sending DMs) gets `{status: "declined", reply: "<why, one line>"}`.
+- A quest that says Angie's owner approved posting (or anything that clearly means the same) sets `config.json → agents.social-ops.clients[Angie's].autopost.owner_approved` to `true`. Reply confirming that Lumi will now schedule Angie's posts automatically.
 - `list` the collection `checks`. Each document id is a task id the user ticked as done (`{done: true, at}`). Set that task's `phase` to `done` with `verify: {passed: true, evidence: "checked off by the user on the quest board"}`.
-- After step 4, for every quest whose task is now `done`, `update` it to `{status: "done", reply: "<one line on what was delivered and where>"}`.
+- After step 5, for every quest whose task is now `done`, `update` it to `{status: "done", reply: "<one line on what was delivered and where>"}`.
 
 If `ArtifactData` isn't available, skip this step and note "quest board not reachable" in the cycle log.
 
@@ -81,6 +84,9 @@ Read shack/agents/<name>/SPEC.md and shack/agents/REPORT_FORMAT.md and follow th
 Work order for this cycle:
 <work order>
 Write only inside shack/agents/<name>/ and shack/private/<name>/.
+Hermes is <available (model X) | unavailable>. When available, hand bulk drafting to it with
+`python3 shack/scripts/hermes.py draft --task "..." [--input file]` (exit code 3 = do it yourself),
+then review and fix every draft before using it. Never send Hermes bank details, grades or client contacts.
 Do not commit or push. End your reply with the report JSON block.
 ```
 
@@ -95,7 +101,25 @@ For each spoke report:
 - Relay facts between spokes for the next cycle (store them as task notes, never as cross-writes).
 - Run `python3 scripts/validate.py`. Fix anything it flags.
 
-### 6. COMMIT, PUSH, PUBLISH
+### 6. RECAPS
+Recaps live in `state/recaps.json` (lists `daily`, `weekly`, `monthly`, newest first; keep 30 / 12 / 12). Each entry is:
+```json
+{"period": "2026-10-08", "chronicle": "<4-7 sentences in Mayor Tock's voice: warm, a little old-timey, specific>",
+ "stats": {"school": {...}, "money": {...}, "social": {...}, "store": {...}, "system": {"cycles": n, "skipped_spokes": n, "hermes_drafts": n}},
+ "highlights": ["<short real wins>"], "needs_you": ["<short asks>"]}
+```
+- **Daily** (the `night` cycle): what each spoke actually did today, from today's run log, task changes and spoke metrics. Use real numbers only. A quiet day gets a short, honest entry.
+- **Weekly** (the `night` cycle on Sunday, `period` like `2026-W41`): roll up the week's daily entries and show trends.
+- **Monthly** (the `night` cycle on the last day of the month, `period` like `2026-10`): roll up the weeks, with progress on each goal (savings %, deadlines met, posts, orders).
+The world's Chronicle lectern on Clockspire shows these.
+
+### 7. PUSH NOTIFICATIONS
+Use the `PushNotification` tool (load it with `ToolSearch` if it's deferred). If it isn't available, put the text in your final report instead.
+- **Morning brief** (`dawn` cycle, as the very last step): one short push, at most 4 lines: today's deadlines, money in or out since yesterday, Angie's posts today, and the single most important thing that needs Hudson. Skip any line with nothing real to say.
+- **Urgent** (any cycle): push right away for anything in `config.json → notifications.urgent` that is **new this cycle**: a deadline within 24 hours, a critical spending alert, a client problem, an unfulfilled order older than 48 hours, or a failed cycle. Never repeat an urgent push for the same item.
+- Nothing else pushes. Routine progress goes in the recaps and the world.
+
+### 8. COMMIT, PUSH, PUBLISH
 ```bash
 python3 scripts/log_run.py --cycle <name> --result ok|partial|failed --tasks-run <n> --notes "<one line>"
 python3 scripts/render_dashboard.py      # writes dashboard/DASHBOARD.md and world/world.html
@@ -106,7 +130,7 @@ If the push fails on the network, retry up to 4 times (2s, 4s, 8s, 16s).
 
 Then refresh the world page: call the `Artifact` tool with `action: "read"` on `config.json → world.artifact_url`, then `action: "publish"` with `url` set to it and `file_path` set to `shack/world/world.html`. Do not pass `capabilities` (omitting them keeps the page's quest-board database). If the Artifact tool is not available in this session, skip it. `dashboard/DASHBOARD.md` on GitHub is the fallback view.
 
-### 7. Report
+### 9. Report
 End with a compact cycle report and no filler:
 
 | Thread | Result | Tasks touched | Alerts |

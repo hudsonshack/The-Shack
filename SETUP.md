@@ -54,3 +54,19 @@ The hooks check state files and block secrets before every commit. They also re-
 These show as **your tasks** on the town-square quest board, where you can tick them off:
 - Savings targets and deadlines for Invest, Car insurance and Apartment fund
 - Angie's monthly retainer
+
+## 6. Optional: turn on Hermes (saves your Claude usage)
+Hermes is a free AI model from Nous Research. The agents hand it bulk drafting (flashcards, caption variations, hashtags, DM first drafts), then check its work. It runs through OpenRouter.
+
+1. Make a free account at **openrouter.ai** (no card needed for the free models).
+2. In OpenRouter, open **Keys** and create a key. Don't paste it into a chat.
+3. In Claude Code, open the cloud environment menu (the environment name in the session's title bar), then **Edit**:
+   - **Network access:** add `openrouter.ai` under **Allowed domains** and leave **Allow package managers** ticked.
+   - **Environment variables** (or **Network secrets**): add `OPENROUTER_API_KEY` set to your key.
+4. Save. The next cycle checks Hermes and the world shows it as online.
+
+Until this is done, the agents do everything with Claude, as they do now.
+
+## 7. Phone notifications
+The Routine already has push notifications on. Make sure notifications are allowed for the Claude app on your phone, so you get the morning brief (about 6:00 AM) and urgent alerts.
+
