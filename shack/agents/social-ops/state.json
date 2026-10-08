@@ -1,10 +1,15 @@
 {
   "agent": "social-ops",
-  "phase": "uninit",
-  "last_run": null,
+  "phase": "idle",
+  "last_run": "2026-10-08T20:45:00-04:00",
   "next_run": null,
-  "summary": "Waiting for first cycle.",
-  "alerts": [],
+  "summary": "Metricool has no social networks connected; nothing scheduled. Waiting on user to connect networks.",
+  "alerts": [
+    {
+      "level": "warn",
+      "msg": "Metricool brand has no connected networks; connect at https://app.metricool.com/brands/connections?blogId=7176689"
+    }
+  ],
   "metrics": {
     "clients": [],
     "scheduled_posts_7d": 0,
@@ -14,6 +19,12 @@
       "bubbles": [],
       "deliveries": 0,
       "growth": 0
+    },
+    "store_ads": {
+      "videos_planned": 0,
+      "videos_posted_7d": 0,
+      "top_video": null,
+      "link_clicks_7d": 0
     }
   }
 }

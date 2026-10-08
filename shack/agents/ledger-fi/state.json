@@ -1,12 +1,17 @@
 {
   "agent": "ledger-fi",
-  "phase": "uninit",
-  "last_run": null,
+  "phase": "idle",
+  "last_run": "2026-10-08",
   "next_run": null,
-  "summary": "Waiting for first cycle.",
-  "alerts": [],
+  "summary": "Night cycle: searched Gmail for M&T alerts since 2026-10-01 (config query widened to month start); 0 threads found. Alerts not connected (task T-0002 pending). No amounts guessed. Sender not yet confirmed.",
+  "alerts": [
+    {
+      "level": "warn",
+      "msg": "No M&T alert emails found; bank feed not connected. See SETUP.md step 3 (task T-0002)."
+    }
+  ],
   "metrics": {
-    "month": null,
+    "month": "2026-10",
     "month_income": 0,
     "month_spend": 0,
     "categories": [],
@@ -33,7 +38,9 @@
     "anomalies": [],
     "bank_feed": "not connected",
     "world": {
-      "bubbles": [],
+      "bubbles": [
+        "Waiting on the bank alert feed"
+      ],
       "deliveries": 0,
       "growth": 0
     }

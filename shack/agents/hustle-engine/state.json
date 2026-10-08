@@ -1,20 +1,39 @@
 {
   "agent": "hustle-engine",
-  "phase": "uninit",
-  "last_run": null,
+  "phase": "idle",
+  "last_run": "2026-10-08T22:00:00-04:00",
   "next_run": null,
-  "summary": "Waiting for first cycle.",
-  "alerts": [],
+  "summary": "Night cycle: Fidgetly has 22 active products, 0 orders and $0 revenue in 7d. 50 variants at or below 5 units (14 at zero). No research (after-school only).",
+  "alerts": [
+    {
+      "level": "warn",
+      "msg": "50 variants at or below 5 units, 14 at 0 (Viral Dumpling, Fidget Spinners, Pop It Bracelets, Light-Up Key Clickers, Snow Squish Cube)"
+    }
+  ],
   "metrics": {
     "shopify": {
-      "orders_7d": null,
-      "revenue_7d": null,
-      "low_stock": []
+      "orders_7d": 0,
+      "revenue_7d": 0,
+      "low_stock": [
+        "Viral Dumpling Mystery Squishy (14 variants)",
+        "Fidget Spinners (15 sets)",
+        "Pop It Bracelets (5)",
+        "Light-Up Key Clickers (5)",
+        "Snow Squish Cube (2)",
+        "Turbo Car Shifter Red/Silver (0)",
+        "Fidget Spiral with Hook L (0)",
+        "Doughnut Squishy (2)",
+        "Chain Gear iridescent (5)"
+      ],
+      "unfulfilled_over_48h": 0
     },
     "opportunities": [],
     "dm_drafts": 0,
     "world": {
-      "bubbles": [],
+      "bubbles": [
+        "No orders yet - the bazaar is quiet",
+        "Low stock on dumplings and spinners"
+      ],
       "deliveries": 0,
       "growth": 0
     }

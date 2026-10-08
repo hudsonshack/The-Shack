@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-10-08T00:00:00-04:00",
+  "updated": "2026-10-07T22:30:00-04:00",
   "goals": [
     {
       "id": "G-01",
@@ -60,8 +60,8 @@
         "passed": null
       },
       "created": "2026-10-08T00:00:00-04:00",
-      "updated": "2026-10-08T00:00:00-04:00",
-      "notes": ""
+      "updated": "2026-10-07T22:30:00-04:00",
+      "notes": "Cycle 2026-10-07 night: 0 threads found, still pending."
     },
     {
       "id": "T-0002",
@@ -77,8 +77,8 @@
         "passed": null
       },
       "created": "2026-10-08T00:00:00-04:00",
-      "updated": "2026-10-08T00:00:00-04:00",
-      "notes": "Paychecks already direct-deposit every Friday. Only the email alerts are missing."
+      "updated": "2026-10-07T22:30:00-04:00",
+      "notes": "Paychecks already direct-deposit every Friday. Only the email alerts are missing. Cycle 2026-10-07 night: 0 threads found, still pending."
     },
     {
       "id": "T-0003",
@@ -130,6 +130,40 @@
       "created": "2026-10-08T00:00:00-04:00",
       "updated": "2026-10-08T00:00:00-04:00",
       "notes": "Clients: Angie's (Cold Spring, NY) plus your own fidget store."
+    },
+    {
+      "id": "T-0007",
+      "agent": "social-ops",
+      "goal_ref": "G-03",
+      "title": "Connect social networks (Angie's, Fidgetly) in Metricool brand blogId 7176689",
+      "phase": "plan",
+      "priority": 1,
+      "due": "2026-10-09",
+      "autonomy": "human",
+      "verify": {
+        "check": "see title",
+        "passed": null
+      },
+      "created": "2026-10-07T22:30:00-04:00",
+      "updated": "2026-10-07T22:30:00-04:00",
+      "notes": ""
+    },
+    {
+      "id": "T-0008",
+      "agent": "hustle-engine",
+      "goal_ref": "G-04",
+      "title": "Review Fidgetly stock: hide or restock 14 zero-stock variants, fix 99,996 placeholder quantities on Viral Dumpling",
+      "phase": "plan",
+      "priority": 2,
+      "due": "2026-10-10",
+      "autonomy": "human",
+      "verify": {
+        "check": "see title",
+        "passed": null
+      },
+      "created": "2026-10-07T22:30:00-04:00",
+      "updated": "2026-10-07T22:30:00-04:00",
+      "notes": ""
     }
   ]
 }

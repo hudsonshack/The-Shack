@@ -1,17 +1,24 @@
 {
   "agent": "academic-core",
-  "phase": "uninit",
-  "last_run": null,
+  "phase": "idle",
+  "last_run": "2026-10-07T21:59:00-04:00",
   "next_run": null,
-  "summary": "Waiting for first cycle.",
-  "alerts": [],
+  "summary": "No Classroom emails found; feed not connected. T-0001 still pending.",
+  "alerts": [
+    {
+      "level": "warn",
+      "msg": "No Classroom emails found in Gmail (last 14d). Finish SETUP.md step 2 (T-0001) so deadlines can be tracked."
+    }
+  ],
   "metrics": {
     "deadlines": [],
     "study_blocks": [],
     "prep_sets": [],
     "classroom_feed": "not connected",
     "world": {
-      "bubbles": [],
+      "bubbles": [
+        "Abbot Quill waits by the lantern for the first scroll from Classroom."
+      ],
       "deliveries": 0,
       "growth": 0
     }
