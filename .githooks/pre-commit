@@ -5,4 +5,4 @@ git diff --cached --name-only | grep -q '^shack/' || exit 0
 command -v python3 >/dev/null 2>&1 || { echo "pre-commit: python3 not found, skipping The Shack checks" >&2; exit 0; }
 python3 "$ROOT/shack/scripts/validate.py" --staged || exit 1
 python3 "$ROOT/shack/scripts/render_dashboard.py" >/dev/null || exit 1
-git add "$ROOT/shack/dashboard/DASHBOARD.md" "$ROOT/shack/world/world.html"
+git add "$ROOT/shack/dashboard/DASHBOARD.md"

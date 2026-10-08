@@ -1,0 +1,97 @@
+<title>The Shack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Silkscreen&family=VT323&display=swap">
+<style>
+/* Layout: the world map fills the window; a slim pixel HUD floats on top; one drawer slides in from the right
+   (bottom sheet on narrow screens) for whatever you click. Single committed look: night-ink chrome, brass trim. */
+:root {
+  --ink: #15121d;          /* panel ground */
+  --ink-2: #1f1a2b;        /* raised rows */
+  --ink-3: #2c2540;        /* borders, wells */
+  --parch: #f3e8d2;        /* main text */
+  --parch-dim: #b9ad98;    /* secondary text */
+  --brass: #e8b75a;        /* Director / primary accent */
+  --brass-dark: #9c7433;
+  --ok: #8ad17a; --warn: #ffb547; --crit: #ff6b6b;
+  --b-monastery: #86d0b0;  /* jade lantern */
+  --b-mine: #f2c94c;       /* gold */
+  --b-market: #ff5fb0;     /* neon */
+  --b-port: #63b4e6;       /* river */
+  --b-square: #e8b75a;
+  --font-display: "Pixelify Sans", "Silkscreen", ui-monospace, monospace;
+  --font-label: "Silkscreen", "Pixelify Sans", ui-monospace, monospace;
+  --font-data: "VT323", ui-monospace, "SF Mono", Menlo, monospace;
+  --px: 2px;               /* one chunky pixel for borders */
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { margin: 0; background: #0d0b14; color: var(--parch); font: 15px/1.35 var(--font-display); overflow: hidden; }
+* { box-sizing: border-box; }
+#app { position: fixed; inset: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) 0; overflow: hidden; }
+#world { position: absolute; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; cursor: grab; touch-action: none; }
+#world:active { cursor: grabbing; }
+#overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+/* Pixel frame used by every floating surface */
+.pixel-frame {
+  background: var(--ink);
+  border: var(--px) solid var(--ink-3);
+  box-shadow: 0 0 0 var(--px) #0a0810, 0 var(--px) 0 var(--px) #0a0810, inset 0 var(--px) 0 rgba(255,255,255,0.05);
+}
+
+/* Speech bubbles (positioned by the core every frame) */
+.bubble {
+  position: absolute; left: 0; top: 0; max-width: 180px; padding: 3px 7px 4px;
+  font: 13px/1.15 var(--font-display); color: #1b1722; background: #fbf4e4;
+  border: var(--px) solid #1b1722; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  box-shadow: 0 var(--px) 0 rgba(0,0,0,0.35);
+}
+.bubble::after { content: ""; position: absolute; left: calc(50% - 4px); bottom: -6px; width: 6px; height: 6px; background: #fbf4e4; border-right: var(--px) solid #1b1722; border-bottom: var(--px) solid #1b1722; transform: skewX(-30deg); }
+.bubble--warn { background: #ffe3b0; } .bubble--warn::after { background: #ffe3b0; }
+.bubble--critical { background: #ffc4c4; } .bubble--critical::after { background: #ffc4c4; }
+.bubble--quiet { color: #4a4252; }
+
+#tooltip { position: absolute; left: 0; top: 0; padding: 2px 6px; font: 12px/1.3 var(--font-label); color: var(--parch); background: rgba(21,18,29,0.92); border: var(--px) solid var(--ink-3); pointer-events: none; white-space: nowrap; z-index: 5; }
+
+/* HUD */
+#hud { position: absolute; left: 16px; right: 16px; top: 12px; display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; pointer-events: none; z-index: 10; }
+#hud > * { pointer-events: auto; }
+.hud-group { display: flex; align-items: center; gap: 12px; padding: 6px 10px; }
+.hud-title { font: 700 18px/1 var(--font-display); letter-spacing: 0.06em; color: var(--brass); }
+.hud-stat { display: flex; flex-direction: column; gap: 1px; }
+.hud-stat .k { font: 10px/1 var(--font-label); color: var(--parch-dim); letter-spacing: 0.06em; }
+.hud-stat .v { font: 20px/1 var(--font-data); color: var(--parch); }
+.hud-btn {
+  font: 13px/1 var(--font-label); color: var(--parch); background: var(--ink-2); border: var(--px) solid var(--ink-3);
+  padding: 6px 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.hud-btn:hover { border-color: var(--brass-dark); }
+.hud-btn:focus-visible, .panel button:focus-visible, .panel input:focus-visible, .panel textarea:focus-visible, .panel select:focus-visible { outline: var(--px) solid var(--brass); outline-offset: 2px; }
+.hud-btn[aria-pressed="true"] { border-color: var(--brass); color: var(--brass); }
+
+/* Drawer */
+#panel { position: absolute; top: 64px; right: 16px; bottom: 16px; width: min(400px, calc(100% - 32px)); display: flex; flex-direction: column; z-index: 20; overflow: hidden; }
+#panel[hidden] { display: none; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px 10px; border-bottom: var(--px) solid var(--ink-3); }
+.panel-body { padding: 12px 14px 16px; overflow-y: auto; min-height: 0; flex: 1; display: grid; gap: 14px; align-content: start; }
+@media (max-width: 700px) {
+  #panel { top: auto; left: 16px; right: 16px; width: auto; height: 62%; }
+  #hud { flex-wrap: wrap; }
+}
+
+#toast { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); padding: 8px 12px; z-index: 30; font: 14px/1.2 var(--font-display); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div id="app">
+  <canvas id="world" aria-label="The Shack: a pixel world where your four agents live and work"></canvas>
+  <div id="overlay" aria-hidden="true"></div>
+  <div id="tooltip" hidden></div>
+  <header id="hud"></header>
+  <aside id="panel" class="pixel-frame" hidden aria-live="polite"></aside>
+  <div id="toast" class="pixel-frame" hidden role="status"></div>
+</div>
+<script id="shack-data" type="application/json">__SHACK_DATA__</script>
+__SHACK_SCRIPTS__

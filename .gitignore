@@ -30,3 +30,6 @@ desktop.ini
 # The Shack private data (never commit)
 shack/private/*
 !shack/private/README.md
+
+# The Shack world page is built by render_dashboard.py right before publishing
+shack/world/world.html
