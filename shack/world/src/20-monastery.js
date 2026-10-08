@@ -35,6 +35,7 @@
   const SAND = { dark: '#bfae86', base: '#ddd0ad', light: '#efe6cc' };
   const PAPER = '#f5ecd2', INK = '#3a2f2a';
   const FLAG = ['#3a6fd4', '#f1eee4', '#d6402f', '#3c9a5a', '#f0c23e'];
+  const FLAG_DARK = FLAG.map((c) => S.color.shade(c, -0.25));
   const SHADOW_INK = '#140f1e';
 
   /* ------------------------------------------------------- tiny helpers */
@@ -1144,6 +1145,20 @@
     { a: [PAGODA.x + 24, PAGODA.y + 24], b: [TCX - 46, TEMPLE.y + 22], sag: 10, g: 3 },
 ].filter((l) => l.g <= GROWTH);
 
+  // Paper-window rects in world px (temple lattice bays, library moon window, pagoda windows).
+  const WINDOWS = [];
+  {
+    const pillarsAt = [-60, -38, -16, 12, 34, 56].map((o) => 84 + o - 1);
+    for (let k = 0; k + 1 < pillarsAt.length; k++) {
+      if (k === 2) continue;
+      const a = pillarsAt[k] + 5, b = pillarsAt[k + 1];
+      WINDOWS.push([TEMPLE.x + a + 2, TEMPLE.y + 57, b - a - 4, 12]);
+    }
+    for (let k = 0; k < 6; k++) WINDOWS.push([TEMPLE.x + 84 - 30 + k * 10 + 1, TEMPLE.y + 25, 6, 5]);
+    if (GROWTH >= 2) WINDOWS.push([LIBRARY.x + 30, LIBRARY.y + 31, 14, 14], [LIBRARY.x + 13, LIBRARY.y + 37, 6, 12], [LIBRARY.x + 55, LIBRARY.y + 37, 6, 12]);
+    if (GROWTH >= 3) for (const yy of [80, 56, 36]) WINDOWS.push([PAGODA.x + 21, PAGODA.y + yy, 4, 5]);
+  }
+
   let mistSpr = null;
   function mistSprite() {
     if (mistSpr) return mistSpr;
@@ -1198,7 +1213,7 @@
         ctx.fillStyle = col;
         ctx.fillRect(x - 1, y + 1, 3, 3);
         ctx.fillRect(x - 1 + (flut > 0.3 ? 1 : 0), y + 4, 2, 1);
-        ctx.fillStyle = C.shade(col, -0.25);
+        ctx.fillStyle = FLAG_DARK[(f + li) % FLAG.length];
         ctx.fillRect(x + 1, y + 1, 1, 3);
         if (flut > 0.6) ctx.fillRect(x + 2, y + 2, 1, 1);
       }
@@ -1215,11 +1230,11 @@
     ctx.globalAlpha = 1;
     // A red pennant on the temple finial when Abbot Quill's status is critical.
     if ((S.status.monastery || {}).level === 'critical') {
-      const x = TCX, y = TEMPLE.y - 12;
-      R(ctx, x, y, 1, 11, WOOD.dark);
-      const f = rm ? 0 : Math.round(Math.sin(t * 7) * 1);
-      R(ctx, x + 1, y, 5, 2, '#e0322a'); R(ctx, x + 1, y + 2, 3 + f, 1, '#e0322a'); R(ctx, x + 1, y + 2, 1, 1, '#9a1c16');
-      D(ctx, x + 6 + f, y + 1, '#e0322a');
+      const x = TCX, y = TEMPLE.y - 16;
+      R(ctx, x - 1, y, 1, 16, OUT); R(ctx, x, y, 1, 16, WOOD.light); D(ctx, x, y - 1, P.gold);
+      const f = rm ? 0 : Math.round(Math.sin(t * 6) * 1.2);
+      R(ctx, x + 1, y + 1, 7, 2, '#e0322a'); R(ctx, x + 1, y + 3, 5 + f, 2, '#c42620'); R(ctx, x + 1, y + 5, 3, 1, '#9a1c16');
+      D(ctx, x + 8 + f, y + 2, '#e0322a'); D(ctx, x + 2, y + 1, '#ff6a5a');
     }
   });
 
@@ -1245,7 +1260,9 @@
       ctx.globalCompositeOperation = 'lighter';
       ctx.fillStyle = `rgba(255,190,90,${(0.35 * dark).toFixed(3)})`;
       for (const [x, y] of LANTERNS) ctx.fillRect(x - 2, y - 15, 4, 4);
-      ctx.fillRect(TCX - 3, TEMPLE.y + 98, 0, 0);
+      // Warm paper windows of the temple (and library / pagoda when built).
+      ctx.fillStyle = `rgba(255,186,96,${(0.22 * dark).toFixed(3)})`;
+      for (const [x, y, w, h] of WINDOWS) ctx.fillRect(x, y, w, h);
       ctx.globalCompositeOperation = 'source-over';
     }
   });
