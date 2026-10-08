@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-10-07T22:30:00-04:00",
+  "updated": "2026-10-07T22:10:00-04:00",
   "goals": [
     {
       "id": "G-01",
@@ -51,7 +51,7 @@
       "agent": "hub",
       "goal_ref": "G-00",
       "title": "Forward Google Classroom emails from school Gmail to personal Gmail (see SETUP.md step 2)",
-      "phase": "execute",
+      "phase": "blocked",
       "priority": 1,
       "due": "2026-10-10",
       "autonomy": "human",
@@ -60,15 +60,15 @@
         "passed": null
       },
       "created": "2026-10-08T00:00:00-04:00",
-      "updated": "2026-10-07T22:30:00-04:00",
-      "notes": "Cycle 2026-10-07 night: 0 threads found, still pending."
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": "Cycle night: 0 Classroom threads (configured + broad query). Waiting on SETUP.md step 2."
     },
     {
       "id": "T-0002",
       "agent": "hub",
       "goal_ref": "G-00",
       "title": "When ready: connect M&T alerts so Ledger-Fi sees purchases and Friday paychecks (ask Claude for a walkthrough)",
-      "phase": "plan",
+      "phase": "blocked",
       "priority": 3,
       "due": null,
       "autonomy": "human",
@@ -77,8 +77,8 @@
         "passed": null
       },
       "created": "2026-10-08T00:00:00-04:00",
-      "updated": "2026-10-07T22:30:00-04:00",
-      "notes": "Paychecks already direct-deposit every Friday. Only the email alerts are missing. Cycle 2026-10-07 night: 0 threads found, still pending."
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": "Cycle night: 0 M&T alert threads. Waiting on SETUP.md step 3."
     },
     {
       "id": "T-0003",
@@ -111,8 +111,8 @@
         "passed": null
       },
       "created": "2026-10-08T00:00:00-04:00",
-      "updated": "2026-10-08T00:00:00-04:00",
-      "notes": "Tell Claude the numbers, or Ledger-Fi will propose targets from your income after two weeks of data."
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": "Waiting on the user. When Invest gets a target, mention a real brokerage account would be a custodial account opened with a parent."
     },
     {
       "id": "T-0005",
@@ -128,8 +128,8 @@
         "passed": null
       },
       "created": "2026-10-08T00:00:00-04:00",
-      "updated": "2026-10-08T00:00:00-04:00",
-      "notes": "Clients: Angie's (Cold Spring, NY) plus your own fidget store."
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": "Waiting on user for retainer; also blocked by T-0007."
     },
     {
       "id": "T-0007",
@@ -145,15 +145,15 @@
         "passed": null
       },
       "created": "2026-10-07T22:30:00-04:00",
-      "updated": "2026-10-07T22:30:00-04:00",
-      "notes": ""
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": "Metricool brand 7176689 has no connected networks; due 2026-10-09."
     },
     {
       "id": "T-0008",
       "agent": "hustle-engine",
       "goal_ref": "G-04",
       "title": "Review Fidgetly stock: hide or restock 14 zero-stock variants, fix 99,996 placeholder quantities on Viral Dumpling",
-      "phase": "plan",
+      "phase": "execute",
       "priority": 2,
       "due": "2026-10-10",
       "autonomy": "human",
@@ -162,8 +162,42 @@
         "passed": null
       },
       "created": "2026-10-07T22:30:00-04:00",
-      "updated": "2026-10-07T22:30:00-04:00",
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": "Live count 12 zero-stock variants (task said 14); 55 at <=5. Placeholder qty on Dumpling buns, Butter, Popsicle squishies. Read-only; needs real counts from user."
+    },
+    {
+      "id": "T-0009",
+      "agent": "hustle-engine",
+      "goal_ref": "G-04",
+      "title": "Provide real stock counts for placeholder-quantity squishies (Dumpling, Butter, Popsicle) and decide restock for the 12 zero-stock variants",
+      "phase": "plan",
+      "priority": 2,
+      "due": "2026-10-15",
+      "autonomy": "human",
+      "verify": {
+        "check": "Inventory shows real quantities and no sold-out variants are published unintentionally",
+        "passed": null
+      },
+      "created": "2026-10-07T22:10:00-04:00",
+      "updated": "2026-10-07T22:10:00-04:00",
       "notes": ""
+    },
+    {
+      "id": "T-0010",
+      "agent": "social-ops",
+      "goal_ref": "G-03",
+      "title": "Feature healthy-stock Fidgetly products in first content (Pop Tubes, Mini Pop Its, Galaxy Cube, Chain Gear Silver); avoid Pop It Bracelets, Turbo Car Shifter, Spiral w/ Hook L, Spinners",
+      "phase": "plan",
+      "priority": 3,
+      "due": null,
+      "autonomy": "draft",
+      "verify": {
+        "check": "draft caption plan in social-ops outbox",
+        "passed": null
+      },
+      "created": "2026-10-07T22:10:00-04:00",
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": "Relayed by hub from Hustle-Engine; blocked until T-0007 networks connected."
     }
   ]
 }

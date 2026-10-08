@@ -3,7 +3,7 @@
   "phase": "idle",
   "last_run": "2026-10-08T20:45:00-04:00",
   "next_run": null,
-  "summary": "Metricool has no social networks connected; nothing scheduled. Waiting on user to connect networks.",
+  "summary": "Night cycle: Metricool blogId 7176689 still has no connected networks; getScheduledPosts returns 0 posts. Nothing to draft or schedule. Blocked on T-0007 (due 2026-10-09); T-0005 retainer pending.",
   "alerts": [
     {
       "level": "warn",

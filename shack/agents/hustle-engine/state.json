@@ -1,13 +1,13 @@
 {
   "agent": "hustle-engine",
   "phase": "idle",
-  "last_run": "2026-10-08T22:00:00-04:00",
+  "last_run": "2026-10-08T23:00:00-04:00",
   "next_run": null,
-  "summary": "Night cycle: Fidgetly has 22 active products, 0 orders and $0 revenue in 7d. 50 variants at or below 5 units (14 at zero). No research (after-school only).",
+  "summary": "Night cycle (read-only): 0 orders, $0 revenue in 7d. 55 variants at or below 5 units, 12 at zero (Pop It Bracelets E/F/H, Turbo Car Shifter Red/Silver, Spiral w/ Hook L, Fidget Spinners sets 5/6, 4 dumpling buns). Dumpling/butter/popsicle squishies carry placeholder quantities (99,9xx). No research (after-school only).",
   "alerts": [
     {
       "level": "warn",
-      "msg": "50 variants at or below 5 units, 14 at 0 (Viral Dumpling, Fidget Spinners, Pop It Bracelets, Light-Up Key Clickers, Snow Squish Cube)"
+      "msg": "55 variants at or below 5 units, 12 at 0 (Pop It Bracelets, Turbo Car Shifter, Spiral w/ Hook L, Fidget Spinners, Viral Dumpling buns)"
     }
   ],
   "metrics": {
@@ -15,24 +15,28 @@
       "orders_7d": 0,
       "revenue_7d": 0,
       "low_stock": [
-        "Viral Dumpling Mystery Squishy (14 variants)",
-        "Fidget Spinners (15 sets)",
-        "Pop It Bracelets (5)",
-        "Light-Up Key Clickers (5)",
-        "Snow Squish Cube (2)",
+        "Pop It Bracelets E/F/H (0), A-D,G low",
         "Turbo Car Shifter Red/Silver (0)",
         "Fidget Spiral with Hook L (0)",
-        "Doughnut Squishy (2)",
-        "Chain Gear iridescent (5)"
+        "Fidget Spinners sets 5/6 (0), 17 more sets at 1-5",
+        "Viral Dumpling Squishy: 4 buns at 0, ~16 at 1-5",
+        "Light-Up Key Clickers (3-5)",
+        "Snow Squish Cube (2-5)",
+        "Doughnut Squishy (4-5)",
+        "Chain Gear iridescent (5-6)"
       ],
-      "unfulfilled_over_48h": 0
+      "unfulfilled_over_48h": 0,
+      "zero_stock_variants": 12,
+      "low_stock_variants": 55,
+      "placeholder_qty_note": "Dumpling buns ~99,99x, Butter ~1,4xx/1,0xx, Popsicle 200: placeholder quantities, not real stock"
     },
     "opportunities": [],
     "dm_drafts": 0,
     "world": {
       "bubbles": [
         "No orders yet - the bazaar is quiet",
-        "Low stock on dumplings and spinners"
+        "12 stalls sold out, 55 shelves running thin",
+        "Placeholder stock counts need real numbers"
       ],
       "deliveries": 0,
       "growth": 0
