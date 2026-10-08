@@ -582,5 +582,131 @@
   "ledger-fi": 20,
   "hustle-engine": 15
  },
- "sample": true
+ "sample": true,
+ "recaps": {
+  "version": 1,
+  "daily": [
+   {
+    "period": "2026-10-09",
+    "chronicle": "A brisk Friday on the islands. Grit Copperpot hauled your paycheck up the sky-rail before breakfast, $212.40 safe in the vault. Abbot Quill hung a fresh scroll for Friday's biology quiz and set two study lanterns for the afternoon. Over in Neon Hollow, Lumi lined up five posts for Angie's and sketched four fidget video ideas. Cap'n Twirl reports a quiet harbor, but the Infinity cubes are running low.",
+    "stats": {
+     "school": {
+      "deadlines_next_7d": 3,
+      "study_blocks_set": 2,
+      "quizlet_cards": 28
+     },
+     "money": {
+      "income_today": 212.4,
+      "spend_today": 18.75,
+      "month_spend": 318.4
+     },
+     "social": {
+      "posts_scheduled": 5,
+      "drafts": 3
+     },
+     "store": {
+      "orders": 1,
+      "revenue": 15.0
+     },
+     "system": {
+      "cycles": 3,
+      "skipped_spokes": 2,
+      "hermes_drafts": 4
+     }
+    },
+    "highlights": [
+     "Friday paycheck in: $212.40",
+     "Biology Quizlet set ready (28 cards)"
+    ],
+    "needs_you": [
+     "Film 2 fidget clips this weekend"
+    ]
+   },
+   {
+    "period": "2026-10-08",
+    "chronicle": "Thursday was shoot day at Angie's. The footage reached the harbor of my inbox by evening, and Lumi has already turned it into three reels and a carousel for you to show the owner. A quiet day for the vault and the monastery otherwise.",
+    "stats": {
+     "school": {
+      "deadlines_next_7d": 3,
+      "study_blocks_set": 1,
+      "quizlet_cards": 0
+     },
+     "money": {
+      "income_today": 0,
+      "spend_today": 9.5,
+      "month_spend": 299.65
+     },
+     "social": {
+      "posts_scheduled": 0,
+      "drafts": 3,
+      "reels_edited": 3
+     },
+     "store": {
+      "orders": 0,
+      "revenue": 0
+     },
+     "system": {
+      "cycles": 3,
+      "skipped_spokes": 4,
+      "hermes_drafts": 6
+     }
+    },
+    "highlights": [
+     "Angie's sample package: 3 reels, 10 photos"
+    ],
+    "needs_you": [
+     "Show the package to Angie's owner"
+    ]
+   }
+  ],
+  "weekly": [
+   {
+    "period": "2026-W41",
+    "chronicle": "Our first full week aloft. Every deadline met, one paycheck banked, the first Angie's package delivered. Fidgetly sleeps while we focus on the client.",
+    "stats": {
+     "school": {
+      "deadlines_met": 4,
+      "deadlines_missed": 0,
+      "study_hours": 5.5
+     },
+     "money": {
+      "income": 642.5,
+      "spend": 318.4,
+      "saved": 180
+     },
+     "social": {
+      "posts": 7,
+      "reels": 3
+     },
+     "store": {
+      "orders": 6,
+      "revenue": 94.5
+     },
+     "system": {
+      "cycles": 19,
+      "skipped_spokes": 31,
+      "hermes_drafts": 22
+     }
+    },
+    "highlights": [
+     "All deadlines met",
+     "First client package done"
+    ],
+    "needs_you": [
+     "Set savings targets"
+    ]
+   }
+  ],
+  "monthly": []
+ },
+ "hermes": {
+  "enabled": true,
+  "model": "auto",
+  "available": false,
+  "reason": "OPENROUTER_API_KEY is not set in the environment",
+  "use_for": [
+   "Quizlet flashcard drafts",
+   "caption and hashtag variations"
+  ]
+ }
 }
