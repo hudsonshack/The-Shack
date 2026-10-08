@@ -169,6 +169,7 @@
     [122, 120, 'pine', 14, 15], [404, 140, 'pine', 13, 16], [384, 232, 'maple', 20, 17], [100, 136, 'maple', 16, 18],
   ];
   if (GROWTH < 3) TREES.push([140, 96, 'maple', 22, 19], [160, 128, 'maple', 16, 20]);
+  if (GROWTH < 1) TREES.push([370, 104, 'maple', 20, 21], [352, 128, 'pine', 12, 22]);
 
   /* ----------------------------------------------------- reserve tiles */
   (function reserveAll() {
@@ -980,7 +981,7 @@
       R(ctx, p.x, p.y - p.h, 2, p.h, WOOD.base); R(ctx, p.x, p.y - p.h, 1, p.h, WOOD.hi); D(ctx, p.x, p.y - p.h - 1, P.gold);
     }
   }
-  const POLES = [{ x: 168, y: 140, h: 34, g: 0 }, { x: 397, y: 145, h: 26, g: 2 }, { x: 289, y: 145, h: 26, g: 2 }];
+  const POLES = [{ x: 168, y: 140, h: 34, g: 9 }, { x: 397, y: 145, h: 26, g: 2 }, { x: 289, y: 145, h: 26, g: 2 }];
 
   /* ======================================================== STATIC (20) */
   function drawBuildings(ctx) {
@@ -1007,8 +1008,20 @@
     items.push({ y: 116, f: () => place(ctx, rockSprite(1301, 12, 8), 106, 108, [2, 1, 0.3]) });
     items.push({ y: 204, f: () => place(ctx, rockSprite(1302, 9, 6), 232, 198, [2, 1, 0.3]) });
     if (GROWTH < 3) items.push({ y: 112, f: () => stele(ctx, 152, 112) });
+    if (GROWTH === 1) items.push({ y: 120, f: () => footings(ctx) });
     items.sort((a, b) => a.y - b.y);
     for (const it of items) it.f();
+  }
+
+  function footings(ctx) {
+    // Growth 1: the library wing is staked out: stone footings and a timber stack.
+    for (let k = 0; k < 5; k++) for (const yy of [92, 120]) {
+      const x = 344 + k * 13;
+      R(ctx, x, yy, 6, 4, STONE.base); R(ctx, x, yy, 6, 1, STONE.hi); R(ctx, x, yy + 3, 6, 1, STONE.deep);
+    }
+    S.px.line(ctx, 346, 96, 398, 96, '#d8c79a'); S.px.line(ctx, 346, 96, 346, 120, '#d8c79a'); S.px.line(ctx, 398, 96, 398, 120, '#d8c79a');
+    groundShadow(ctx, 372, 112, 12, 2, 0.25);
+    for (let k = 0; k < 3; k++) { R(ctx, 360 + k, 104 + k * 3, 24 - k * 2, 3, WOOD.base); R(ctx, 360 + k, 104 + k * 3, 24 - k * 2, 1, WOOD.hi); D(ctx, 360 + k, 105 + k * 3, WOOD.deep); }
   }
 
   function stele(ctx, x, y) {
@@ -1124,12 +1137,12 @@
 
   // 400: incense smoke, prayer flags, mist on the cliffs, critical pennant.
   const FLAGLINES = [
-    { a: [POLES[0].x + 1, POLES[0].y - POLES[0].h], b: [TCX - 79, TEMPLE.y + 52], sag: 7, g: 0 },
-    { a: [TCX + 47, TEMPLE.y + 21], b: [366, 30], sag: 9, g: 1 },
+    { a: [TCX + 47, TEMPLE.y + 21], b: [366, 30], sag: 9, g: 0 },
+    { a: [PAVILION.x + 25, PAVILION.y + 1], b: [TCX - 79, TEMPLE.y + 52], sag: 7, g: 1 },
     { a: [TCX - 46, TEMPLE.y + 21], b: [178, 34], sag: 4, g: 2 },
     { a: [POLES[2].x + 1, POLES[2].y - POLES[2].h], b: [POLES[1].x + 1, POLES[1].y - POLES[1].h], sag: 5, g: 2 },
-    { a: [PAGODA.x + 23, PAGODA.y + 20], b: [PAVILION.x + 25, PAVILION.y + 1], sag: 8, g: 3 },
-  ].filter((l) => l.g <= GROWTH);
+    { a: [PAGODA.x + 24, PAGODA.y + 24], b: [TCX - 46, TEMPLE.y + 22], sag: 10, g: 3 },
+].filter((l) => l.g <= GROWTH);
 
   let mistSpr = null;
   function mistSprite() {
@@ -1167,9 +1180,9 @@
     for (let li = 0; li < FLAGLINES.length; li++) {
       const L = FLAGLINES[li];
       const [ax, ay] = L.a, [bx, by] = L.b;
-      const len = Math.max(Math.abs(bx - ax), 1);
+      const len = Math.max(Math.hypot(bx - ax, by - ay), 1);
       const sag = L.sag + (rm ? 0 : Math.sin(t * 0.9 + li) * 0.8);
-      const steps = Math.ceil(len);
+      const steps = Math.ceil(Math.max(Math.abs(bx - ax), Math.abs(by - ay), 1));
       ctx.fillStyle = '#4a3a30';
       let prev = null;
       for (let i = 0; i <= steps; i++) {
