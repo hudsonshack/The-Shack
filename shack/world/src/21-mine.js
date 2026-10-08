@@ -186,6 +186,8 @@
   const GAR = { x: 494, y: 578, w: 72, h: 54 };
   const TREE = { x: 606, base: 600 };
 
+  const RAILS = (S.nav && Array.isArray(S.nav.rails) ? S.nav.rails : []).filter((p) => Array.isArray(p) && p.length === 2);
+
   /* --------------------------------------------------- cliff profile */
   const NCOL = MX1 - MX0;
   const CTOP = new Int16Array(NCOL), CBOT = new Int16Array(NCOL);
@@ -249,7 +251,7 @@
     rpx(840, 530, 184, 110);                       // east yard (growth sites)
     rpx(960, 464, 64, 66);                         // bench, timber stack by the cottage
     // rails off-road (by the square)
-    const r = S.nav.rails;
+    const r = RAILS;
     for (let i = 0; i + 1 < r.length; i++) {
       const [x0, y0] = r[i], [x1, y1] = r[i + 1];
       for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) S.reserve(x, y);
@@ -445,17 +447,31 @@
     crystals(ctx, 676, 596); crystals(ctx, 1012, 624);
   }
   function boulder(ctx, x, y, r, au, winter) {
-    groundShadow(ctx, x + 2, y + 1, r + 1, Math.max(1, r >> 1), 0.28);
-    const spr = build(r * 2 + 2, r * 2, (g) => {
-      ellipse(g, r + 1, r, r + 1, r - 1, STRATA.rust[0]);
-      ellipse(g, r, r - 1, r, r - 2, STRATA.ochre[1]);
-      ellipse(g, r - 1, r - 2, Math.max(1, r - 2), Math.max(1, r - 3), STRATA.ochre[2]);
-      D(g, r - 2, 1, STRATA.cream[2]); D(g, r - 1, 1, STRATA.cream[2]);
-      dith(g, r + 1, r, r, r - 1, STRATA.rust[1], 1);
-      if (au) { D(g, r + 1, r - 1, GOLD.base); D(g, r + 2, r, GOLD.dark); D(g, r - 2, r + 1, GOLD.base); D(g, r - 3, r - 2, GOLD.hi); }
-      if (winter) R(g, r - 2, 0, r + 1, 1, P.snow);
+    // faceted sandstone rock: lit top facet, front face, shaded right flank, a crack
+    groundShadow(ctx, x + 2, y + 1, r + 2, Math.max(1, r >> 1), 0.28);
+    const w = r * 2 + 2, h = Math.round(r * 1.6) + 2;
+    const spr = build(w, h, (g) => {
+      const topH = Math.max(2, Math.round(h * 0.38));
+      for (let yy = 0; yy < h; yy++) {
+        const inset = yy < topH ? Math.max(0, Math.round((topH - yy) * 1.2) - 1) : yy > h - 2 ? 1 : 0;
+        const skew = Math.round((S.hash(x, yy, 67) - 0.5) * 1.2);
+        const x0 = inset + (yy < topH ? skew : 0), x1 = w - inset - (yy < 2 ? 1 : 0);
+        for (let xx = x0; xx < x1; xx++) {
+          let c;
+          if (yy < topH) c = xx < w * 0.6 ? STRATA.cream[2] : STRATA.cream[1];
+          else if (xx > w * 0.68) c = STRATA.rust[0];
+          else c = (yy === topH) ? STRATA.ochre[2] : STRATA.ochre[1];
+          if (yy >= topH && xx <= w * 0.68 && ((xx + yy) & 1) && yy > h * 0.7) c = STRATA.ochre[0];
+          D(g, xx, yy, c);
+        }
+      }
+      // crack across the front
+      const cx0 = Math.round(w * 0.3);
+      for (let k = 0; k < Math.round(h * 0.5); k++) D(g, cx0 + (k >> 1), Math.round(h * 0.45) + k, STRATA.deep[0]);
+      if (au) { D(g, Math.round(w * 0.45), Math.round(h * 0.55), GOLD.base); D(g, Math.round(w * 0.45) - 1, Math.round(h * 0.55) - 1, GOLD.hi); D(g, Math.round(w * 0.2), Math.round(h * 0.75), GOLD.base); }
+      if (winter) R(g, 1, 0, w - 3, Math.max(1, Math.round(h * 0.3)), P.snow);
     }, '#3a1a12');
-    place(ctx, spr, x - r, y - r * 2 + 1);
+    place(ctx, spr, x - r - 1, y - h + 1);
   }
   function crystals(ctx, x, y) {
     groundShadow(ctx, x + 2, y + 1, 6, 2, 0.25);
@@ -508,7 +524,7 @@
       else { const a = Math.min(sg.y0, sg.y1), b = Math.max(sg.y0, sg.y1); for (let y = a + 1; y < b - 1; y += 5) tieV(sg.x0, y); }
     }
     for (const a of arcs) for (const th of [0.2, 0.55, 0.9, 1.25]) {
-      for (let o = -6; o <= 6; o += 0.5) { const [x, y, ux, uy] = arcPoint(a, th, o); D(ctx, x, y, o < -5 ? RAIL.tieL : RAIL.tieB); D(ctx, x - uy * 0 + (Math.abs(ux) > 0.5 ? 0 : 0), y, RAIL.tieB); }
+      for (let o = -6; o <= 6; o += 0.5) { const [x, y] = arcPoint(a, th, o); D(ctx, x, y, o < -5 ? RAIL.tieL : RAIL.tieB); }
       for (let o = -6; o <= 6; o += 0.5) { const [x, y] = arcPoint(a, th + 0.09, o); D(ctx, x, y, RAIL.tieD); }
     }
     // rails
@@ -872,8 +888,7 @@
     R(g, x, ty, 5, 1, GOLD.light); D(g, x + 1, ty, GOLD.hi);
     R(g, x - 1, ty, 1, n * 2 + 1, GOLD.deep); R(g, x + 5, ty, 1, n * 2 + 1, GOLD.deep); R(g, x, ty - 1, 5, 1, GOLD.deep);
   }
-  function sack(g, x, by, coins) {
-    // burlap money sack, 9x10
+  function sack(g, x, by, coins) { // burlap money sack, 9x10
     ellipse(g, x + 4, by - 3, 4, 3, BURLAP.base);
     R(g, x + 1, by - 6, 7, 4, BURLAP.base);
     R(g, x + 2, by - 9, 5, 3, BURLAP.base);
@@ -972,7 +987,7 @@
     // spill outside: piles, sacks and loose coins (scaled by this month's income)
     if (INCOME > 0) {
       const outside = build(56, 22, (g) => {
-        if (coinF > 0.3) { const hw = Math.round(4 + 10 * (coinF - 0.3)), hh = Math.round(2 + 6 * (coinF - 0.3)); coinMound(g, 14, 19, hw, hh); }
+        if (coinF > 0.3) { const hw = Math.round(5 + 12 * (coinF - 0.3)), hh = Math.round(3 + 8 * (coinF - 0.3)); coinMound(g, 14, 19, hw, hh); }
         const sacks = Math.min(4, Math.floor(coinF * 4.4));
         for (let k = 0; k < sacks; k++) sack(g, 26 + k * 8, 20 - (k & 1), true);
         if (coinF > 0.8) {
@@ -980,7 +995,7 @@
         }
         const loose = Math.round(coinF * 12);
         for (let k = 0; k < loose; k++) { const x = 2 + Math.floor(S.hash(k, 1, 55) * 50), y = 17 + Math.floor(S.hash(k, 2, 55) * 4); R(g, x, y, 2, 1, GOLD.base); D(g, x, y, GOLD.hi); D(g, x + 1, y + 1, GOLD.deep); }
-      }, null);
+      }, '#4a2c08');
       ctx.globalAlpha = 0.22; ctx.drawImage(outside.sil || (outside.sil = silhouette(outside)), VX + 6, VY + VH - 9); ctx.globalAlpha = 1;
       ctx.drawImage(outside, VX + 4, VY + VH - 11);
     }
@@ -1542,13 +1557,13 @@
   S.registerStatic(6, (ctx) => drawGround(ctx));
   S.registerStatic(12, (ctx) => {
     const s = season();
-    const pts = S.nav.rails.map(([x, y]) => [x * T + 8, y * T + 8]);
-    drawRails(ctx, pts, s);
+    const pts = RAILS.map(([x, y]) => [x * T + 8, y * T + 8]);
+    if (pts.length > 1) drawRails(ctx, pts, s);
     // spur from the turntable into the mine mouth
     drawRails(ctx, [[TURN.x, TURN.y], [EX, TURN.y], [EX, 462]], s);
     drawTurntable(ctx, TURN.x, TURN.y);
     const w = pts[pts.length - 1];
-    drawBuffer(ctx, w[0] - 2, w[1]);
+    if (w) drawBuffer(ctx, w[0] - 2, w[1]);
   });
   S.registerStatic(21, (ctx) => drawMine(ctx));
   S.registerStatic(30, (ctx) => drawSavings(ctx));

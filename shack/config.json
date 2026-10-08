@@ -24,9 +24,9 @@
   ],
   "priority_weights": {
     "academic-core": 40,
-    "social-ops": 25,
+    "social-ops": 35,
     "ledger-fi": 20,
-    "hustle-engine": 15
+    "hustle-engine": 5
   },
   "autonomy": {
     "profile": "aggressive",
@@ -176,8 +176,10 @@
           "Instagram Reels",
           "YouTube Shorts"
         ],
-        "goal": "first ads and organic short-form content for the fidget store"
-      }
+        "goal": "first ads and organic short-form content for the fidget store",
+        "status": "paused"
+      },
+      "focus": "Angie's first. Fidgetly promotion is paused until Hudson decides to restart it."
     },
     "hustle-engine": {
       "label": "Hustle-Engine",
@@ -205,7 +207,9 @@
       "outreach_channel": "instagram-facebook-dm-drafts",
       "character": "Cap'n Twirl",
       "biome": "port",
-      "look": "a harbor merchant captain who is never without a fidget spinner"
+      "look": "a harbor merchant captain who is never without a fidget spinner",
+      "mode": "maintenance",
+      "maintenance": "Fidgetly is on hold. Night cycle only: store pulse (orders, unfulfilled orders, stock problems). No research loops, no ad prep, no DMs."
     }
   },
   "player": {
