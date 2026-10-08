@@ -9,13 +9,15 @@
  *   gesture (the HUD Sound button calls toggle() from a click). A remembered
  *   "on" preference arms the audio, which then starts on the first click or
  *   key press anywhere on the page.
- * - One ambient loop per biome, chosen from the biome under the camera centre
- *   (checked once a second) and crossfaded:
- *     square    a gentle town waltz (3/4, triangle bass, pulse melody, clock chimes)
- *     monastery slow pentatonic temple bells with long decay over a singing-bowl drone
- *     mine      bouncy square bass, pickaxe clinks and thumps, a whistled dwarf tune
- *     market    synthwave arpeggio with a soft detuned pad, kick and clap
- *     port      a 6/8 sea shanty on triangle, squeezebox blips, filtered-noise waves
+ * - One ambient loop per island, chosen from the island under the camera centre
+ *   (S.biomeAt, checked once a second) and crossfaded:
+ *     square    Clockspire: a gentle town waltz (3/4, triangle bass, pulse melody, clock chimes)
+ *     monastery Lantern Peak: slow pentatonic temple bells with long decay over a singing-bowl drone
+ *     mine      Copperhold: bouncy square bass, pickaxe clinks and thumps, a whistled dwarf tune
+ *     market    Neon Hollow: synthwave arpeggio with a soft detuned pad, kick and clap
+ *     port      Spindrift Harbor: a 6/8 sky shanty on triangle, squeezebox blips, filtered-noise waves
+ *     void      open space between the islands: a soft, slow Lydian pad, far-off
+ *               star pings and a faint cosmic wind
  * - Notes are placed on the audio clock by a lookahead scheduler (a 40 ms timer
  *   schedules everything in the next 300 ms at exact AudioContext times), so
  *   timer jitter never reaches the rhythm.
@@ -277,6 +279,10 @@
   const K_BASS = [45, 41, 48, 43];
   const K_ARP = [0, 1, 2, 3, 4, 3, 2, 1, 0, 2, 4, 2, 1, 3, 4, 3];
 
+  // Space: slow Lydian pad, one chord per 4 beats (D, Bbmaj7, Gmaj7, Asus), with star pings.
+  const V_PAD = [[50, 57, 64, 66, 69], [46, 53, 62, 65, 69], [43, 50, 59, 62, 66], [45, 52, 59, 64, 71]];
+  const V_STARS = [74, 76, 78, 81, 83, 86, 88, 90, 93];
+
   // Port: D dorian shanty in 6/8, eighth steps, 6 per bar, 8 bars.
   const P_ROOT = [38, 38, 36, 36, 38, 34, 36, 38];
   const P_CHORD = [[57, 62, 65], [57, 62, 65], [55, 60, 64], [55, 60, 64], [57, 62, 65], [58, 62, 65], [55, 60, 64], [57, 62, 65]];
@@ -399,9 +405,55 @@
         if (bar === 7 && pos === 3 && loop % 2 === 1) { bell(tr.wet, mf(81), t, 0.04, 2.2, CHIME_PARTS); bell(tr.wet, mf(81), t + sd * 0.8, 0.035, 2.4, CHIME_PARTS); }
       },
     },
+    {
+      id: 'void', trim: 1.9, bpm: 40, spb: 2, len: 32, swing: 0, rev: 0.85, echo: [0.75, 0.42, 0.38],
+      onStart(t, tr) { startWind(tr, t); },
+      onStop(t, tr) { stopWind(tr, t); },
+      step(s, t, sd, loop, tr) {
+        const bar = Math.floor(s / 8), pos = s % 8;
+        // the pad: detuned sine pairs that swell in and out, overlapping the next chord
+        if (pos === 0) {
+          const dur = sd * 8;
+          V_PAD[bar].forEach((m, k) => {
+            for (const det of [-7, 6]) note(tr.dry, { w: 'sine', f: mf(m), det, t: t + k * 0.06, d: dur * 0.9, v: k === 0 ? 0.04 : 0.026, a: dur * 0.38, r: dur * 0.55 });
+          });
+          note(tr.dry, { w: 'triangle', f: mf(V_PAD[bar][0] - 12), t, d: dur * 0.95, v: 0.05, a: dur * 0.3, r: dur * 0.5, lp: 380 });
+        }
+        // far-off star pings: soft sines into the long echo
+        if (pos % 2 === 1 && Math.random() < 0.32) {
+          const m = pick(V_STARS) + (Math.random() < 0.2 ? 12 : 0);
+          bell(tr.wet, mf(m), t + rand(0, sd * 0.5), 0.022, rand(2.2, 3.4), CHIME_PARTS);
+        }
+      },
+    },
   ];
 
-  /** River waves: looping noise, lowpassed, swelling with a slow LFO. */
+  /** Cosmic wind for the space pad: very quiet lowpassed noise breathing slowly. */
+  function startWind(tr, t) {
+    stopWind(tr, t);
+    const s = ac.createBufferSource();
+    s.buffer = G.noise; s.loop = true;
+    const f = ac.createBiquadFilter();
+    f.type = 'bandpass'; f.frequency.value = 700; f.Q.value = 0.9;
+    const g = gain(0);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.012, t + 4);
+    const lfo = ac.createOscillator();
+    lfo.frequency.value = 0.05;
+    const lfoAmp = gain(0.009), lfoCut = gain(380);
+    lfo.connect(lfoAmp); lfoAmp.connect(g.gain);
+    lfo.connect(lfoCut); lfoCut.connect(f.frequency);
+    s.connect(f); f.connect(g); g.connect(tr.dry);
+    s.start(t, Math.random()); lfo.start(t);
+    tr.state.wind = [s, lfo];
+  }
+  function stopWind(tr, t) {
+    if (!tr.state.wind) return;
+    for (const n of tr.state.wind) { try { n.stop(t + 0.05); } catch (e) { /* already stopped */ } }
+    tr.state.wind = null;
+  }
+
+  /** Harbour waves: looping noise, lowpassed, swelling with a slow LFO. */
   function startWaves(tr, t) {
     stopWaves(tr, t);
     const s = ac.createBufferSource();
@@ -470,12 +522,14 @@
 
   /* ---------------------------------------------------- biome & crossfade */
 
+  /** Island id (from S.biomeAt) to loop. 'void' is open space between the islands. */
   const BIOME_TRACK = {
-    square: 'square', meadow: 'square', north: 'square',
+    square: 'square',
     monastery: 'monastery',
     market: 'market',
-    mine: 'mine', savings: 'mine',
-    port: 'port', riverside: 'port', river: 'port',
+    mine: 'mine',
+    port: 'port',
+    void: 'void',
   };
 
   function crossfadeTo(id) {
@@ -703,7 +757,7 @@
     toggle,
     sfx,
     setBiome,
-    /** Current loop id ('square', 'monastery', 'mine', 'market', 'port') or null when silent. */
+    /** Current loop id ('square', 'monastery', 'mine', 'market', 'port', 'void') or null when silent. */
     get biome() { return enabled && ac && ac.state === 'running' ? current : null; },
     /** Small diagnostic for the dev preview. */
     state() { return { enabled, context: ac ? ac.state : 'none', loop: current, voices, running: tracks ? tracks.filter((t) => t.running).map((t) => t.id) : [] }; },
