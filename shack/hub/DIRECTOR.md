@@ -61,8 +61,19 @@ For each work order, confirm:
 - the connectors it needs are available in this session (`ToolSearch` for `Gmail`, `Google_Calendar`, `Google_Drive`, `Metricool`, `Shopify`). If one is missing, mark that spoke's dependent tasks `blocked` with the reason "connector not attached to Routine" and still run the rest.
 - each action is allowed by `config.json → autonomy`. `spend` and `dm-send` are never allowed. `external-send` (sending email to someone else) needs the user's yes, so set those tasks to `blocked` with note "awaiting approval" and leave a Gmail draft.
 
+**Skip idle spokes (saves usage).** Before dispatching, run each spoke's feed check yourself (one or two quick tool calls each). A spoke whose feed is empty **and** that has no work to do is **not dispatched** this cycle:
+
+| Spoke | Feed check (skip if all true) |
+|---|---|
+| academic-core | Gmail search `config.json → agents.academic-core.sources.gmail_query` returns 0 threads · no `deadlines` or `study_blocks` dated today or later in its state · no new quest for it |
+| ledger-fi | Gmail search for M&T alerts since the 1st of the month returns 0 threads · not the 1st of the month · no new quest for it |
+| social-ops | Metricool has no connected networks (`getBrandSettings` errors or lists none) · the Angie's Raw Drive folder (`clients[].drive.raw`) has no files the Finished folder doesn't already cover · no new quest for it |
+| hustle-engine | `mode` is `maintenance` and this isn't the `night` cycle · no new quest for it |
+
+For a skipped spoke, write its `state.json` yourself: keep its metrics, set `phase: "idle"`, `last_run` to now, `summary` to `"Skipped: <which feed is empty>"`, and `metrics.world.bubbles` to one honest line (for example `"Waiting for Classroom mail"`). Don't add new alerts for a feed that was already flagged in an earlier cycle. Record skipped spokes in the cycle log's `--notes`.
+
 ### 4. EXECUTE
-Launch the four spokes **in one message, in parallel**, with the `Agent` tool (`subagent_type: general-purpose`). Each prompt is:
+Launch the spokes that weren't skipped **in one message, in parallel**, with the `Agent` tool (`subagent_type: general-purpose`). If all four were skipped, go straight to step 6. Each prompt is:
 
 ```
 You are <Label> (<character> in The Shack), a spoke agent. Repo root: <path>.
