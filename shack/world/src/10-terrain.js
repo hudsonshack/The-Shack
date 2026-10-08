@@ -1593,26 +1593,31 @@
     for (const [tx, ty] of [[56, 23], [57, 24]]) if (decorOk(tx, ty)) { items.push({ type: 'hay', x: tx * TILE + 1, base: ty * TILE + 13 }); mark(tx, ty); }
     // riverside willows by the water
     for (const [tx, ty] of [[5, 16], [16, 24]]) if (decorOk(tx, ty) && decorOk(tx, ty - 1)) { items.push({ type: 'willow', x: tx * TILE + 8, base: ty * TILE + 14 }); for (let dx = -1; dx <= 1; dx++) for (let dy = -2; dy <= 0; dy++) mark(tx + dx, ty + dy); }
-    // scattered trees, bushes, rocks
+    // pass 1: trees, clustered into groves by low-frequency noise
     for (let ty = 0; ty < ROWS; ty++) for (let tx = 0; tx < COLS; tx++) {
       if (used[ty * COLS + tx] || !decorOk(tx, ty)) continue;
-      const h = hash(tx, ty, 101), zone = S.biomeAt(tx, ty);
-      const dens = zone === 'meadow' ? 0.14 : zone === 'north' ? 0.26 : 0.2;
+      const zone = S.biomeAt(tx, ty);
+      const grove = vnoise(tx / 4.5, ty / 4.5, 9);
+      const dens = (zone === 'meadow' ? 0.16 : 0.26) + Math.max(0, grove - 0.4) * 1.3;
+      if (hash(tx, ty, 101) >= dens) continue;
       const canTree = decorOk(tx, ty - 1) && !S.onRoad(tx, ty - 2) && notBuilding(tx - 1, ty) && notBuilding(tx + 1, ty) &&
         notBuilding(tx, ty + 1) && notBuilding(tx - 1, ty + 1) && notBuilding(tx + 1, ty + 1) && notBuilding(tx, ty + 2) &&
         !used[(ty - 1) * COLS + tx] && !used[ty * COLS + tx - 1] && !(tx + 1 < COLS && used[ty * COLS + tx + 1]);
+      if (!canTree) continue;
       const jx = ((hash(tx, ty, 102) * 7) | 0) - 3, jy = ((hash(tx, ty, 103) * 4) | 0);
-      if (h < dens && canTree) {
-        const k = hash(tx, ty, 104);
-        const pine = zone === 'north' ? k < 0.55 : zone === 'riverside' ? k < 0.3 : k < 0.15;
-        items.push(pine ? { type: 'pine', v: (k * 30 | 0) % 3, x: tx * TILE + 8 + jx, base: ty * TILE + 13 + jy }
-          : { type: 'tree', kind: ((k * 40) | 0) % 4, v: (k * 90 | 0) % 3, x: tx * TILE + 8 + jx, base: ty * TILE + 13 + jy });
-        mark(tx, ty); mark(tx, ty - 1); mark(tx - 1, ty); mark(tx + 1, ty); mark(tx - 1, ty - 1); mark(tx + 1, ty - 1);
-      } else if (h < dens + 0.06 && notBuilding(tx, ty + 1)) {
-        items.push({ type: 'bush', v: ((h * 300) | 0) % 3, x: tx * TILE + 8 + jx, base: ty * TILE + 12 + jy }); mark(tx, ty);
-      } else if (h < dens + 0.09) {
-        items.push({ type: 'rock', v: ((h * 500) | 0) % 3, x: tx * TILE + 8 + jx, base: ty * TILE + 10 + jy }); mark(tx, ty);
-      }
+      const k = hash(tx, ty, 104);
+      const pine = zone === 'north' ? k < 0.5 : zone === 'riverside' ? k < 0.3 : k < 0.18;
+      items.push(pine ? { type: 'pine', v: (k * 30 | 0) % 3, x: tx * TILE + 8 + jx, base: ty * TILE + 13 + jy }
+        : { type: 'tree', kind: ((k * 40) | 0) % 4, v: (k * 90 | 0) % 3, x: tx * TILE + 8 + jx, base: ty * TILE + 13 + jy });
+      mark(tx, ty); mark(tx, ty - 1); mark(tx - 1, ty); mark(tx + 1, ty); mark(tx - 1, ty - 1); mark(tx + 1, ty - 1);
+    }
+    // pass 2: bushes and rocks in the gaps
+    for (let ty = 0; ty < ROWS; ty++) for (let tx = 0; tx < COLS; tx++) {
+      if (used[ty * COLS + tx] || !decorOk(tx, ty)) continue;
+      const h = hash(tx, ty, 105);
+      const jx = ((hash(tx, ty, 106) * 7) | 0) - 3, jy = ((hash(tx, ty, 107) * 4) | 0);
+      if (h < 0.07 && notBuilding(tx, ty + 1)) { items.push({ type: 'bush', v: ((h * 300) | 0) % 3, x: tx * TILE + 8 + jx, base: ty * TILE + 12 + jy }); mark(tx, ty); }
+      else if (h < 0.1) { items.push({ type: 'rock', v: ((h * 500) | 0) % 3, x: tx * TILE + 8 + jx, base: ty * TILE + 10 + jy }); mark(tx, ty); }
     }
     items.sort((a, b) => a.base - b.base);
     return items;
