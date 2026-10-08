@@ -9,6 +9,11 @@
     "clients": [],
     "scheduled_posts_7d": 0,
     "drafts_pending": 0,
-    "prospects": []
+    "prospects": [],
+    "world": {
+      "bubbles": [],
+      "deliveries": 0,
+      "growth": 0
+    }
   }
 }

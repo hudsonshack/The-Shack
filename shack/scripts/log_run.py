@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Append one cycle record to jarvis-ops/logs/runs.jsonl."""
+"""Append one cycle record to shack/logs/runs.jsonl."""
 import argparse
 import json
 from datetime import datetime

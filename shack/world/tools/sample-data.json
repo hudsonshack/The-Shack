@@ -1,0 +1,596 @@
+{
+ "generated": "2026-10-09T15:50-04:00",
+ "system": "The Shack",
+ "timezone": "America/New_York",
+ "next_cycle": {
+  "name": "dawn",
+  "at": "2026-10-08T05:46:00-04:00"
+ },
+ "cycles": [
+  {
+   "name": "dawn",
+   "local_time": "05:46",
+   "focus": "morning brief, today's deadlines and study blocks"
+  },
+  {
+   "name": "after-school",
+   "local_time": "15:46",
+   "focus": "new assignments, social posts, Shopify orders"
+  },
+  {
+   "name": "night",
+   "local_time": "20:46",
+   "focus": "spending review, tomorrow's plan, outreach drafts"
+  }
+ ],
+ "autonomy": {
+  "profile": "aggressive",
+  "read": "auto",
+  "draft": "auto",
+  "write-repo": "auto",
+  "calendar-write": "auto",
+  "social-schedule": "auto",
+  "dm-send": "never",
+  "external-send": "ask",
+  "spend": "never"
+ },
+ "threads": [
+  {
+   "id": "academic-core",
+   "label": "Academic-Core",
+   "character": "Abbot Quill",
+   "biome": "monastery",
+   "domain": "School",
+   "phase": "idle",
+   "pending": 3,
+   "blocked": 0,
+   "done": 4,
+   "last_run": "2026-10-09T15:46:00-04:00",
+   "summary": "3 deadlines this week, 6 study blocks placed.",
+   "weight": 40
+  },
+  {
+   "id": "ledger-fi",
+   "label": "Ledger-Fi",
+   "character": "Grit Copperpot",
+   "biome": "mine",
+   "domain": "Finances",
+   "phase": "idle",
+   "pending": 1,
+   "blocked": 0,
+   "done": 2,
+   "last_run": "2026-10-09T15:46:00-04:00",
+   "summary": "Friday paycheck in. Food spending running high.",
+   "weight": 20
+  },
+  {
+   "id": "social-ops",
+   "label": "Social-Ops",
+   "character": "Lumi",
+   "biome": "market",
+   "domain": "Social media clients",
+   "phase": "idle",
+   "pending": 2,
+   "blocked": 0,
+   "done": 3,
+   "last_run": "2026-10-09T15:46:00-04:00",
+   "summary": "5 posts queued for Angie's, fidget video plan ready.",
+   "weight": 25
+  },
+  {
+   "id": "hustle-engine",
+   "label": "Hustle-Engine",
+   "character": "Cap'n Twirl",
+   "biome": "port",
+   "domain": "Side hustles",
+   "phase": "error",
+   "pending": 1,
+   "blocked": 1,
+   "done": 1,
+   "last_run": "2026-10-09T15:46:00-04:00",
+   "summary": "Shopify connector not attached; research done.",
+   "weight": 15
+  }
+ ],
+ "alerts": [
+  {
+   "level": "warn",
+   "agent": "Academic-Core",
+   "msg": "Biology quiz in 2 days (Fri)",
+   "at": "2026-10-09T15:47:00-04:00"
+  },
+  {
+   "level": "warn",
+   "agent": "Ledger-Fi",
+   "msg": "Food & drink at 84% of budget before the 20th",
+   "at": "2026-10-09T15:47:00-04:00"
+  },
+  {
+   "level": "critical",
+   "agent": "Hustle-Engine",
+   "msg": "2 fidget orders unfulfilled for 50 hours",
+   "at": "2026-10-09T15:48:00-04:00"
+  }
+ ],
+ "tasks": [
+  {
+   "id": "T-0006",
+   "agent": "hub",
+   "goal_ref": "G-00",
+   "title": "Attach the repo and the Gmail, Google Calendar, Google Drive, Shopify and Metricool connectors to the \"The Shack: Director cycle\" Routine (see SETUP.md step 1)",
+   "phase": "execute",
+   "priority": 1,
+   "due": "2026-10-08",
+   "autonomy": "human",
+   "verify": {
+    "check": "a cycle runs with all five connectors and pushes to ops/state",
+    "passed": null
+   },
+   "created": "2026-10-08T00:00:00-04:00",
+   "updated": "2026-10-08T00:00:00-04:00",
+   "notes": "Routines created from a chat can't carry connectors; they have to be added in the Routines settings."
+  },
+  {
+   "id": "T-0003",
+   "agent": "hub",
+   "goal_ref": "G-00",
+   "title": "Merge the setup pull request so scheduled runs use main",
+   "phase": "execute",
+   "priority": 1,
+   "due": "2026-10-09",
+   "autonomy": "human",
+   "verify": {
+    "check": "shack/ exists on origin/main",
+    "passed": null
+   },
+   "created": "2026-10-08T00:00:00-04:00",
+   "updated": "2026-10-08T00:00:00-04:00",
+   "notes": ""
+  },
+  {
+   "id": "T-0001",
+   "agent": "hub",
+   "goal_ref": "G-00",
+   "title": "Forward Google Classroom emails from school Gmail to personal Gmail (see SETUP.md step 2)",
+   "phase": "execute",
+   "priority": 1,
+   "due": "2026-10-10",
+   "autonomy": "human",
+   "verify": {
+    "check": "Academic-Core finds a forwarded Classroom email",
+    "passed": null
+   },
+   "created": "2026-10-08T00:00:00-04:00",
+   "updated": "2026-10-08T00:00:00-04:00",
+   "notes": ""
+  },
+  {
+   "id": "T-0004",
+   "agent": "ledger-fi",
+   "goal_ref": "G-02",
+   "title": "Set dollar targets and deadlines for Invest, Car insurance, Apartment fund",
+   "phase": "plan",
+   "priority": 2,
+   "due": null,
+   "autonomy": "human",
+   "verify": {
+    "check": "all savings_goals have target set in config.json",
+    "passed": null
+   },
+   "created": "2026-10-08T00:00:00-04:00",
+   "updated": "2026-10-08T00:00:00-04:00",
+   "notes": "Tell Claude the numbers, or Ledger-Fi will propose targets from your income after two weeks of data."
+  },
+  {
+   "id": "T-0005",
+   "agent": "social-ops",
+   "goal_ref": "G-03",
+   "title": "Tell Claude Angie's monthly retainer",
+   "phase": "plan",
+   "priority": 2,
+   "due": null,
+   "autonomy": "human",
+   "verify": {
+    "check": "social-ops state lists every Metricool brand with a retainer",
+    "passed": null
+   },
+   "created": "2026-10-08T00:00:00-04:00",
+   "updated": "2026-10-08T00:00:00-04:00",
+   "notes": "Clients: Angie's (Cold Spring, NY) plus your own fidget store."
+  },
+  {
+   "id": "T-0002",
+   "agent": "hub",
+   "goal_ref": "G-00",
+   "title": "When ready: connect M&T alerts so Ledger-Fi sees purchases and Friday paychecks (ask Claude for a walkthrough)",
+   "phase": "plan",
+   "priority": 3,
+   "due": null,
+   "autonomy": "human",
+   "verify": {
+    "check": "Ledger-Fi parses at least one M&T alert email",
+    "passed": null
+   },
+   "created": "2026-10-08T00:00:00-04:00",
+   "updated": "2026-10-08T00:00:00-04:00",
+   "notes": "Paychecks already direct-deposit every Friday. Only the email alerts are missing."
+  }
+ ],
+ "goals": [
+  {
+   "id": "G-01",
+   "title": "Never miss a Classroom deadline; study ahead of every test",
+   "agent": "academic-core"
+  },
+  {
+   "id": "G-02",
+   "title": "Track every dollar automatically and grow the three savings goals",
+   "agent": "ledger-fi"
+  },
+  {
+   "id": "G-03",
+   "title": "Run social media clients on autopilot and add new clients",
+   "agent": "social-ops"
+  },
+  {
+   "id": "G-04",
+   "title": "Grow the fidget store: first ads, steady orders",
+   "agent": "hustle-engine"
+  },
+  {
+   "id": "G-00",
+   "title": "Finish one-time setup so every feed runs by itself",
+   "agent": "hub"
+  }
+ ],
+ "agents": {
+  "academic-core": {
+   "deadlines": [
+    {
+     "course": "Biology",
+     "title": "Cell transport quiz",
+     "due": "2026-10-11",
+     "type": "quiz"
+    },
+    {
+     "course": "English 11",
+     "title": "Gatsby ch. 4-6 reflection",
+     "due": "2026-10-12",
+     "type": "assignment"
+    },
+    {
+     "course": "Precalc",
+     "title": "Unit 2 test",
+     "due": "2026-10-16",
+     "type": "test"
+    }
+   ],
+   "study_blocks": [
+    {
+     "title": "📚 Biology: membranes",
+     "start": "2026-10-09T16:30:00-04:00"
+    },
+    {
+     "title": "📚 Precalc: functions review",
+     "start": "2026-10-10T16:00:00-04:00"
+    }
+   ],
+   "prep_sets": [
+    {
+     "title": "Biology: cell transport",
+     "cards": 28,
+     "file": "outbox/quizlet/2026-10-11-biology-cell-transport.txt"
+    }
+   ],
+   "classroom_feed": "connected",
+   "world": {
+    "bubbles": [
+     "Bio quiz Fri!",
+     "6 study blocks set",
+     "Quizlet set: 28 cards"
+    ],
+    "deliveries": 3,
+    "growth": 2
+   }
+  },
+  "ledger-fi": {
+   "month": "2026-10",
+   "month_income": 642.5,
+   "month_spend": 318.4,
+   "categories": [
+    {
+     "name": "Food & drink",
+     "spent": 126.3,
+     "budget": 150
+    },
+    {
+     "name": "Gas & transport",
+     "spent": 88,
+     "budget": 120
+    },
+    {
+     "name": "Subscriptions",
+     "spent": 24.99,
+     "budget": 30
+    },
+    {
+     "name": "Hustle expenses",
+     "spent": 79.11,
+     "budget": 100
+    }
+   ],
+   "savings": [
+    {
+     "name": "Invest",
+     "current": 180,
+     "target": 1000,
+     "deadline": "2027-06-01"
+    },
+    {
+     "name": "Car insurance",
+     "current": 260,
+     "target": 600,
+     "deadline": "2026-12-01"
+    },
+    {
+     "name": "Apartment fund",
+     "current": 450,
+     "target": 5000,
+     "deadline": "2030-08-01"
+    }
+   ],
+   "anomalies": [
+    {
+     "merchant": "Food & drink",
+     "amount": 126.3,
+     "rule": "category over 80% before the 20th",
+     "date": "2026-10-09"
+    }
+   ],
+   "bank_feed": "connected",
+   "world": {
+    "bubbles": [
+     "+$212 Friday pay!",
+     "Food budget 84%",
+     "Car ins. 43% saved"
+    ],
+    "deliveries": 2,
+    "growth": 1
+   },
+   "last_paycheck": {
+    "date": "2026-10-09",
+    "amount": 212.4
+   },
+   "paychecks_month": 2
+  },
+  "social-ops": {
+   "clients": [
+    {
+     "name": "Angie's",
+     "networks": [
+      "instagram",
+      "facebook"
+     ],
+     "retainer": null,
+     "posts_next_7d": 5
+    },
+    {
+     "name": "Fidget store",
+     "networks": [
+      "tiktok",
+      "instagram",
+      "youtube"
+     ],
+     "retainer": null,
+     "posts_next_7d": 2
+    }
+   ],
+   "scheduled_posts_7d": 7,
+   "drafts_pending": 3,
+   "prospects": [
+    {
+     "name": "Cold Spring Coffee",
+     "status": "drafted"
+    },
+    {
+     "name": "Hudson Valley Bikes",
+     "status": "drafted"
+    }
+   ],
+   "world": {
+    "bubbles": [
+     "5 posts for Angie's",
+     "Fidget video plan: 4",
+     "2 DM drafts in Gmail"
+    ],
+    "deliveries": 3,
+    "growth": 2
+   },
+   "store_ads": {
+    "videos_planned": 4,
+    "videos_posted_7d": 1,
+    "top_video": "Magnetic ring ASMR",
+    "link_clicks_7d": 37
+   }
+  },
+  "hustle-engine": {
+   "shopify": {
+    "orders_7d": 6,
+    "revenue_7d": 94.5,
+    "low_stock": [
+     "Infinity cube (3)"
+    ]
+   },
+   "opportunities": [
+    {
+     "title": "Magnetic fidget rings",
+     "margin_pct": 48
+    },
+    {
+     "title": "Pop-it keychains (bulk)",
+     "margin_pct": 35
+    }
+   ],
+   "dm_drafts": 1,
+   "world": {
+    "bubbles": [
+     "6 orders this week",
+     "Infinity cube low!",
+     "48% margin idea"
+    ],
+    "deliveries": 2,
+    "growth": 1
+   }
+  }
+ },
+ "runs": [
+  {
+   "cycle": "after-school",
+   "started": "2026-10-09T15:46-04:00",
+   "finished": "2026-10-09T15:52-04:00",
+   "result": "partial",
+   "tasks_run": 9,
+   "notes": "Shopify connector missing"
+  },
+  {
+   "cycle": "dawn",
+   "started": "2026-10-09T05:46-04:00",
+   "finished": "2026-10-09T05:51-04:00",
+   "result": "ok",
+   "tasks_run": 7,
+   "notes": ""
+  }
+ ],
+ "commits": [
+  {
+   "sha": "02691fd",
+   "at": "2026-10-08T00:38:07+00:00",
+   "subject": "Run all cycles from one Routine and document attaching its connectors"
+  },
+  {
+   "sha": "e4b43f8",
+   "at": "2026-10-08T00:37:08+00:00",
+   "subject": "Replace voice app with J.A.R.V.I.S. Ops hub-and-spoke agent team"
+  },
+  {
+   "sha": "d10cf7a",
+   "at": "2026-06-15T20:37:01-04:00",
+   "subject": "Add mobile connection guide"
+  },
+  {
+   "sha": "9d173a0",
+   "at": "2026-06-15T19:25:34-04:00",
+   "subject": "Initial commit: J.A.R.V.I.S. Live HUD Workstation Companion"
+  }
+ ],
+ "player": {
+  "name": "Hudson"
+ },
+ "home_area": "Cold Spring, NY",
+ "world": {
+  "director": {
+   "character": "Mayor Tock",
+   "biome": "square",
+   "look": "clockmaker mayor who keeps the town-square clock tower and rings the cycle bell"
+  },
+  "biomes": {
+   "square": {
+    "name": "Town Square",
+    "theme": "cobblestone plaza, fountain, clock tower, quest board, mail post"
+   },
+   "monastery": {
+    "name": "Highland Monastery",
+    "agent": "academic-core",
+    "theme": "cliffside temple in the Hudson Highlands, stairs, lanterns, study garden"
+   },
+   "mine": {
+    "name": "Copperpot Mine",
+    "agent": "ledger-fi",
+    "theme": "dwarven gold mine canyon, ore veins, minecarts, vault door"
+   },
+   "market": {
+    "name": "Neon Night Market",
+    "agent": "social-ops",
+    "theme": "lanterns, billboard screens, broadcast tower, posts launch as fireworks"
+   },
+   "port": {
+    "name": "River Port Bazaar",
+    "agent": "hustle-engine",
+    "theme": "Hudson River docks, cargo ships with orders, crates of fidgets"
+   }
+  },
+  "landmarks": [
+   "Hudson House Inn (riverside, Friday payday cart to the mine)",
+   "School (Classroom alerts arrive by carrier bird)",
+   "Apartment under construction (Apartment fund)",
+   "Garage with shield (Car insurance)",
+   "Investment tree (Invest)"
+  ],
+  "sound": "off by default, chiptune + sfx toggle",
+  "quest_board": true
+ },
+ "clients": [
+  {
+   "name": "Angie's",
+   "location": "Cold Spring, NY",
+   "type": "client",
+   "retainer": null
+  },
+  {
+   "name": "Fidget store (own Shopify)",
+   "type": "in-house",
+   "note": "store is set up but has no advertising yet"
+  }
+ ],
+ "store": {
+  "projects": [
+   {
+    "name": "Fidget store (Shopify)",
+    "sells": "fidget toys",
+    "status": "site live, no ads yet",
+    "kpis": [
+     "orders/week",
+     "revenue/week",
+     "conversion rate",
+     "low-stock SKUs"
+    ]
+   }
+  ],
+  "ads": {
+   "platforms": [
+    "TikTok",
+    "Instagram Reels",
+    "YouTube Shorts"
+   ],
+   "goal": "first ads and organic short-form content for the fidget store"
+  }
+ },
+ "payday": {
+  "weekday": "Friday",
+  "method": "direct deposit to M&T checking"
+ },
+ "savings_goals": [
+  {
+   "name": "Invest",
+   "target": null,
+   "deadline": null
+  },
+  {
+   "name": "Car insurance",
+   "target": null,
+   "deadline": null
+  },
+  {
+   "name": "Apartment fund",
+   "target": null,
+   "deadline": null
+  }
+ ],
+ "weights": {
+  "academic-core": 40,
+  "social-ops": 25,
+  "ledger-fi": 20,
+  "hustle-engine": 15
+ },
+ "sample": true
+}

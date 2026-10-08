@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate J.A.R.V.I.S. Ops state files and block secrets or private data.
+"""Validate The Shack state files and block secrets or private data.
 
 Usage:
   validate.py            check every state file
@@ -108,9 +108,9 @@ def check_config():
         return
     weights = data.get("priority_weights", {})
     if set(weights) != set(AGENTS):
-        err("jarvis-ops/config.json", "priority_weights must list all four agents")
+        err("shack/config.json", "priority_weights must list all four agents")
     elif sum(weights.values()) != 100:
-        err("jarvis-ops/config.json", f"priority_weights add up to {sum(weights.values())}, not 100")
+        err("shack/config.json", f"priority_weights add up to {sum(weights.values())}, not 100")
 
 
 def staged_files():
@@ -121,8 +121,8 @@ def staged_files():
 
 def scan(paths):
     for rel in paths:
-        if rel.startswith("jarvis-ops/private/") and not rel.endswith("README.md"):
-            err(rel, "files in jarvis-ops/private/ must never be committed")
+        if rel.startswith("shack/private/") and not rel.endswith("README.md"):
+            err(rel, "files in shack/private/ must never be committed")
             continue
         p = REPO / rel
         if not p.is_file() or p.stat().st_size > 2_000_000:
@@ -134,7 +134,7 @@ def scan(paths):
         for rx, label in SECRET_PATTERNS:
             if rx.search(text):
                 err(rel, f"looks like it contains a {label}")
-        if rel.startswith("jarvis-ops/agents/ledger-fi/") and ACCOUNT_NUMBER.search(text):
+        if rel.startswith("shack/agents/ledger-fi/") and ACCOUNT_NUMBER.search(text):
             err(rel, "contains a long digit run that may be an account or card number")
 
 
@@ -145,11 +145,11 @@ def main():
     if "--staged" in sys.argv:
         scan(staged_files())
     if errors:
-        print("J.A.R.V.I.S. Ops validation failed:", file=sys.stderr)
+        print("The Shack validation failed:", file=sys.stderr)
         for e in errors:
             print(f"  - {e}", file=sys.stderr)
         sys.exit(1)
-    print("J.A.R.V.I.S. Ops state OK")
+    print("The Shack state OK")
 
 
 if __name__ == "__main__":

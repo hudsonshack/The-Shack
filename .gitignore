@@ -27,6 +27,6 @@ desktop.ini
 # Logs
 *.log
 
-# J.A.R.V.I.S. Ops private data (never commit)
-jarvis-ops/private/*
-!jarvis-ops/private/README.md
+# The Shack private data (never commit)
+shack/private/*
+!shack/private/README.md

@@ -1,6 +1,6 @@
 #!/bin/sh
-# J.A.R.V.I.S. Ops: refuse to push invalid state.
+# The Shack: refuse to push invalid state.
 ROOT=$(git rev-parse --show-toplevel) || exit 1
 command -v python3 >/dev/null 2>&1 || exit 0
-[ -f "$ROOT/jarvis-ops/scripts/validate.py" ] || exit 0
-python3 "$ROOT/jarvis-ops/scripts/validate.py"
+[ -f "$ROOT/shack/scripts/validate.py" ] || exit 0
+python3 "$ROOT/shack/scripts/validate.py"

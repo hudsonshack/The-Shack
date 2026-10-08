@@ -1,5 +1,7 @@
 # Academic-Core (School)
 
+In The Shack world this agent is **Abbot Quill**, the monk scholar of the Highland Monastery.
+
 **Goal G-01:** never miss a Google Classroom deadline, and study ahead of every test.
 
 ## Inputs
@@ -18,7 +20,7 @@ If the Gmail search returns no Classroom emails at all, set `metrics.classroom_f
    - For each test or quiz: put review blocks on Google Calendar at the spaced-repetition offsets in `config.json` counted **backwards** from the test date (the day before, 3 days before, 7, 14, 30), skipping offsets already in the past.
    - For each assignment: one work block before the due date, sized to the task (max `max_block_minutes`).
    - Only between `no_study_before` and `no_study_after` on weekdays, and not over existing events (including work shifts).
-   - Title format: `📚 <Course>: <topic>`. Put `jarvis-ops:academic-core` in the event description so later cycles can find and move their own events. Never edit events without that marker.
+   - Title format: `📚 <Course>: <topic>`. Put `the-shack:academic-core` in the event description so later cycles can find and move their own events. Never edit events without that marker.
    - Record created blocks in `metrics.study_blocks` (next 7 days).
 4. **Test prep.** For every test or quiz within 10 days, build a Quizlet set:
    - Write `outbox/quizlet/<YYYY-MM-DD>-<course>-<topic>.txt`: one card per line, `term<TAB>definition`, 20–40 cards, from the Classroom email text, Drive notes on that course, and standard high-school curriculum for the topic.

@@ -12,6 +12,11 @@
       "low_stock": []
     },
     "opportunities": [],
-    "dm_drafts": 0
+    "dm_drafts": 0,
+    "world": {
+      "bubbles": [],
+      "deliveries": 0,
+      "growth": 0
+    }
   }
 }

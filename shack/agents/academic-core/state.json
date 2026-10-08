@@ -9,6 +9,11 @@
     "deadlines": [],
     "study_blocks": [],
     "prep_sets": [],
-    "classroom_feed": "not connected"
+    "classroom_feed": "not connected",
+    "world": {
+      "bubbles": [],
+      "deliveries": 0,
+      "growth": 0
+    }
   }
 }

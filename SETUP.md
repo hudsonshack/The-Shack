@@ -3,9 +3,9 @@
 After these steps, everything runs by itself three times a day.
 
 ## 1. Give the Routine its repo and connectors
-The hub runs as a Claude Routine named **J.A.R.V.I.S. Ops hub cycle** (05:46, 15:46 and 20:46 New York time). A Routine created from a chat can't carry connectors, so add them once:
+The hub runs as a Claude Routine named **The Shack: Director cycle** (05:46, 15:46 and 20:46 New York time). A Routine created from a chat can't carry connectors, so add them once:
 
-1. Open claude.ai → **Code** → **Routines** (or the Routines list in the Claude app) → **J.A.R.V.I.S. Ops hub cycle** → edit.
+1. Open claude.ai → **Code** → **Routines** (or the Routines list in the Claude app) → **The Shack: Director cycle** → edit.
 2. Add the repository `hudsonshack/Chi-King-J.A.R.V.I.S`.
 3. Add the connectors **Gmail**, **Google Calendar**, **Google Drive**, **Shopify** and **Metricool**.
 4. Save. Optional: use **Run now** to test it.
@@ -25,10 +25,10 @@ Your school blocks Claude from opening Google Classroom, but Classroom emails yo
    - **Create filter** → check **Forward it to:** your personal Gmail → **Create filter**.
 4. In Classroom (school account) → ⚙️ **Settings** → make sure email notifications are **on** for new work, due-date reminders and returned work.
 
-Check: the next cycle's dashboard shows `feed: connected` on Academic-Core.
+Check: in the world, click the Highland Monastery. Its Classroom feed reads `connected` after the next cycle.
 
-## 3. Turn on M&T Bank alerts (Ledger-Fi)
-Every purchase and deposit then shows up as an email that Ledger-Fi reads. You don't need to download CSVs or share bank passwords.
+## 3. Turn on M&T Bank alerts (Ledger-Fi), whenever you're ready
+Your paycheck already direct-deposits every Friday. These alerts let Grit Copperpot see it, along with every purchase, as emails. You don't need to download CSVs or share bank passwords. Ask Claude to walk you through it live if you'd rather.
 
 1. M&T mobile app → **Menu** → **Alerts** (or in online banking: **Profile & Settings → Alerts**).
 2. Turn on, with delivery by **email** to your personal Gmail:
@@ -37,7 +37,7 @@ Every purchase and deposit then shows up as an email that Ledger-Fi reads. You d
    - Withdrawal / transfer alert
    - Low balance alert (pick an amount, for example $50)
 
-Check: the next cycle's dashboard shows `feed: connected` on Ledger-Fi.
+Check: in the world, click Copperpot Mine. Its bank feed reads `connected` after the next cycle.
 
 ## 4. Optional: git hooks on your MacBook
 Only needed if you also edit this repo on your Mac. Install Git (`xcode-select --install`) if you haven't.
@@ -45,13 +45,15 @@ Only needed if you also edit this repo on your Mac. Install Git (`xcode-select -
 ```sh
 git clone https://github.com/hudsonshack/Chi-King-J.A.R.V.I.S.git
 cd Chi-King-J.A.R.V.I.S
-sh jarvis-ops/scripts/install-hooks.sh
+sh shack/scripts/install-hooks.sh
 ```
 
-The hooks check state files and block secrets before every commit. They also re-render the dashboard and auto-push commits made on `ops/state`.
+The hooks check state files and block secrets before every commit. They also re-render the dashboard and the world page, and auto-push commits made on `ops/state`.
 
 ## 5. Tell Claude a few numbers when you have them
-These show as **you** tasks on the dashboard:
+These show as **your tasks** on the town-square quest board, where you can tick them off:
 - Savings targets and deadlines for Invest, Car insurance and Apartment fund
-- Each social media client's monthly retainer
-- Your town, so Social-Ops can find local businesses to pitch
+- Angie's monthly retainer
+
+## 6. Optional: rename the GitHub repo
+The repo is still called `Chi-King-J.A.R.V.I.S`. To finish the rename, open GitHub → the repo → **Settings** → **Repository name**, change it (for example to `the-shack`) and save. GitHub redirects the old name, so the Routine keeps working. Then tell Claude so the docs and the Routine prompt use the new name.

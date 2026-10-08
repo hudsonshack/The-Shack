@@ -17,10 +17,10 @@
    | Spend money, place orders, change prices, move funds | never |
 
 5. **Privacy.**
-   - Raw emails, transactions, grades, client contact details and DM drafts that name real people go in `jarvis-ops/private/<agent>/`. It is gitignored and never committed.
+   - Raw emails, transactions, grades, client contact details and DM drafts that name real people go in `shack/private/<agent>/`. It is gitignored and never committed.
    - Committed state holds totals, counts, titles and dates only. No account numbers, no full transaction lists, no passwords or tokens. `scripts/validate.py` blocks the common patterns.
    - Cloud cycles run in a fresh container each time, so `private/` is scratch space that starts empty every cycle. The lasting sources of truth are Gmail, Google Calendar, Metricool, Shopify and the committed summaries. Spokes rebuild totals from those sources each cycle (for example, month-to-date spending is recomputed from all of this month's M&T alert emails), which also makes every cycle safe to re-run.
-   - The dashboard page is private to the user's Claude account. Keep it to summaries all the same.
+   - The world page is private to the user's Claude account. Keep it to summaries all the same.
 6. **Output style.** Dense tables and short lines. No conversational filler in reports.
 7. **Failure handling.** A failing spoke never stops the cycle. Mark it `error`, add an alert, finish the others, log the cycle as `partial`.
-8. **Asking the user.** Questions go in a task with `autonomy: "human"` and a clear title. They show in the dashboard under Open tasks with the "you" tag.
+8. **Asking the user.** Questions go in a task with `autonomy: "human"` and a clear title. They show on the town-square quest board under "Your tasks", where the user can tick them off.
