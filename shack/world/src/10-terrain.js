@@ -65,9 +65,9 @@
   const FLAG = { x: 442, base: 126, top: 66 };
   const FIELD = { x0: 568, y0: 24, x1: 632, y1: 150 };
   const POND = { x: 676, y: 292, rx: 22, ry: 11 };
-  const LAMPS = [[502, 318], [554, 318], [502, 366], [618, 366], [427, 366], [618, 318], [327, 316], [264, 316]];
+  const LAMPS = [[502, 318], [554, 318], [618, 366], [427, 366], [618, 318], [327, 316], [264, 316]];
   const BENCHES = [[449, 372], [469, 384], [600, 284], [410, 228], [592, 228]];
-  const PLANTERS = [[480, 232, 14, 22], [562, 232, 14, 22], [430, 386, 34, 14], [596, 398, 26, 12]];
+  const PLANTERS = [[430, 386, 34, 14], [596, 398, 26, 12]];
 
   // Reserve every tile our buildings and solid props occupy (at load, per the contract).
   S.reserve(30, 7, 6, 9);    // clock tower (x30-35, y7-15) incl. its flanking planters
@@ -150,6 +150,7 @@
     const winter = sea === 'winter';
     const gBase = rgb(P.grass[sea]), gDark = rgb(P.grassDark[sea]);
     const gDeep = rgb(sh(P.grassDark[sea], winter ? -0.08 : -0.16)), gLight = rgb(winter ? P.snow : sh(P.grass[sea], 0.13));
+    const gMid = rgb(mix(P.grass[sea], P.grassDark[sea], 0.5));
     const sand = rgb(winter ? mix(SAND, P.snow, 0.55) : SAND), sandD = rgb(winter ? mix(SAND_D, P.snow, 0.4) : SAND_D);
     const sandW = rgb(winter ? mix(SAND_W, '#c3d1da', 0.3) : SAND_W), sandL = rgb(winter ? P.snow : SAND_L);
     const wDeep = rgb(P.waterDeep), wMid = rgb(P.water), wLight = rgb(P.waterLight), wFoam = rgb(P.foam), wStreak = rgb(WSTREAK);
@@ -183,9 +184,10 @@
           else if (ds < 3.5 + wob) c = hash(x, y, 5) < 0.12 ? sandD : (b < 0.1 ? sandL : sand);
           else if (ds < 5 + wob) c = b < 0.5 ? sand : gBase;
           else {
-            const n = n1(x, y) * 0.75 + n2(x, y) * 0.25;
-            const v = n + (b - 0.5) * 0.16;
-            c = v > 0.66 ? gDeep : v > 0.55 ? gDark : v < 0.31 ? gLight : gBase;
+            const n = n1(x, y) * 0.7 + n2(x, y) * 0.3;
+            const v = n + (b - 0.5) * 0.14;
+            c = v > 0.71 ? gDark : v > 0.6 ? gMid : v < 0.29 ? gLight : gBase;
+            if (v > 0.78 && b < 0.3) c = gDeep;
             const hs = hash(x, y, 21);
             if (hs < 0.03) c = gDark; else if (hs < 0.042) c = winter ? sparkle : gLight;
           }
@@ -288,7 +290,7 @@
     const grassE = C(P.grassDark[sea]), grassB = C(P.grass[sea]);
     const set = (i, c) => { d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; };
     // Voronoi cobbles
-    const CW = 7, CH = 6;
+    const CW = 8, CH = 7;
     const seed = (cx, cy) => [cx * CW + 1 + hash(cx, cy, 3) * (CW - 2), cy * CH + 1 + hash(cx, cy, 4) * (CH - 2)];
     function cobble(x, y, dd, tl, edgeH) {
       if (dd <= 1) return cob.o;
@@ -306,12 +308,12 @@
         if (q < b1) { b2 = b1; b1 = q; bx = sx; by = sy; bk = hash(ccx + i, ccy + j, 5); } else if (q < b2) b2 = q;
       }
       const gap = Math.sqrt(b2) - Math.sqrt(b1);
-      if (gap < 1.1) return cob.m;
+      if (gap < 1.3) return cob.m;
       const lx = x - bx, ly = y - by, lit = -(lx + ly);
-      let base = bk < 0.18 ? cob.v : bk < 0.32 ? cob.u : bk < 0.45 ? cob.d : cob.b;
-      if (gap < 2.1 && lx + ly > 0) return cob.d;
-      if (lit > 2.2) return bk < 0.45 ? cob.l : cob.w;
-      if (lit > 1 && bay(x, y) < 0.5) return cob.l;
+      const base = bk < 0.12 ? cob.v : bk < 0.22 ? cob.u : cob.b;
+      if (gap < 2.3 && lx + ly > 0) return cob.d;
+      if (gap < 2.3 && lit > 0) return bk < 0.22 ? cob.l : cob.w;
+      if (lit > 2.5 && bay(x, y) < 0.5) return cob.l;
       return base;
     }
     function compass(x, y) { // brass compass-rose inlay at the crossing (the hub)
@@ -388,7 +390,8 @@
       if (!dd) continue;
       const tx = (x / TILE) | 0, ty = (y / TILE) | 0;
       const biome = S.biomeAt(tx, ty);
-      const style = STYLE_OF[biome] || 'dirt';
+      let style = STYLE_OF[biome] || 'dirt';
+      if (style === 'cobble' && (x < PLAZA.x0 || x >= PLAZA.x1 || y >= PLAZA.y1)) style = 'dirt';
       const up = y - dd >= 0 && !M[(y - dd) * W + x], left = x - dd >= 0 && !M[k - dd];
       const tl = up || left;
       const edgeH = up || (y + dd < H && !M[(y + dd) * W + x]);
@@ -1097,9 +1100,9 @@
       D(r, x0 - 5 + inset, y, P.outline); D(r, x1 + 4 - inset, y, P.outline);
       D(r, x0 - 4 + inset, y, '#7a8194');
     }
+    for (let y = ridge; y < eave; y++) for (let x = x1 - 2; x < x1 + 5; x++) if (bay(x, y) < 0.4 && x < x1 + 4 - Math.max(0, 14 - (y - ridge))) D(r, x, y, sh(roof, -0.3));
     c.drawImage(rc, x0 - 5, ridge - 1);
     R(c, x0 + 9, ridge - 1, x1 - x0 - 18, 2, '#3a3f4d'); R(c, x0 + 9, ridge - 1, x1 - x0 - 18, 1, '#7a8194');
-    for (let y = ridge; y < eave; y++) for (let x = x1 - 2; x < x1 + 5; x++) if (bay(x, y) < 0.4) D(c, x, y, sh(roof, -0.3));
     R(c, x0 - 4, eave, x1 - x0 + 8, 2, P.outline); R(c, x0 - 4, eave, x1 - x0 + 8, 1, trim);
     if (winter) snowCap(c, x0 + 4, ridge, x1 - x0 - 8, 9, 13);
     // chimney
@@ -1222,6 +1225,7 @@
     bellAt(ctx, BELL.x, BELL.y, 0);
     for (const [x, y, w, h] of PLANTERS) drawPlanter(ctx, x, y, w, h);
     drawTopiary(ctx, 412, 222); drawTopiary(ctx, 436, 236); drawTopiary(ctx, 616, 222); drawTopiary(ctx, 594, 238);
+    drawTopiary(ctx, 487, 255); drawTopiary(ctx, 569, 255);
     drawQuestBoard(ctx);
     drawMailPost(ctx);
     drawFountain(ctx, isWinter());
@@ -1245,6 +1249,7 @@
     if (kind === 1 && sea === 'autumn') { base = '#c4492f'; alt = '#e0763a'; }        // red maple
     if (kind === 2 && sea === 'autumn') { base = '#d9a032'; alt = '#f0cf5a'; }        // gold birch-ish
     if (kind === 3 && sea === 'autumn') { base = '#8f9a45'; alt = '#b3b24f'; }        // still-green oak
+    if (kind === 4 && sea === 'autumn') { base = '#6f8f3a'; alt = '#9cb44f'; }        // apple trees, fruit on
     if (sea === 'summer') alt = sh(base, 0.25);
     if (sea === 'spring' && kind !== 4) alt = sh(base, 0.22);
     return { base, hi: alt, mid: sh(base, -0.14), dark: sh(base, -0.32), out: sh(base, -0.62) };
@@ -1253,14 +1258,15 @@
   function treeSprite(kind, v) {
     const key = 't' + kind + '_' + v + '_' + season;
     if (spriteCache[key]) return spriteCache[key];
-    const w = 34, h = 40, cv = mk(w, h), c = cv.getContext('2d');
+    const w = 40, h = 46, cv = mk(w, h), c = cv.getContext('2d');
     const rnd = S.rng(1000 + kind * 37 + v * 101);
-    const cx = 17, cy = 15;
+    const cx = 20, cy = 17, big = kind !== 4;
     const trunk = '#6b4a2f', trunkL = '#8d6440', trunkD = '#4a321f';
     // trunk + roots
-    R(c, cx - 3, 22, 6, 15, P.outline);
-    R(c, cx - 2, 22, 4, 14, trunk); R(c, cx - 2, 22, 1, 14, trunkL); R(c, cx + 1, 22, 1, 14, trunkD);
-    R(c, cx - 4, 35, 8, 2, P.outline); R(c, cx - 3, 35, 2, 1, trunk); R(c, cx + 1, 35, 2, 1, trunkD);
+    R(c, cx - 3, 26, 6, 16, P.outline);
+    R(c, cx - 2, 26, 4, 15, trunk); R(c, cx - 2, 26, 1, 15, trunkL); R(c, cx + 1, 26, 1, 15, trunkD);
+    R(c, cx - 5, 40, 10, 2, P.outline); R(c, cx - 4, 40, 3, 1, trunk); R(c, cx + 1, 40, 3, 1, trunkD);
+    D(c, cx - 1, 33, trunkD); D(c, cx, 36, trunkL);
     const L = leafSet(kind);
     if (!L) { // winter: bare branches with snow
       const br = (x, y, a, len, depth) => {
@@ -1275,16 +1281,17 @@
           br(ex, ey, a + 0.45 + rnd() * 0.3, len * 0.6, depth - 1);
         }
       };
-      br(cx, 24, -Math.PI / 2, 8, 3);
-      cv._ox = cx; cv._base = 36;
+      br(cx, 28, -Math.PI / 2, 9, 3);
+      cv._ox = cx; cv._base = 41;
       return (spriteCache[key] = cv);
     }
     // canopy blobs
-    const blobs = [[cx, cy, 10.5]];
-    const nb = 4 + ((rnd() * 3) | 0);
+    const sc = big ? 1.18 : 1;
+    const blobs = [[cx, cy, 10.5 * sc]];
+    const nb = 5 + ((rnd() * 3) | 0);
     for (let i = 0; i < nb; i++) {
       const a = (i / nb) * Math.PI * 2 + rnd() * 0.6;
-      blobs.push([cx + Math.cos(a) * (6 + rnd() * 2), cy + Math.sin(a) * (4.5 + rnd() * 2) - 1, 5.5 + rnd() * 2]);
+      blobs.push([cx + Math.cos(a) * (6.5 + rnd() * 2) * sc, cy + Math.sin(a) * (5 + rnd() * 2) * sc - 1, (5.5 + rnd() * 2) * sc]);
     }
     const inside = (x, y) => {
       let best = -1e9, bi = -1;
@@ -1296,8 +1303,8 @@
       return best >= 0 ? bi : -1;
     };
     const M = new Int8Array(w * h).fill(-1);
-    for (let y = 0; y < 30; y++) for (let x = 0; x < w; x++) M[y * w + x] = inside(x + 0.5, y + 0.5);
-    for (let y = 0; y < 30; y++) for (let x = 0; x < w; x++) {
+    for (let y = 0; y < 34; y++) for (let x = 0; x < w; x++) M[y * w + x] = inside(x + 0.5, y + 0.5);
+    for (let y = 0; y < 34; y++) for (let x = 0; x < w; x++) {
       const bi = M[y * w + x];
       if (bi < 0) continue;
       const edge = x === 0 || x === w - 1 || y === 0 || M[y * w + x - 1] < 0 || M[y * w + x + 1] < 0 || M[(y - 1) * w + x] < 0 || M[(y + 1) * w + x] < 0;
@@ -1320,8 +1327,7 @@
       }
     }
     // a peek of branch through the canopy bottom
-    D(c, cx - 1, 23, trunkD); D(c, cx, 22, trunkD);
-    cv._ox = cx; cv._base = 36;
+    cv._ox = cx; cv._base = 41;
     return (spriteCache[key] = cv);
   }
   function pineSprite(v) {
@@ -1354,27 +1360,39 @@
   function willowSprite() {
     const key = 'w_' + season;
     if (spriteCache[key]) return spriteCache[key];
-    const w = 40, h = 44, cv = mk(w, h), c = cv.getContext('2d'), cx = 20;
-    R(c, cx - 3, 20, 6, 22, P.outline); R(c, cx - 2, 20, 4, 21, '#6b5a3f'); R(c, cx - 2, 20, 1, 21, '#8a7655');
-    R(c, cx - 5, 40, 10, 2, P.outline);
+    const w = 44, h = 48, cv = mk(w, h), c = cv.getContext('2d'), cx = 22;
     const winter = season === 'winter';
-    const base = winter ? '#8a8f6a' : season === 'autumn' ? '#c9b347' : season === 'spring' ? '#9ccf5a' : '#6fa443';
-    const hi = sh(base, 0.25), dk = sh(base, -0.28), out = sh(base, -0.6);
+    const base = winter ? '#8a8f6a' : season === 'autumn' ? '#b9b04a' : season === 'spring' ? '#9ccf5a' : '#6fa443';
+    const hi = sh(base, 0.28), dk = sh(base, -0.3), out = sh(base, -0.62);
+    // trunk (leaning a little)
+    R(c, cx - 3, 18, 7, 27, P.outline);
+    R(c, cx - 2, 18, 5, 26, '#6b5a3f'); R(c, cx - 2, 18, 1, 26, '#8a7655'); R(c, cx + 2, 18, 1, 26, '#4f4230');
+    R(c, cx - 6, 43, 13, 2, P.outline); R(c, cx - 5, 43, 4, 1, '#6b5a3f');
     // crown
-    ell(c, cx, 12, 15, 10, out); ell(c, cx, 12, 14, 9, base); ell(c, cx - 4, 8, 7, 4, hi);
-    // drooping strands
-    for (let x = cx - 16; x <= cx + 16; x++) {
-      const len = 16 + Math.round(hash(x, 1, 9) * 12) - Math.round(Math.abs(x - cx) * 0.25);
-      for (let y = 12; y < 12 + len; y++) {
-        if (x % 2 === 0 && y > 18) continue;
-        const col = y === 11 + len ? out : (x < cx ? (y < 20 ? hi : base) : dk);
-        if (winter && y > 22) continue;
+    const inCrown = (x, y) => ((x - cx) / 15) ** 2 + ((y - 13) / 10) ** 2 <= 1;
+    for (let y = 2; y < 24; y++) for (let x = 0; x < w; x++) {
+      if (!inCrown(x + 0.5, y + 0.5)) continue;
+      const edge = !inCrown(x - 0.5, y + 0.5) || !inCrown(x + 1.5, y + 0.5) || !inCrown(x + 0.5, y - 0.5);
+      const lit = (-(x - cx) / 15 - (y - 13) / 10) * 0.8 + (bay(x, y) - 0.5) * 0.4;
+      D(c, x, y, edge ? out : lit > 0.45 ? hi : lit > -0.25 ? base : dk);
+    }
+    // weeping strands
+    if (!winter || true) for (let x = cx - 17; x <= cx + 17; x++) {
+      const d = Math.abs(x - cx) / 17;
+      if (hash(x, 3, 7) < 0.18) continue;
+      const y0 = 11 + Math.round(Math.sqrt(Math.max(0, 1 - d * d)) * 7);
+      const len = Math.round((winter ? 6 : 13) + (1 - d) * (winter ? 4 : 11) + hash(x, 4, 7) * 6);
+      for (let y = y0; y < y0 + len; y++) {
+        const k = y - y0;
+        let col = (x & 1) ? dk : x < cx ? (k < 6 ? hi : base) : base;
+        if (k === len - 1) col = out;
+        if ((x & 1) && k > len - 4) continue;
         D(c, x, y, col);
       }
     }
-    for (let i = 0; i < 30; i++) { const x = cx - 13 + ((hash(i, 2, 5) * 26) | 0), y = 4 + ((hash(i, 3, 5) * 12) | 0); D(c, x, y, hash(i, 4, 5) < 0.5 ? hi : dk); }
-    if (winter) { R(c, cx - 9, 3, 12, 2, P.snow); R(c, cx - 12, 5, 6, 1, P.snow); }
-    cv._ox = cx; cv._base = 41;
+    for (let i = 0; i < 26; i++) { const x = cx - 11 + ((hash(i, 2, 5) * 22) | 0), y = 5 + ((hash(i, 3, 5) * 10) | 0); D(c, x, y, hash(i, 4, 5) < 0.5 ? hi : dk); }
+    if (winter) { R(c, cx - 9, 3, 12, 2, P.snow); R(c, cx - 12, 5, 6, 1, P.snow); R(c, cx + 2, 4, 6, 1, P.snow); }
+    cv._ox = cx; cv._base = 44;
     return (spriteCache[key] = cv);
   }
   function bushSprite(v) {
@@ -1579,7 +1597,7 @@
     for (let ty = 0; ty < ROWS; ty++) for (let tx = 0; tx < COLS; tx++) {
       if (used[ty * COLS + tx] || !decorOk(tx, ty)) continue;
       const h = hash(tx, ty, 101), zone = S.biomeAt(tx, ty);
-      const dens = zone === 'meadow' ? 0.13 : zone === 'north' ? 0.2 : 0.17;
+      const dens = zone === 'meadow' ? 0.14 : zone === 'north' ? 0.26 : 0.2;
       const canTree = decorOk(tx, ty - 1) && !S.onRoad(tx, ty - 2) && notBuilding(tx - 1, ty) && notBuilding(tx + 1, ty) &&
         notBuilding(tx, ty + 1) && notBuilding(tx - 1, ty + 1) && notBuilding(tx + 1, ty + 1) && notBuilding(tx, ty + 2) &&
         !used[(ty - 1) * COLS + tx] && !used[ty * COLS + tx - 1] && !(tx + 1 < COLS && used[ty * COLS + tx + 1]);
@@ -1600,6 +1618,7 @@
     return items;
   }
   let decorItems = null;
+  S._dbgDecor = () => decorItems;
 
   S.registerStatic(50, (ctx) => {
     if (!decorItems) decorItems = placeDecor();
@@ -1627,7 +1646,7 @@
     // y-sorted props
     for (const it of decorItems) {
       if (it.type === 'tree' || it.type === 'pine' || it.type === 'willow') {
-        const wide = it.type === 'willow' ? 15 : it.type === 'pine' ? 8 : 11;
+        const wide = it.type === 'willow' ? 16 : it.type === 'pine' ? 9 : it.kind === 4 ? 11 : 13;
         shadow(ctx, it.x + 4, it.base, wide, 3);
       }
       if (it.type === 'tree') drawSprite(ctx, treeSprite(it.kind, it.v), it.x, it.base);
