@@ -687,11 +687,15 @@
       // counter top
       const CT = WY + 12;
       R(g, 2, CT, w - 4, 3, '#c99060'); R(g, 2, CT, w - 4, 1, '#ecc08a'); R(g, 2, CT + 2, w - 4, 1, '#8a5a34');
-      // espresso machine
-      R(g, 8, CT - 9, 12, 9, '#b9b6c8'); R(g, 8, CT - 9, 12, 1, '#f1eff8'); R(g, 8, CT - 9, 1, 9, '#e0def0'); R(g, 19, CT - 9, 1, 9, '#7d7990');
-      R(g, 10, CT - 7, 3, 2, '#2a2638'); R(g, 15, CT - 7, 3, 2, '#2a2638'); D(g, 11, CT - 4, '#2a2638'); D(g, 16, CT - 4, '#2a2638');
-      R(g, 10, CT - 2, 3, 2, '#f4ede0'); R(g, 15, CT - 2, 3, 2, '#f4ede0'); D(g, 18, CT - 8, '#ff5a4a');
-      R(g, 9, CT - 11, 10, 2, '#e8e2f0'); R(g, 10, CT - 12, 2, 1, '#f4ede0'); R(g, 13, CT - 12, 2, 1, '#f4ede0'); R(g, 16, CT - 12, 2, 1, '#f4ede0');
+      // vintage copper espresso machine: cup tray on top, gauge, two group heads, steam wand
+      R(g, 8, CT - 10, 12, 10, '#b8643a'); R(g, 8, CT - 10, 12, 1, '#f0b07a'); R(g, 8, CT - 10, 1, 10, '#de8a52'); R(g, 19, CT - 10, 1, 10, '#7a3a1e');
+      R(g, 9, CT - 9, 2, 5, '#e8a06a'); R(g, 8, CT - 5, 12, 1, '#d8d4e4'); R(g, 8, CT - 4, 12, 1, '#8a869c');
+      D(g, 17, CT - 8, '#fbf6ea'); D(g, 16, CT - 8, '#5a2a14'); D(g, 17, CT - 9, '#5a2a14');
+      R(g, 11, CT - 3, 4, 1, '#3a3650'); R(g, 4, CT - 3, 7, 1, '#2a2638'); D(g, 4, CT - 4, '#5a5670');
+      R(g, 12, CT - 2, 2, 1, '#2a2638'); R(g, 12, CT - 1, 2, 1, '#f4ede0'); D(g, 16, CT - 1, '#f4ede0');
+      R(g, 20, CT - 7, 1, 5, '#c8c4dc'); D(g, 21, CT - 2, '#c8c4dc');
+      R(g, 9, CT - 12, 10, 2, '#d8d4e4'); R(g, 9, CT - 12, 10, 1, '#ffffff');
+      for (let k = 0; k < 4; k++) R(g, 10 + k * 2, CT - 13, 1, 1, k % 2 ? '#e2d6c4' : '#f8f2e8');
       // pastry case
       const px0 = 24, pw = 22;
       R(g, px0, CT - 9, pw, 9, WOOD.dark); R(g, px0 + 1, CT - 8, pw - 2, 7, '#c8e4e6'); R(g, px0 + 1, CT - 8, pw - 2, 1, '#f2fbfb');
@@ -802,10 +806,12 @@
   function tripodSprite() {
     return cached('tri', () => build(13, 22, (g) => {
       L(g, 6, 9, 1, 21, '#2f2c44'); L(g, 6, 9, 11, 21, '#2f2c44'); R(g, 6, 9, 1, 12, '#4a4764'); L(g, 7, 10, 12, 21, '#6b688b');
-      // camera body + lens + hot-shoe mic
-      R(g, 1, 2, 11, 7, '#24212f'); R(g, 1, 2, 11, 1, '#4a4764'); R(g, 4, 0, 4, 2, '#24212f');
-      S.px.circle(g, 6, 5, 2, '#0e0c16'); D(g, 5, 4, '#5a6aa8'); D(g, 7, 6, '#2a3a6a'); R(g, 9, 0, 3, 2, '#3a3650');
-      D(g, 2, 3, '#7a7896');
+      // the camera seen from behind (it films the stall): flip screen showing the shot, hot-shoe mic
+      R(g, 1, 2, 11, 7, '#24212f'); R(g, 1, 2, 11, 1, '#4a4764'); R(g, 1, 2, 1, 7, '#3a3650'); R(g, 3, 0, 5, 2, '#24212f'); D(g, 4, 0, '#4a4764');
+      R(g, 2, 3, 8, 5, '#0e0c16');
+      for (let i = 0; i < 6; i++) D(g, 3 + i, 4, RAINBOW[i]);
+      R(g, 3, 5, 6, 2, '#cfa874'); D(g, 5, 5, '#ff4f6e'); D(g, 7, 6, '#3ec8f0');
+      R(g, 9, 0, 3, 2, '#3a3650'); D(g, 11, 0, '#6b688b');
     }, OUT));
   }
   function ringLightSprite() {
@@ -1124,25 +1130,48 @@
     // ticket booth
     R(ctx, cx - 30, base - 13, 10, 13, OUT); R(ctx, cx - 29, base - 12, 8, 11, '#d8443a'); R(ctx, cx - 29, base - 12, 8, 2, '#ffe45c'); R(ctx, cx - 28, base - 8, 6, 3, '#ffd27a');
   }
-  function drawWheel(ctx, t) {
-    const { cx, cy, r } = WHEEL;
-    const a0 = rm ? 0 : t * 0.18;
-    // spokes, then an outlined double rim (lit from the top-left)
-    for (let k = 0; k < 8; k++) {
-      const a = a0 + k / 8 * Math.PI * 2;
-      L(ctx, cx, cy, cx + Math.cos(a) * (r - 1), cy + Math.sin(a) * (r - 1), '#a9a5c2');
+  // The rim never changes and the 8 spokes repeat every 45 degrees, so both are pre-rendered.
+  const WHEEL_STEPS = 24;
+  let wheelRim = null; const wheelSpokes = [];
+  function wheelRimSprite() {
+    if (wheelRim) return wheelRim;
+    const { r } = WHEEL, size = r * 2 + 5, o = r + 2;
+    const [c, g] = mk(size, size);
+    for (let k = 0; k < 160; k++) {
+      const a = k / 160 * Math.PI * 2;
+      D(g, Math.round(o + Math.cos(a) * (r + 1)), Math.round(o + Math.sin(a) * (r + 1)), OUT);
     }
     for (let k = 0; k < 160; k++) {
       const a = k / 160 * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
       const lit = -(ca + sa) > 0.4;
-      D(ctx, Math.round(cx + ca * (r + 1)), Math.round(cy + sa * (r + 1)), OUT);
-      D(ctx, Math.round(cx + ca * r), Math.round(cy + sa * r), lit ? '#ffffff' : '#d8d4e6');
-      D(ctx, Math.round(cx + ca * (r - 1)), Math.round(cy + sa * (r - 1)), lit ? '#c8c4dc' : '#8d89a8');
-      if (k % 4 === 0) D(ctx, Math.round(cx + ca * (r - 4)), Math.round(cy + sa * (r - 4)), '#8d89a8');
+      D(g, Math.round(o + ca * r), Math.round(o + sa * r), lit ? '#ffffff' : '#d8d4e6');
+      D(g, Math.round(o + ca * (r - 1)), Math.round(o + sa * (r - 1)), lit ? '#c8c4dc' : '#8d89a8');
+      if (k % 4 === 0) D(g, Math.round(o + ca * (r - 4)), Math.round(o + sa * (r - 4)), '#8d89a8');
     }
+    return (wheelRim = c);
+  }
+  function wheelSpokeSprite(step) {
+    if (wheelSpokes[step]) return wheelSpokes[step];
+    const { r } = WHEEL, size = r * 2 + 5, o = r + 2;
+    const [c, g] = mk(size, size);
+    const a0 = step / WHEEL_STEPS * (Math.PI / 4);
+    for (let k = 0; k < 8; k++) {
+      const a = a0 + k / 8 * Math.PI * 2;
+      L(g, o, o, o + Math.cos(a) * (r - 1), o + Math.sin(a) * (r - 1), '#a9a5c2');
+    }
+    return (wheelSpokes[step] = c);
+  }
+  const wheelAngle = (t) => (rm ? 0 : t * 0.18);
+  function drawWheel(ctx, t) {
+    const { cx, cy, r } = WHEEL, o = r + 2;
+    const a0 = wheelAngle(t);
+    const step = Math.floor(((a0 % (Math.PI / 4)) / (Math.PI / 4)) * WHEEL_STEPS) % WHEEL_STEPS;
+    const aq = Math.floor(a0 / (Math.PI / 4)) * (Math.PI / 4) + step / WHEEL_STEPS * (Math.PI / 4);
+    ctx.drawImage(wheelSpokeSprite(step), cx - o, cy - o);
+    ctx.drawImage(wheelRimSprite(), cx - o, cy - o);
     R(ctx, cx - 2, cy - 2, 5, 5, OUT); R(ctx, cx - 1, cy - 1, 3, 3, P.gold);
     for (let k = 0; k < 8; k++) {
-      const a = a0 + k / 8 * Math.PI * 2, x = Math.round(cx + Math.cos(a) * r), y = Math.round(cy + Math.sin(a) * r);
+      const a = aq + k / 8 * Math.PI * 2, x = Math.round(cx + Math.cos(a) * r), y = Math.round(cy + Math.sin(a) * r);
       const c = RAINBOW[k % 6];
       R(ctx, x - 3, y, 7, 6, OUT); R(ctx, x - 2, y + 1, 5, 4, c); R(ctx, x - 2, y + 1, 5, 1, sh(c, 0.4)); R(ctx, x - 1, y + 2, 3, 1, '#2a2440');
       D(ctx, x, y - 1, OUT);
@@ -1395,10 +1424,17 @@
         if (prev !== null && Math.abs(prev - y) > 1) wg.fillRect(x - 640, Math.min(prev, y), 1, Math.abs(prev - y));
         wg.fillRect(x - 640, y, 1, 1);
         prev = y;
-        if (i % 5 === 2 && i > 1 && i < steps - 1) { BULBS.push({ x, y: y + 1, c: BULB_COLS[bi % BULB_COLS.length], k: bi }); bi++; }
+        if (i % 5 === 2 && i > 1 && i < steps - 1) { const c = BULB_COLS[bi % BULB_COLS.length]; BULBS.push({ x, y: y + 1, c, hi: mix(c, '#ffffff', 0.6), k: bi, dim: false }); bi++; }
       }
     }
     for (const b of BULBS) { wg.fillStyle = mix(b.c, '#2a2238', 0.55); wg.fillRect(b.x - 640, b.y, 1, 2); }
+  })();
+  // bounding box of the wires, so the per-frame blit stays small
+  const WBOX = (function () {
+    const d = wg.getImageData(0, 0, 384, 256).data;
+    let x0 = 384, y0 = 256, x1 = 0, y1 = 0;
+    for (let y = 0; y < 256; y++) for (let x = 0; x < 384; x++) if (d[(y * 384 + x) * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    return x1 >= x0 ? { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 } : null;
   })();
   // a few string-light glows for the dark
   for (const [a, b, sag] of STRINGS) {
@@ -1421,7 +1457,7 @@
   });
 
   // 400: steam from the espresso machine, the cafe table and the noodle pot; string-light wires.
-  const STEAM = [[ANG.x + 1 + 14, ANG.y + 1 + 37 - 12], [TABLE.x + 8, TABLE.y + 4]];
+  const STEAM = [[ANG.x + 1 + 67, ANG.y + 1 + 6], [TABLE.x + 8, TABLE.y + 4]];   // the roaster chimney, the cup on the table
   if (GROWTH >= 1) STEAM.push([NOOD.x + 1 + 15, NOOD.y + 1 + 32 - 10]);
   S.registerDynamic(400, (ctx, t) => {
     const n = rm ? 3 : 7;
@@ -1438,7 +1474,7 @@
       }
     }
     ctx.globalAlpha = 1;
-    ctx.drawImage(wires, 640, 0);
+    if (WBOX) ctx.drawImage(wires, WBOX.x, WBOX.y, WBOX.w, WBOX.h, 640 + WBOX.x, WBOX.y, WBOX.w, WBOX.h);
   });
 
   // 700: lit neon, the billboard screen, TV wall, bulbs, lanterns, beacon + rings, fireworks.
@@ -1505,10 +1541,14 @@
     // string bulbs
     const tw = Math.floor(t * 3);
     for (const b of BULBS) {
-      const dim = !rm && S.hash(b.k, tw, 741) < 0.07;
-      ctx.globalAlpha = dim ? 0.35 : 1;
-      R(ctx, b.x, b.y, 1, 2, b.c); D(ctx, b.x, b.y, mix(b.c, '#ffffff', 0.6));
-      if (dark > 0.2 && !dim) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.28 * dark; R(ctx, b.x - 1, b.y - 1, 3, 4, b.c); ctx.globalCompositeOperation = 'source-over'; }
+      b.dim = !rm && S.hash(b.k, tw, 741) < 0.07;
+      ctx.globalAlpha = b.dim ? 0.35 : 1;
+      R(ctx, b.x, b.y, 1, 2, b.c); D(ctx, b.x, b.y, b.hi);
+    }
+    if (dark > 0.2) {
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.28 * dark;
+      for (const b of BULBS) if (!b.dim) R(ctx, b.x - 1, b.y - 1, 3, 4, b.c);
+      ctx.globalCompositeOperation = 'source-over';
     }
     ctx.globalAlpha = 1;
     // Edison bulbs under Angie's awning and the noodle cart's paper lanterns
@@ -1538,7 +1578,7 @@
     }
     // ferris wheel bulbs
     if (GROWTH >= 3) {
-      const a0 = rm ? 0 : t * 0.18;
+      const a0 = wheelAngle(t);
       for (let k = 0; k < 16; k++) {
         const a = a0 + (k + 0.5) / 16 * Math.PI * 2;
         const on = rm || ((k + Math.floor(t * 4)) % 3 !== 0);

@@ -450,7 +450,7 @@
 
   /** Light sources for the night overlay: {x, y, r, color, intensity 0..1, flicker?, nightOnly? (default true), on?() } */
   S.lights = [];
-  S.addLight = (l) => { S.lights.push(Object.assign({ intensity: 1, nightOnly: true }, l)); return l; };
+  S.addLight = (l) => { const o = Object.assign({ intensity: 1, nightOnly: true }, l); S.lights.push(o); return o; };
 
   /* -------------------------------------------------------------- hotspots
    * Clickable world areas: {id, kind:'biome'|'villager'|'landmark', label,
@@ -458,7 +458,7 @@
    * Clicks call S.ui.open(hotspot). Hover shows the label as a tooltip.
    */
   const hotspots = [];
-  S.addHotspot = (h) => { hotspots.push(Object.assign({ priority: 0 }, h)); return h; };
+  S.addHotspot = (h) => { if (h.priority == null) h.priority = 0; hotspots.push(h); return h; };
   S.hotspots = hotspots;
   function hitTest(wx, wy) {
     let best = null;
@@ -518,13 +518,14 @@
   S.screenToWorld = (sx, sy) => ({ x: cam.x + (sx - viewW / 2) / cam.z, y: cam.y + (sy - viewH / 2) / cam.z });
   S.worldToScreen = (wx, wy) => ({ x: (wx - cam.x) * cam.z + viewW / 2, y: (wy - cam.y) * cam.z + viewH / 2 });
   S.zoomTo = (z, sx = viewW / 2, sy = viewH / 2) => {
+    panAnim = null;
     const before = S.screenToWorld(sx, sy);
     cam.z = z; clampCam();
     const after = S.screenToWorld(sx, sy);
     cam.x += before.x - after.x; cam.y += before.y - after.y; clampCam();
   };
   S.zoomBy = (f, sx, sy) => S.zoomTo(cam.z * f, sx, sy);
-  S.fitView = () => { cam.z = cam.fitZ; cam.x = W / 2; cam.y = H / 2; cam.follow = null; clampCam(); };
+  S.fitView = () => { panAnim = null; cam.z = cam.fitZ; cam.x = W / 2; cam.y = H / 2; cam.follow = null; clampCam(); };
   /** Smoothly centre on a world point (and optionally zoom). */
   let panAnim = null;
   S.panTo = (wx, wy, z) => { panAnim = { x: wx, y: wy, z: z || cam.z, t: 0 }; cam.follow = null; };
