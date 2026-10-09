@@ -20,9 +20,17 @@
  *      new moon), pixel-correct terminator, craters and maria
  *   40 tiny rock islets drifting very slowly across space
  *   50 shooting stars every 6 to 15 s (rarer with reduced motion, none by day)
+ *   60 letterbox join: world edges that face a visible letterbox fade (dithered)
+ *      to exactly S.spaceColor, so any aspect ratio joins without a seam
  *
- * Also sets S.spaceColor to match the world edge, and exposes
+ * Also sets S.spaceColor to the average tone of the world's outer band as lit
+ * right now (night sky + day wash + twilight, weighted toward the letterbox
+ * sides actually showing), and exposes
  * S.space = { moon(): {age, days, illumination, waxing, name}, moonPos, shoot() } for anyone who wants it.
+ *
+ * Placement keeps clear of the HUD at fit view: the moon sits in the open gap
+ * right of the clock spire, below the status card; the ringed planet sits under
+ * Clockspire, above the control dock.
  */
 (function () {
   'use strict';
@@ -79,8 +87,28 @@
   /* ----------------------------------------------------------- palettes */
   const VIOLET = ['#05041a', '#090723', '#0e0b2d', '#140f38', '#1b1343', '#24184f', '#2f1d5b', '#3c2367', '#4b2a71', '#5c3279', '#70397f'];
   const TEAL = ['#05041a', '#071026', '#091a33', '#0c2440', '#112f4c', '#173c58'];
-  const EDGE_NIGHT = '#08071d';
-  const DAY_EDGE = '#8590d6';
+  const EDGE_FALLBACK = '#0e0b2d'; // until the sky has been painted and measured
+
+  /* Edge statistics: the average colour of an RGBA buffer over the world's
+   * outer band, separately for the left+right columns and the top+bottom rows.
+   * Returned as {lr: [r, g, b, a], tb: [r, g, b, a]} with rgb premultiplied by a,
+   * so a wash drawn at globalAlpha k composites as  c * (1 - k*a) + k * rgb. */
+  const BAND = 32;
+  function edgeStats(d) {
+    const acc = (x0, y0, x1, y1, s) => {
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+        const o = (y * W + x) * 4, a = d[o + 3] / 255;
+        s[0] += d[o] * a; s[1] += d[o + 1] * a; s[2] += d[o + 2] * a; s[3] += a; s[4]++;
+      }
+    };
+    const lr = [0, 0, 0, 0, 0], tb = [0, 0, 0, 0, 0];
+    acc(0, 0, BAND, H, lr); acc(W - BAND, 0, W, H, lr);
+    acc(0, 0, W, BAND, tb); acc(0, H - BAND, W, H, tb);
+    const norm = (s) => [s[0] / s[4], s[1] / s[4], s[2] / s[4], s[3] / s[4]];
+    return { lr: norm(lr), tb: norm(tb) };
+  }
+  let nightEdge = null, dayEdge = null, edgeGen = 0;
+  const twiEdge = {};
 
   /* ============================================================ NEBULA */
   function paintNebula(img) {
@@ -253,7 +281,10 @@
   const FAR_ISLETS = [[476, 150, 7, 0.62], [826, 52, 6, 0.66], [30, 414, 9, 0.55], [1238, 446, 8, 0.58], [452, 640, 7, 0.6], [1180, 20, 6, 0.68], [820, 780, 6, 0.65], [12, 760, 8, 0.6]];
 
   /* ======================================================= RINGED PLANET */
-  const PL = { cx: 604, cy: 712, R: 40, tilt: -0.3, squash: 0.3, r1: 1.38, r2: 2.18 };
+  /* Under Clockspire's underside tip (about native 613) and above the control
+   * dock (native 733+ at every fit view down to 1280x720): the sphere spans
+   * cy +/- 40 and the ring cy +/- 36 by cx +/- 84. */
+  const PL = { cx: 604, cy: 686, R: 40, tilt: -0.3, squash: 0.3, r1: 1.38, r2: 2.18 };
   const LIGHT = (() => { const v = [-0.62, -0.55, 0.56]; const l = Math.hypot(v[0], v[1], v[2]); return v.map((a) => a / l); })();
   const BANDS = [
     ['#2a1634', '#6a3048', '#b05a5e', '#e08e70', '#f6c296'], // peach
@@ -349,7 +380,10 @@
     const name = names[Math.floor(((age * 8) + 0.5) % 8)];
     return { age, days: age * SYNODIC, illumination, waxing, name };
   }
-  const MOON = { x: 596, y: 96, R: 13 };
+  /* In the open gap right of the clock spire, above Clockspire's NE corner:
+   * below the HUD status card (native y <= 114 at fit view, phone included)
+   * and left of the blimp's route (x 768..896). */
+  const MOON = { x: 735, y: 165, R: 13 };
   const CRATERS = [[-0.05, 0.64, 0.13], [0.52, 0.42, 0.1], [-0.2, 0.28, 0.09], [0.12, -0.66, 0.08], [0.66, -0.18, 0.07], [-0.6, -0.5, 0.08]];
   const MARIA = [[-0.32, -0.28, 0.34], [0.18, -0.3, 0.22], [0.36, 0.04, 0.24], [-0.5, 0.18, 0.3], [0.05, 0.12, 0.14]];
   let moonCache = { key: '', canvas: null };
@@ -425,6 +459,7 @@
     paintStars(img);
     paintGalaxy(img, 1196, 400);
     paintGalaxy(img, 470, 534);
+    nightEdge = edgeStats(img.data); edgeGen++;
     x2.putImageData(img, 0, 0);
     for (const [x, y, w, fd] of FAR_ISLETS) {
       const sp = isletSprite(w, x * 7 + y, fd, season);
@@ -459,6 +494,7 @@
       d[o + 2] = Math.min(255, Math.floor(c0[2] / STEP + bb) * STEP);
       d[o + 3] = Math.round((Math.floor(a * 20 + bb) / 20) * 255);
     }
+    dayEdge = edgeStats(d); edgeGen++;
     x2.putImageData(img, 0, 0);
     return c;
   }
@@ -467,29 +503,40 @@
     const img = x2.createImageData(W, H), d = img.data;
     const A = rgbOf(kind === 'dawn' ? '#ff86c0' : '#ff7a8a'), B = rgbOf(kind === 'dawn' ? '#ffb48e' : '#ffaa52');
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      // the low edge glows like a horizon, the sun's corner warms, the sides blush a little
+      // the low edge glows like a horizon, the sun's corner warms, the top blushes a little
+      // (no side blush: the left and right edges meet the letterbox on wide screens)
       const low = Math.exp(-(H - y) / 150);
       const sun = Math.exp(-Math.hypot(x + 20, y + 20) / 330);
-      const side = Math.exp(-Math.min(x, W - x) / 70) * 0.45 + Math.exp(-y / 60) * 0.3;
-      const k = clamp01(low * 0.95 + sun * 0.8 + side);
+      const top = Math.exp(-y / 60) * 0.3;
+      const k = clamp01(low * 0.95 + sun * 0.8 + top);
       const q = dqi(k, 6, x, y);
       if (!q) continue;
       const c0 = mixRgb(A, B, clamp01(low * 1.2 + sun * 0.3));
       const o = (y * W + x) * 4;
       d[o] = c0[0]; d[o + 1] = c0[1]; d[o + 2] = c0[2]; d[o + 3] = Math.round(q / 6 * 0.5 * 255);
     }
+    twiEdge[kind] = edgeStats(d); edgeGen++;
     x2.putImageData(img, 0, 0);
     return c;
   }
 
-  /** Visible world rect (native px, clamped) so full-screen layers skip off-camera pixels. */
-  function viewRect() {
-    const cv = S.canvas;
-    if (!cv || !S.screenToWorld) return { x: 0, y: 0, w: W, h: H };
-    const a = S.screenToWorld(0, 0), b = S.screenToWorld(cv.clientWidth || W, cv.clientHeight || H);
+  /** Camera footprint this frame: the visible world rect (native px, clamped) so
+   * full-screen layers skip off-camera pixels, and how far the view reaches past
+   * each world edge (native px; > 0 means that side shows letterbox). */
+  const view = { x: 0, y: 0, w: W, h: H, l: 0, r: 0, t: 0, b: 0 };
+  function updateView() {
+    const cv = S.canvas, vw = cv && cv.clientWidth, vh = cv && cv.clientHeight;
+    if (!vw || !vh || !S.screenToWorld) { Object.assign(view, { x: 0, y: 0, w: W, h: H, l: 0, r: 0, t: 0, b: 0 }); return; }
+    const a = S.screenToWorld(0, 0), b = S.screenToWorld(vw, vh);
     const x0 = Math.max(0, Math.floor(a.x) - 2), y0 = Math.max(0, Math.floor(a.y) - 2);
     const x1 = Math.min(W, Math.ceil(b.x) + 2), y1 = Math.min(H, Math.ceil(b.y) + 2);
-    return x1 > x0 && y1 > y0 ? { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } : { x: 0, y: 0, w: W, h: H };
+    if (x1 > x0 && y1 > y0) Object.assign(view, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+    else Object.assign(view, { x: 0, y: 0, w: W, h: H });
+    // a side counts once its bar is at least half a screen pixel wide
+    const z = (S.cam && S.cam.z) || 1, cut = 0.5 / z;
+    view.l = -a.x > cut ? -a.x : 0; view.r = b.x - W > cut ? b.x - W : 0;
+    view.t = -a.y > cut ? -a.y : 0; view.b = b.y - H > cut ? b.y - H : 0;
+    view.spanX = b.x - a.x; view.spanY = b.y - a.y;
   }
 
   /** Day amount, twilight amount and which twilight, from S.time. */
@@ -502,19 +549,53 @@
     sky.twi = inTwi ? clamp01(1 - Math.abs(L - 0.42) / 0.5) : 0;
     sky.kind = T.isDawn ? 'dawn' : 'dusk';
   }
-  let lastEdgeKey = -1;
-  function updateSpaceColor() {
-    const k = Math.round(sky.day * 40);
-    if (k === lastEdgeKey) return;
-    lastEdgeKey = k;
-    S.spaceColor = S.color.mix(EDGE_NIGHT, DAY_EDGE, (k / 40) * 0.8);
+  /* The letterbox colour: the world's outer band as lit right now. Each wash
+   * composites over the night tone exactly as layer 10 draws it (globalAlpha
+   * sky.day, then sky.twi), averaged over the band. Left/right and top/bottom
+   * tones are blended by how much of each letterbox is on screen, so the colour
+   * moves smoothly while zooming. Recomputed only when its inputs step. */
+  function bandTone(side, day, twi, kind) {
+    let c = nightEdge ? nightEdge[side].slice(0, 3) : rgbOf(EDGE_FALLBACK);
+    const over = (e, k) => { c = [0, 1, 2].map((i) => c[i] * (1 - k * e[3]) + k * e[i]); };
+    if (day >= 0.01 && dayEdge) over(dayEdge[side], day);
+    if (twi >= 0.01 && twiEdge[kind]) over(twiEdge[kind][side], twi);
+    return c;
+  }
+  /* 50-atmosphere multiplies the whole world by a faint cool night tint (its
+   * layer 600, after space is drawn; read through its public S.atmo.sky()).
+   * The letterbox is never tinted, so S.spaceColor carries the same tint while
+   * the edge ramp aims at the untinted tone: once multiplied, the world's edge
+   * lands exactly on the letterbox colour. Without that module: no tint. */
+  const NIGHT_TINT = rgbOf('#d3d6f0');
+  function nightTintK() {
+    let a = null;
+    try { a = S.atmo && typeof S.atmo.sky === 'function' ? S.atmo.sky() : null; } catch (e) { a = null; }
+    return a && typeof a.n === 'number' ? smooth(0.25, 1, a.n) : 0;
+  }
+  let lastEdgeKey = -1, rampColor = EDGE_FALLBACK;
+  function updateSpaceColor(build) {
+    // the washes' edge stats come from their canvases; build them when they are about to show
+    if (build && sky.day >= 0.01 && !dayCanvas) dayCanvas = buildDay();
+    if (build && sky.twi >= 0.01 && !twiCanvas[sky.kind]) twiCanvas[sky.kind] = buildTwilight(sky.kind);
+    const lrA = (view.l + view.r) * (view.spanY || H), tbA = (view.t + view.b) * (view.spanX || W);
+    const f = lrA + tbA > 0 ? Math.round((tbA / (lrA + tbA)) * 20) / 20 : 0;
+    // the colour steps with these quantised inputs; it isn't recomputed every frame
+    const dq = Math.round(sky.day * 40), tq = Math.round(sky.twi * 40), nq = Math.round(nightTintK() * 40);
+    const key = (((edgeGen * 2 + (sky.kind === 'dawn' ? 1 : 0)) * 21 + f * 20) * 41 + nq) * 1681 + tq * 41 + dq; // all small ints: one number
+    if (key === lastEdgeKey) return;
+    lastEdgeKey = key;
+    const tone = mixRgb(bandTone('lr', dq / 40, tq / 40, sky.kind), bandTone('tb', dq / 40, tq / 40, sky.kind), f);
+    const tint = mixRgb([255, 255, 255], NIGHT_TINT, nq / 40);
+    rampColor = hexRgb(tone);
+    S.spaceColor = hexRgb([0, 1, 2].map((i) => (tone[i] * tint[i]) / 255));
   }
 
   S.registerDynamic(10, (ctx) => {
     updateSky();
-    updateSpaceColor();
+    updateView();
+    updateSpaceColor(true);
     if (sky.day < 0.01 && sky.twi < 0.01) return;
-    const v = viewRect();
+    const v = view;
     if (sky.day >= 0.01) {
       if (!dayCanvas) dayCanvas = buildDay();
       ctx.globalAlpha = sky.day;
@@ -663,7 +744,53 @@
     ctx.globalAlpha = 1;
   });
 
-  // Space colour at load, before the first frame.
+  /* ===================================================== LETTERBOX JOIN
+   * Where the view reaches past a world edge (pillarbox on a wide laptop,
+   * letterbox on a zoomed-out phone) the core fills the screen with
+   * S.spaceColor. Space fades to that colour (its untinted tone; see
+   * nightTintK) over the last F px of each such edge with an ordered-dither
+   * alpha ramp, so the join has no seam at any aspect ratio. Drawn after every space layer (stars, moon, islets, shooting
+   * stars fade with it) and before the islands, which stay crisp on top.
+   * F is about 40 screen px, capped so it never reaches the moon or the planet.
+   * Cost: up to four pattern fills of a few thousand px; tiles rebuild only
+   * when the colour or F steps.
+   */
+  const ramp = { F: 0, color: '', pat: {} };
+  function rampTile(len, side, rgb) {
+    const horiz = side === 'l' || side === 'r';
+    const w = horiz ? len : 4, h = horiz ? 4 : len;
+    const c = mk(w, h), x2 = c.getContext('2d'), img = x2.createImageData(w, h), d = img.data;
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const k = side === 'l' ? i : side === 'r' ? len - 1 - i : side === 't' ? j : len - 1 - j; // px in from the world edge
+      const u = 1 - (k + 0.5) / len, a = u * u * (3 - 2 * u);
+      const q = Math.min(8, Math.floor(a * 8 + bayer(i, j)));
+      const o = (j * w + i) * 4;
+      d[o] = rgb[0]; d[o + 1] = rgb[1]; d[o + 2] = rgb[2]; d[o + 3] = Math.round((q / 8) * 255);
+    }
+    x2.putImageData(img, 0, 0);
+    return c;
+  }
+  S.registerDynamic(60, (ctx) => {
+    if (!(view.l || view.r || view.t || view.b)) return;
+    const z = (S.cam && S.cam.z) || 1;
+    const F = Math.max(24, Math.min(64, Math.round(40 / z / 8) * 8));
+    if (ramp.F !== F || ramp.color !== rampColor) {
+      ramp.F = F; ramp.color = rampColor; ramp.pat = {};
+      const rgb = rgbOf(rampColor);
+      for (const s of ['l', 'r', 't', 'b']) ramp.pat[s] = ctx.createPattern(rampTile(F, s, rgb), s === 'l' || s === 'r' ? 'repeat-y' : 'repeat-x');
+    }
+    const fill = (s, x, y, w, h) => {
+      if (!ramp.pat[s]) return;
+      ctx.save(); ctx.translate(x, y); ctx.fillStyle = ramp.pat[s]; ctx.fillRect(0, 0, w, h); ctx.restore();
+    };
+    if (view.l) fill('l', 0, 0, F, H);
+    if (view.r) fill('r', W - F, 0, F, H);
+    if (view.t) fill('t', 0, 0, W, F);
+    if (view.b) fill('b', 0, H - F, W, F);
+  });
+
+  // Space colour at load, before the first frame (refined on the first frame,
+  // once the sky has been painted and the camera sized).
   updateSky();
-  updateSpaceColor();
+  updateSpaceColor(false);
 })();
