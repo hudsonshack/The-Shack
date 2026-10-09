@@ -493,7 +493,11 @@
       d[k * 4] = col[0]; d[k * 4 + 1] = col[1]; d[k * 4 + 2] = col[2]; d[k * 4 + 3] = 255;
     }
     x.putImageData(img, 0, 0);
-    return { c, w, h, base };
+    // Opaque span per column (first and last drawn row, -1 if empty), so "is someone
+    // under this cloud?" tests the real puffy outline, not the sprite's bounding box.
+    const top = new Int16Array(w).fill(-1), bot = new Int16Array(w).fill(-1);
+    for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) if (d[(j * w + i) * 4 + 3]) { if (top[i] < 0) top[i] = j; bot[i] = j; }
+    return { c, w, h, base, top, bot };
   }
   /** A long thin wisp of cloud for open space: streaky, lit on top, dithered alpha. */
   function wispSprite(seed, w, h) {
@@ -596,18 +600,25 @@
     return best ? { tx: best.tx + 0.5, ty: best.ty + 0.5 } : { tx: r.x + r.w / 2, ty: r.y + r.h / 3 };
   }
   /* Hand-picked clear sky over each biome island (tile coords of the cloud's
-   * centre): open grass, plaza or river, away from the name-defining landmark,
-   * with ground (and then the edge) below for the rain to fall onto. */
-  const SPOTS = { monastery: [7.5, 12.6], market: [61, 11.2], port: [11, 31.5], mine: [64, 35] };
-  /** Where a storm's smaller second cloud sits relative to the main one (px), kept off buildings. */
-  const SIDE = { monastery: [-46, 14] };
+   * centre): open grass, plaza or river, away from the name-defining landmark
+   * and from every place a villager stops to work (40-villagers' PL spots, the
+   * kid's kite meadow), so the rain cloud (warn) and the bigger storm cloud
+   * (critical) both keep at least ~12 px clear of them through their drift.
+   *   Lantern Peak      the south lawn below the bell pavilion and scroll board
+   *   Neon Hollow       the south strip below the blimp walkway
+   *   Spindrift Harbor  over the river east of the kid's kite meadow
+   *   Copperhold        the open yard between the cottage and the crystals
+   * Anyone who still walks under a cloud is revealed by seeThrough(). */
+  const SPOTS = { monastery: [11, 15.75], market: [61.3, 16.1], port: [20.5, 30.5], mine: [65, 35.4] };
+  /** Where a storm's smaller second cloud sits relative to the main one (px), kept off buildings and work spots. */
+  const SIDE = { monastery: [-60, -6], market: [-56, -2], port: [46, -14] };
   function wxFor(id) {
     if (WX[id]) return WX[id];
     const seed = 7 + S.ISLANDS.indexOf(id) * 31;
     const crit = levelOf(id) === 'critical';
-    const main = { spr: cloudSprite(seed + 1, 84, 40, 'rain'), sprS: cloudSprite(seed + 2, 128, 56, 'storm'), ph: (seed % 10) / 10 * 6.28, dx: 0, dy: 0 };
+    const main = { spr: cloudSprite(seed + 1, 84, 40, 'rain'), sprS: cloudSprite(seed + 2, 128, 56, 'storm'), ph: (seed % 10) / 10 * 6.28, dx: 0, dy: 0, see: 0 };
     const so = SIDE[id] || [50, -16];
-    const side = { spr: null, sprS: cloudSprite(seed + 3, 76, 36, 'storm'), ph: main.ph + 1.7, dx: so[0], dy: so[1] };
+    const side = { spr: null, sprS: cloudSprite(seed + 3, 76, 36, 'storm'), ph: main.ph + 1.7, dx: so[0], dy: so[1], see: 0 };
     const spot = SPOTS[id] ? { tx: SPOTS[id][0], ty: SPOTS[id][1] } : cloudSpot(id, crit ? 9 : 6, crit ? 4 : 3);
     return (WX[id] = {
       id, seed, level: 'ok', spot,
@@ -633,6 +644,40 @@
       c.x = Math.round(cx0 + c.dx + drift - spr.w / 2); c.y = Math.round(cy0 + c.dy + bobY - spr.h / 2);
       c.w = spr.w; c.h = spr.h; c.base = c.y + spr.base;
     }
+  }
+
+  /* A hovering cloud must never hide a villager. While someone on this island
+   * stands or walks under one (sprite box: feet ±12 px, up to the top of the
+   * head), or the kid's kite flies into it, the cloud thins to see-through and
+   * firms up again once they have moved on. Tested against the cloud's real
+   * per-column outline; a handful of entities, so it costs next to nothing. */
+  const SEE_DIM = 0.55;   // how much of the cloud's opacity goes while someone is under it
+  function coversBox(c, x0, x1, y0, y1) {
+    const spr = c.cur, i0 = Math.max(0, Math.floor(x0 - c.x)), i1 = Math.min(spr.w - 1, Math.ceil(x1 - c.x));
+    if (i0 > i1 || y1 < c.y || y0 > c.y + spr.h) return false;
+    for (let i = i0; i <= i1; i++) {
+      const tp = spr.top[i];
+      if (tp >= 0 && c.y + tp <= y1 && c.y + spr.bot[i] >= y0) return true;
+    }
+    return false;
+  }
+  function figureUnder(w, c) {
+    for (const e of S.entities) {
+      if (!e || e.hidden || e.riding || e.island !== w.id || typeof e.h !== 'number' || !isFinite(e.x) || !isFinite(e.y)) continue;
+      if (coversBox(c, e.x - 12, e.x + 12, e.y - e.h - 4, e.y)) return true;
+      const k = e.kite;   // the kid's kite (drawn 13×17 at its anchor, tail below)
+      if (k && isFinite(k.x) && isFinite(k.y) && coversBox(c, k.x - 7, k.x + 6, k.y - 1, k.y + 22)) return true;
+    }
+    return false;
+  }
+  function seeThrough(w, dt) {
+    for (const c of w.clouds) {
+      if (!c.cur || c.k < 0.02) { c.see = 0; continue; }
+      const tgt = figureUnder(w, c) ? 1 : 0;
+      // Settle at once on the first frames so a screenshot is honest; then ease (~0.25 s).
+      c.see = w.seen ? c.see + (tgt - c.see) * Math.min(1, dt * 8) : tgt;
+    }
+    w.seen = true;
   }
 
   function spawnDrop(w, storm) {
@@ -694,6 +739,7 @@
     for (const p in tgt) w[p] += (tgt[p] - w[p]) * k;
     w.level = level;
     placeClouds(w, t);
+    seeThrough(w, dt);
     // Rain.
     const rate = (w.storm > 0.5 ? 260 : 160) * w.rain * PART;
     w.acc += rate * dt;
@@ -835,9 +881,10 @@
     // The clouds themselves, over their rain.
     for (const c of w.clouds) {
       if (!c.cur || c.k < 0.02) continue;
-      ctx.globalAlpha = Math.min(1, c.k * 1.15);
+      const op = 1 - SEE_DIM * (c.see || 0);   // see-through while a villager is under it
+      ctx.globalAlpha = Math.min(1, c.k * 1.15) * op;
       ctx.drawImage(tinted(c.cur, sky), c.x, c.y);
-      if (fa > 0.01 && c === w.clouds[1]) { ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = fa * 0.55; ctx.drawImage(flashSprite(c.cur), c.x, c.y); ctx.globalCompositeOperation = 'source-over'; }
+      if (fa > 0.01 && c === w.clouds[1]) { ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = fa * 0.55 * op; ctx.drawImage(flashSprite(c.cur), c.x, c.y); ctx.globalCompositeOperation = 'source-over'; }
     }
     ctx.globalAlpha = 1;
   }

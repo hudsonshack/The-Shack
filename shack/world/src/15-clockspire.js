@@ -13,7 +13,7 @@
  *   dyn 650     the top of the spire, which rises above the island's static
  *               box: drawn after the darkness, tinted to the sky the way the
  *               atmosphere tints the island (cached per sky)  {island: square}
- *   dyn 700    clock face with real New York time, lamp glass, lit slits,
+ *   dyn 700     clock face with real New York time, lamp glass, lit slits,
  *               the Chronicle's glowing pages, dock beacons   {island: square}
  *   dyn 800     bobbing quest marker while "you" tasks are open {island: square}
  *   entities    lamp posts (y-sorted so people pass in front of and behind them)
