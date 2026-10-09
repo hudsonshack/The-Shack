@@ -613,9 +613,9 @@
    *                     yard by the crane, south of Twirl's yellow stall
    *   Copperhold        the open yard between the cottage and the crystals
    * Anyone who still walks under a cloud is revealed by seeThrough(). */
-  const SPOTS = { monastery: [11, 15.75], market: [61.3, 16.1], port: [19.875, 30.625], mine: [65, 35.4] };
+  const SPOTS = { monastery: [11, 15.75], market: [61.3, 16.1], port: [19.875, 30.625], mine: [65.5, 35.4] };
   /** Storm-only spots where the big storm cloud needs more room (glides there with w.storm). */
-  const SPOTS_STORM = { port: [23.25, 40.125] };
+  const SPOTS_STORM = { port: [23.625, 40.5] };
   /** Where a storm's smaller second cloud sits relative to the main one (px), kept off buildings and work spots. */
   const SIDE = { monastery: [-60, -6], market: [-56, -2], port: [-56, 12] };
   function wxFor(id) {
