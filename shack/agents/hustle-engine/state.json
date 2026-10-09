@@ -3,7 +3,7 @@
   "phase": "idle",
   "last_run": "2026-10-08T20:46-04:00",
   "next_run": null,
-  "summary": "Skipped: night store pulse by hub: 0 orders, none unfulfilled",
+  "summary": "Skipped: maintenance mode, not night cycle",
   "alerts": [
     {
       "level": "warn",

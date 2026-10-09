@@ -1,9 +1,9 @@
 {
   "agent": "social-ops",
   "phase": "idle",
-  "last_run": "2026-10-09T05:50-04:00",
+  "last_run": "2026-10-09T15:46-04:00",
   "next_run": null,
-  "summary": "Skipped: Metricool has no connected networks; Angie's Raw folder empty",
+  "summary": "Skipped: Metricool has no networks, Angie raw folder empty",
   "alerts": [
     {
       "level": "warn",
