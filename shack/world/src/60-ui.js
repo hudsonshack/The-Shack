@@ -1,10 +1,16 @@
-/* The Shack \u2014 UI module: HUD, drawer panels and the Quest board.
+/* The Shack \u2014 UI module: HUD, drawer panels, the Chronicle and the Quest board.
  *
  * Implements S.ui.open(hotspot) and S.ui.hudUpdate() for the core.
- * Everything shown comes from S.data (real state) or the artifact's `db`
- * (quests + check-offs). Empty data gets an honest empty state.
- * All pixel art here (icons, portraits, header banners) is drawn once into
- * small canvases and shown scaled with nearest-neighbour sampling.
+ * HUD: a slim status card in the starry gap above Clockspire (clock, next
+ * cycle, alerts + weather, Hermes, SAMPLE DATA) and a control dock in the gap
+ * below it, so the five islands stay clear at fit view.
+ * Drawer: one panel per island, landmark, dock, savings crystal, villager,
+ * the Chronicle (S.data.recaps) and the Quest board (db: quests + checks).
+ * Everything shown comes from S.data (real state) or the artifact's `db`.
+ * Empty data gets an honest empty state.
+ * Keys: Q quest board, C chronicle, Esc close, 1-5 islands, F fit.
+ * Pixel art here (icons, portraits, header banners) is drawn once into small
+ * canvases and shown scaled with nearest-neighbour sampling.
  */
 (function () {
   'use strict';
@@ -19,27 +25,35 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const plural = (n, w, pl) => `${n} ${n === 1 ? w : (pl || w + 's')}`;
 
-  /* =================================================================== themes */
+  /* =================================================================== themes
+   * Five floating islands; display names come from the core (S.islands). */
+  const isl = (id, fb) => (S.islands && S.islands[id] && S.islands[id].name) || fb;
   const THEME = {
-    square:    { name: 'Town Square', color: '#e8b75a', agent: 'hub' },
-    monastery: { name: 'Highland Monastery', color: '#86d0b0', agent: 'academic-core' },
-    mine:      { name: 'Copperpot Mine', color: '#f2c94c', agent: 'ledger-fi' },
-    market:    { name: 'Neon Night Market', color: '#ff5fb0', agent: 'social-ops' },
-    port:      { name: 'River Port Bazaar', color: '#63b4e6', agent: 'hustle-engine' },
-    savings:   { name: 'Savings Row', color: '#b6d36b', agent: 'ledger-fi' },
-    riverside: { name: 'Riverside', color: '#e39a5b', agent: null },
-    north:     { name: 'School Hill', color: '#e07a5f', agent: 'academic-core' },
+    square:    { name: isl('square', 'Clockspire'), color: '#e8b75a', agent: 'hub' },
+    monastery: { name: isl('monastery', 'Lantern Peak'), color: '#86d0b0', agent: 'academic-core' },
+    market:    { name: isl('market', 'Neon Hollow'), color: '#ff5fb0', agent: 'social-ops' },
+    port:      { name: isl('port', 'Spindrift Harbor'), color: '#63b4e6', agent: 'hustle-engine' },
+    mine:      { name: isl('mine', 'Copperhold'), color: '#f2c94c', agent: 'ledger-fi' },
   };
   const AGENT_INFO = {
-    hub:             { name: 'Mayor Tock', label: 'Director', biome: 'square', role: 'Director. Keeps the clock, rings the cycle bell, reads every report.' },
+    hub:             { name: 'Mayor Tock', label: 'Director', biome: 'square', role: 'The Director. Keeps the clock, rings the cycle bell, reads every report and writes the Chronicle.' },
     'academic-core': { name: 'Abbot Quill', label: 'Academic-Core', biome: 'monastery', role: 'School. Classroom deadlines, study blocks and Quizlet sets.' },
     'ledger-fi':     { name: 'Grit Copperpot', label: 'Ledger-Fi', biome: 'mine', role: 'Money. Friday paychecks, budgets, savings goals, odd charges.' },
     'social-ops':    { name: 'Lumi', label: 'Social-Ops', biome: 'market', role: "Social. Angie's and the fidget store on TikTok, Reels and Shorts." },
     'hustle-engine': { name: "Cap'n Twirl", label: 'Hustle-Engine', biome: 'port', role: 'Store. The Shopify fidget shop, orders and arbitrage ideas.' },
   };
+  /** Island order for the nav strip and the 1-5 keys. */
   const NAV = ['square', 'monastery', 'market', 'port', 'mine'];
-  const NAV_SHORT = { square: 'Square', monastery: 'School', market: 'Social', port: 'Store', mine: 'Money' };
-  const PLACE = { square: 'the square', monastery: 'the monastery', market: 'the market', port: 'the port', mine: 'the mine' };
+  const NAV_SHORT = { square: 'Hub', monastery: 'School', market: 'Social', port: 'Store', mine: 'Money' };
+  const PLACE = { square: THEME.square.name, monastery: THEME.monastery.name, market: THEME.market.name, port: THEME.port.name, mine: THEME.mine.name };
+  /** How each spoke island reaches Clockspire. */
+  const TRANSPORT = {
+    kite:  { name: 'paper kites and gliders', short: 'kite', icon: 'kite' },
+    blimp: { name: 'the neon blimp', short: 'blimp', icon: 'blimp' },
+    ship:  { name: 'the sky-ship', short: 'sky-ship', icon: 'ship' },
+    rail:  { name: 'a minecart on the sky-rail bridge', short: 'minecart', icon: 'cart' },
+  };
+  const transportOf = (biome) => TRANSPORT[(S.nav && S.nav.transport && S.nav.transport[biome]) || ({ monastery: 'kite', market: 'blimp', port: 'ship', mine: 'rail' })[biome]] || null;
 
   /* ============================================================ pixel canvas */
   function cnv(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
@@ -90,7 +104,7 @@
       '..aaaa.b', '.a....bb', 'a....bbb', 'a.......', 'a.......', 'a......a', '.a....a.', '..aaaa..'] },
     soundOn: { pal: { a: '#f3e8d2', b: '#e8b75a' }, rows: [
       '...a.....', '..aa..b..', 'aaaa.b.b.', 'aaaa.b.b.', 'aaaa.b.b.', 'aaaa.b.b.', '..aa..b..', '...a.....'] },
-    soundOff: { pal: { a: '#7d7388', r: '#ff6b6b' }, rows: [
+    soundOff: { pal: { a: '#cfc4b0', r: '#ff6b6b' }, rows: [
       '...a.....', '..aa.....', 'aaaa.r.r.', 'aaaa..r..', 'aaaa.r.r.', 'aaaa.....', '..aa.....', '...a.....'] },
     minus: { pal: { a: '#f3e8d2' }, rows: ['.......', '.......', '.......', 'aaaaaaa', '.......', '.......', '.......'] },
     plus: { pal: { a: '#f3e8d2' }, rows: ['...a...', '...a...', '...a...', 'aaaaaaa', '...a...', '...a...', '...a...'] },
@@ -102,6 +116,20 @@
       '.rrr.', 'rRrrk', 'rrrrk', '.kkk.', '..n..', '..n..'] },
     bird: { pal: { w: '#f3e8d2', d: '#b9ad98', y: '#ffb547' }, rows: [
       '.........', '.ww...ww.', 'wddw.wddw', '....wy...', '.........'] },
+    scroll: { pal: { P: '#f3e8d2', p: '#c9b88f', k: '#7a5a3a', r: '#c8453a', w: '#9b6b3d' }, rows: [
+      '.wwwwwwww.', 'wPPPPPPPPw', '.wPkkkkPw.', '..PPPPPPp.', '..PkkkkPp.', '..PPPPPPp.', '..PkkPPPp.', '..PPPPrPp.', '.wPPPPPPw.', 'wwwwwwwwww'] },
+    wing: { pal: { w: '#f3e8d2', d: '#b9ad98', y: '#e8b75a' }, rows: [
+      '......ww', '....wwwd', '..wwwwd.', '.wwwwd..', 'wwwdd...', 'yyyyyyyy', '.yy..yy.'] },
+    kite: { pal: { r: '#c8453a', R: '#ff7a5a', y: '#f2c94c', k: '#3a2a20' }, rows: [
+      '...R...', '..RRr..', '.RRyrr.', 'RRyyyrr', '.rryrr.', '..rrr..', '...k...', '..k....', '...k...'] },
+    blimp: { pal: { p: '#ff5fb0', P: '#ff9ad0', c: '#3ef0ff', k: '#2b2633' }, rows: [
+      '..pppppp..', '.pPPpppppp', 'pPPppppppc', 'pppppppppc', '.pppppppp.', '...kkkk...', '...kcck...'] },
+    ship: { pal: { s: '#f3e8d2', S: '#c9bfa8', w: '#9b6b3d', W: '#c08a52', k: '#3a2416', b: '#63b4e6' }, rows: [
+      '....k.....', '...sk.....', '..ssk.....', '.sSsk.....', 'sssSkb....', '....k.....', 'WWWWWWWWW.', '.wwwwwwww.', '..kkkkkk..'] },
+    cart: { pal: { g: '#7a7a84', G: '#9a9aa4', y: '#f2c94c', Y: '#ffe07a', k: '#2b2633' }, rows: [
+      '..yYyy...', '.yyyyyy..', 'GGGGGGGGG', 'gggggggg.', '.gggggg..', '.k....k..', 'kkkkkkkkk'] },
+    crystal: { pal: { c: '#b7a6ff', C: '#e2dcff', d: '#6f5bd0' }, rows: [
+      '..C..', '.CCc.', '.Ccc.', 'CCccd', 'Cccdd', '.ccd.', '..d..'] },
   };
   const iconCache = {};
   function iconURL(name) {
@@ -115,6 +143,7 @@
     return iconCache[name];
   }
   function icon(name, scale = 2, alt = '') {
+    if (scale === 1) scale = 2; // nothing in the UI is drawn at 1x any more: tiny icons hurt legibility
     const ic = iconURL(name);
     if (!ic) return '';
     return `<img class="ico" src="${ic.url}" width="${ic.w * scale}" height="${ic.h * scale}" alt="${esc(alt)}"${alt ? '' : ' aria-hidden="true"'}>`;
@@ -362,60 +391,26 @@
         break;
       }
       case 'port': {
-        bands(['#1f3a52', '#25465f', '#2c526b', '#345f78'], 0, 5);
-        stars(8, 12, 11);
-        // far shore (Highlands) and the river
-        for (let x = X0; x < X1; x++) { const h = 6 + Math.round(Math.sin(x * 0.06 + 1) * 3 + Math.sin(x * 0.17) * 1.5); R(x, 20 - h, 1, h, '#2a4038'); }
-        bands(['#2f6290', '#3a72a3', '#3f7fb0'], 20, 6);
-        for (let i = 0; i < 40; i++) { const x = X0 + ((hash(i, 5, 2) * W) | 0), y = 21 + ((hash(i, 6, 2) * 16) | 0); R(x, y, 2 + ((hash(i, 7, 2) * 3) | 0), 1, y > 30 ? '#6fb2d6' : '#4f8fbf'); }
-        // cargo ship
-        const sx = 104;
-        R(sx, 22, 40, 6, '#5a3a24'); R(sx + 2, 28, 36, 2, '#3a2416'); R(sx, 22, 40, 1, '#8a5a32'); R(sx + 1, 25, 38, 1, '#c8453a');
-        R(sx + 6, 17, 8, 5, '#c08a52'); R(sx + 15, 17, 8, 5, '#63b4e6'); R(sx + 24, 17, 8, 5, '#c08a52'); R(sx + 6, 17, 8, 1, '#e0b07a'); R(sx + 15, 17, 8, 1, '#9fd2f2'); R(sx + 24, 17, 8, 1, '#e0b07a');
-        R(sx + 34, 4, 1, 18, '#3a2416'); R(sx + 28, 6, 6, 9, '#f3e8d2'); R(sx + 28, 6, 1, 9, '#c9bfa8'); R(sx + 35, 3, 4, 2, '#ff4fa3');
-        R(sx - 2, 30, 44, 1, '#d8eef5');
-        // pier
-        R(60, 26, 40, 3, '#9b6b3d'); R(60, 26, 40, 1, '#c08a52'); for (let x = 62; x < 100; x += 8) R(x, 29, 2, 6, '#74502c');
+        // Spindrift Harbor: a sky-ship sailing past the harbor island's floating pier, clouds below
+        bands(['#1d2c4a', '#223556', '#283f63', '#2f4a70'], 0, 6);
+        stars(12, 18, 11);
+        // soft cloud bank along the bottom
+        for (let x = X0; x < X1; x++) { const h = 6 + Math.round(Math.sin(x * 0.09 + 1) * 2 + Math.sin(x * 0.23) * 1.5); R(x, H - h, 1, h, '#5a6f94'); R(x, H - h, 1, 1, '#8aa0c4'); }
+        // a floating rock with the pier
+        for (let x = 52; x < 100; x++) { const d = Math.min(x - 52, 100 - x); const h = Math.min(9, 2 + (d >> 1)); R(x, 26, 1, h, x % 3 ? '#6b5640' : '#57452f'); }
+        R(50, 23, 52, 3, '#5d8a3e'); R(50, 23, 52, 1, '#86b85a');
+        R(84, 20, 30, 3, '#9b6b3d'); R(84, 20, 30, 1, '#c08a52'); for (let x = 88; x < 114; x += 8) R(x, 23, 2, 5, '#74502c');
+        R(66, 12, 10, 11, '#d9cdb4'); R(65, 10, 12, 3, '#3b5b7a'); R(69, 16, 3, 3, '#ffd27a');
+        // the sky-ship: hull, sails, balloon rigging
+        const sx = 122;
+        R(sx + 4, 6, 30, 7, '#c8453a'); R(sx + 2, 7, 34, 5, '#c8453a'); R(sx + 5, 6, 28, 1, '#ff7a5a'); R(sx + 4, 9, 30, 1, '#f3e8d2');
+        R(sx + 10, 13, 1, 6, '#3a2416'); R(sx + 28, 13, 1, 6, '#3a2416');
+        R(sx, 19, 40, 6, '#5a3a24'); R(sx + 2, 25, 36, 2, '#3a2416'); R(sx, 19, 40, 1, '#8a5a32'); R(sx + 1, 22, 38, 1, '#63b4e6');
+        R(sx + 8, 15, 6, 4, '#c08a52'); R(sx + 16, 15, 6, 4, '#63b4e6'); R(sx + 24, 15, 6, 4, '#c08a52');
+        R(sx + 40, 20, 4, 2, '#3a2416'); R(sx + 44, 18, 3, 2, '#ff4fa3');
+        g.fillStyle = 'rgba(255,255,255,0.12)'; for (let i = 0; i < 4; i++) g.fillRect(sx - 6 - i * 7, 21 + (i & 1), 5, 1);
         // gulls
-        for (const [x, y] of [[86, 6], [94, 10]]) { R(x, y, 2, 1, '#f3e8d2'); R(x + 3, y, 2, 1, '#f3e8d2'); R(x + 2, y + 1, 1, 1, '#f3e8d2'); }
-        break;
-      }
-      case 'savings': {
-        bands(['#20302a', '#263a2e', '#2c4432', '#344e38'], 0, 6);
-        for (let x = X0; x < X1; x++) { R(x, 30, 1, 8, '#4a5a2e'); if (hash(x, 1, 6) > 0.5) R(x, 29, 1, 1, '#6f7a35'); }
-        // scaffold + crane
-        for (let y = 12; y < 30; y += 6) R(96, y, 26, 1, '#c08a52');
-        R(96, 12, 1, 18, '#c08a52'); R(121, 12, 1, 18, '#c08a52'); R(99, 20, 20, 10, '#9a9590'); R(99, 20, 20, 1, '#bdb7ae');
-        R(104, 23, 3, 3, '#ffd27a'); R(111, 23, 3, 3, '#ffd27a');
-        R(130, 2, 2, 28, '#e8b75a'); R(112, 2, 40, 2, '#e8b75a'); R(116, 4, 1, 6, '#5a5a62'); R(115, 10, 3, 2, '#5a5a62');
-        // sapling with gold fruit
-        R(146, 20, 2, 10, '#6b4424'); R(141, 12, 12, 9, '#4f8f33'); R(143, 11, 8, 1, '#6cbf4a'); R(142, 13, 2, 2, '#6cbf4a'); R(144, 16, 2, 2, '#f2c94c'); R(149, 14, 2, 2, '#f2c94c');
-        // shield
-        R(70, 16, 12, 10, '#5a85a8'); R(71, 26, 10, 2, '#5a85a8'); R(73, 28, 6, 2, '#5a85a8'); R(72, 18, 8, 6, '#8fb8d8');
-        break;
-      }
-      case 'riverside': {
-        bands(['#2a2236', '#33293f', '#3d3048', '#47374f'], 0, 6);
-        stars(10, 12, 13);
-        bands(['#2f6290', '#3f7fb0'], 30, 4);
-        // inn facade
-        R(92, 10, 60, 20, '#d9cdb4'); R(92, 10, 60, 1, '#f3e8d2'); R(88, 4, 68, 6, '#4a4458'); R(88, 4, 68, 1, '#6a6478');
-        for (let x = 98; x < 150; x += 12) { R(x, 15, 6, 6, '#ffd27a'); R(x, 15, 6, 1, '#fff3c4'); R(x + 2, 15, 1, 6, '#c08a52'); g.fillStyle = 'rgba(255,184,77,0.15)'; g.fillRect(x - 2, 13, 10, 10); }
-        R(118, 22, 7, 8, '#5a3a24'); R(84, 12, 6, 5, '#6b4424'); R(85, 13, 4, 3, '#e8b75a');
-        // coins on the way (payday)
-        for (const x of [60, 66, 72]) { R(x, 26, 3, 3, '#f2c94c'); R(x, 26, 1, 1, '#fff6c8'); }
-        break;
-      }
-      case 'north': {
-        bands(['#2a2236', '#30283c', '#382e44', '#40344a'], 0, 6);
-        stars(10, 12, 17);
-        R(96, 12, 50, 20, '#9a4a3a'); for (let y = 13; y < 32; y += 3) for (let x = 96 + ((y / 3) & 1) * 3; x < 146; x += 6) R(x, y, 5, 1, '#b85a48');
-        R(92, 8, 58, 4, '#3a3446'); R(116, 2, 10, 6, '#3a3446'); R(119, 3, 4, 3, '#e8b75a');
-        for (const x of [102, 112, 128, 138]) { R(x, 16, 5, 6, '#ffd27a'); R(x + 2, 16, 1, 6, '#9a4a3a'); }
-        R(118, 22, 6, 10, '#3a2a20');
-        R(80, 2, 1, 30, '#bdb7ae'); R(81, 3, 9, 6, '#c8453a'); R(81, 5, 9, 1, '#f3e8d2'); R(81, 3, 4, 3, '#3f6fb0');
-        // a carrier bird with a letter
-        R(40, 10, 3, 1, '#f3e8d2'); R(45, 10, 3, 1, '#f3e8d2'); R(43, 11, 2, 1, '#f3e8d2'); R(43, 12, 2, 2, '#e8b75a');
+        for (const [x, y] of [[30, 8], [40, 12]]) { R(x, y, 2, 1, '#f3e8d2'); R(x + 3, y, 2, 1, '#f3e8d2'); R(x + 2, y + 1, 1, 1, '#f3e8d2'); }
         break;
       }
       default: { // square
@@ -578,7 +573,7 @@
       { k: 'Done', v: esc(th.done ?? 0), tone: th.done ? 'ok' : 'mute' },
       { k: 'Last run', v: esc(lr), sm: true, tone: th.last_run ? '' : 'mute' },
     ];
-    const summary = th.summary || 'Waiting for first cycle.';
+    const summary = th.summary || 'Waiting for the first cycle.';
     return tiles(tl, 4) + `<p class="summary">${esc(summary)}<small>${esc(th.label || AGENT_INFO[agent].label)} \u00b7 ${esc(th.domain || '')}${th.weight != null ? ` \u00b7 weight ${esc(th.weight)}` : ''}</small></p>`;
   }
   function bubblesLine(agent) {
@@ -632,7 +627,7 @@
     const daysTo = ((5 - (p.dow ?? 0)) + 7) % 7;
     let html = `<div class="kvline"><span>Paid <b>every ${esc(pd.weekday || 'Friday')}</b></span><span>${esc(pd.method || 'direct deposit')}</span><span>${today ? '<b style="color:var(--ok)">Payday is today</b>' : `next in <b>${daysTo}d</b>`}</span></div>`;
     if (lp && num(lp.amount) != null) html += `<ul class="rows"><li class="row" style="--g:auto 1fr auto">${icon('coin', 2)}<span><span class="t" style="display:block">Last paycheck</span><span class="d">${esc(dayLabel(lp.date))} \u00b7 ${esc(rel(lp.date))}</span></span><span class="num" style="color:var(--ok)">+${esc(money(lp.amount))}</span></li></ul>`;
-    else html += emptyBox(m.bank_feed === 'connected' ? 'No paycheck seen yet this month.' : 'No paycheck data yet: the M&T alert emails are not connected, so deposits can\u2019t be seen. Your Friday direct deposit still lands either way.', 'coin');
+    else html += emptyBox(m.bank_feed === 'connected' ? 'No paycheck seen yet this month.' : 'No paycheck data yet: the bank alert emails are not connected, so deposits can\u2019t be seen. Your Friday direct deposit still lands either way.', 'coin');
     return sec('Payday', html, { icon: 'coin' });
   }
   function categoriesBlock(m) {
@@ -648,6 +643,8 @@
       : emptyBox('No spending categories yet. They fill in from bank alerts after the first cycles.');
     return sec('Budgets', body, { n: list.length });
   }
+  /** The savings crystals in Copperhold: gold, blue, violet. */
+  const CRYSTAL_COL = { Invest: '#f2c94c', 'Car insurance': '#63b4e6', 'Apartment fund': '#b48cff' };
   function savingsRow(s) {
     const t = num(s.target), c = num(s.current) || 0;
     const r = t ? c / t : 0;
@@ -658,13 +655,14 @@
       if (dl != null && dl > 0 && c < t) sub += ` \u00b7 ${money((t - c) / Math.max(1, dl / 7), 0)}/wk to hit ${dayLabel(s.deadline)}`;
       else if (s.deadline) sub += ` \u00b7 by ${dayLabel(s.deadline)}`;
     } else sub = 'No target set yet';
-    return `<li class="row" style="--g:1fr auto"><span class="t">${esc(s.name)}</span><span class="num">${esc(money(c, 0))}</span><span class="full">${bar(r, t ? '' : 'mute', true)}</span><span class="d full">${esc(sub)}</span></li>`;
+    const col = CRYSTAL_COL[s.name];
+    return `<li class="row" style="--g:1fr auto"><span class="t">${esc(s.name)}</span><span class="num">${esc(money(c, 0))}</span><span class="full"${col ? ` style="--bc:${col}"` : ''}>${bar(r, t ? '' : 'mute', true)}</span><span class="d full">${esc(sub)}</span></li>`;
   }
   function savingsBlock(m) {
     const list = arr(m.savings).length ? arr(m.savings) : arr(D().savings_goals);
     const body = list.length ? `<ul class="rows">${list.map(savingsRow).join('')}</ul>` : emptyBox('No savings goals configured.');
     const anyNoTarget = list.some((s) => !num(s.target));
-    return sec('Savings goals', body + (anyNoTarget ? `<p class="note">Set dollar targets (task T-0004) and the buildings on Savings Row start to grow.</p>` : ''), { n: list.length });
+    return sec('Savings goals', body + (anyNoTarget ? `<p class="note">Set a target on the quest board (or tell Claude) and the savings crystals in ${esc(PLACE.mine)} start to grow.</p>` : ''), { n: list.length });
   }
   function anomaliesBlock(m) {
     const list = arr(m.anomalies);
@@ -749,7 +747,7 @@
     const list = arr(D().commits).slice(0, limit);
     const body = list.length
       ? `<ul class="rows">${list.map((c) => `<li class="row" style="--g:auto 1fr auto"><span class="tag">${esc(String(c.sha || '').slice(0, 7))}</span><span class="t">${esc(c.subject)}</span><span class="d">${esc(rel(c.at))}</span></li>`).join('')}</ul>`
-      : emptyBox('No letters in the mail post yet.');
+      : emptyBox('No letters at the mail post yet.');
     return sec('Recent commits', body, { n: arr(D().commits).length });
   }
 
@@ -786,22 +784,44 @@
     const rows = S.BIOMES.map((b) => {
       const ag = S.agentForBiome(b), th = threadOf(ag) || {}, inf = AGENT_INFO[ag];
       const lvl = (S.status[b] || {}).level || 'idle';
-      return `<li class="row click" data-act="biome" data-arg="${b}" style="--g:32px 1fr auto;--c:${THEME[b].color}"><img class="mini-portrait" src="${portraitURL(whoFor(ag), b)}" alt=""><span><span class="t" style="display:block">${esc(inf.name)} <span class="d">\u00b7 ${esc(th.label || inf.label)}</span></span><span class="d" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(th.summary || 'Waiting for first cycle.')}</span></span><span style="display:grid;justify-items:end;gap:3px">${phasePill(th.phase)}<span class="d">${esc(th.pending ?? 0)}\u00b7${esc(th.blocked ?? 0)}\u00b7${esc(th.done ?? 0)} ${icon(WEATHER[lvl].icon, 1)}</span></span></li>`;
+      return `<li class="row click" data-act="biome" data-arg="${b}" style="--g:34px 1fr auto;--c:${THEME[b].color}" title="Open ${esc(THEME[b].name)}"><img class="mini-portrait" src="${portraitURL(whoFor(ag), b)}" alt=""><span><span class="t" style="display:block"><b>${esc(inf.name)}</b> <span class="d">· ${esc(THEME[b].name)}</span></span><span class="d" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(th.summary || 'Waiting for the first cycle.')}</span></span><span style="display:grid;justify-items:end;gap:4px">${phasePill(th.phase)}<span class="d tnum" title="pending · blocked · done">${esc(th.pending ?? 0)} · ${esc(th.blocked ?? 0)} · ${esc(th.done ?? 0)} ${icon(WEATHER[lvl].icon, 2)}</span></span></li>`;
     }).join('');
     const al = arr(D().alerts);
     const au = D().autonomy || {};
     const auKeys = Object.keys(au).filter((k) => k !== 'profile');
     const yt = youTasks(), ytDone = yt.filter((t) => checks[t.id] && checks[t.id].done).length;
     return [
-      sec('The council', `<ul class="rows">${rows}</ul><p class="note">pending \u00b7 blocked \u00b7 done, and the weather over each biome.</p>`),
-      al.length ? alertsSection(al, 'All alerts') : sec('Alerts', emptyBox('All quiet. No alerts from any biome.', 'ok')),
-      sec('Your quests', `<div class="kvline"><span><b>${yt.length - ytDone}</b> open for you</span><span>${ytDone} ticked off</span></div>${bar(yt.length ? ytDone / yt.length : 0, 'ok')}<div class="btnrow"><button class="btn primary" data-act="quest">${icon('board', 1)} Open quest board</button></div>`),
+      chronicleTeaser(),
+      sec('The council', `<ul class="rows">${rows}</ul><p class="note">Numbers are pending · blocked · done; the icon is the weather over each island.</p>`),
+      al.length ? alertsSection(al, 'All alerts') : sec('Alerts', emptyBox('All quiet. No alerts from any island.', 'ok')),
+      sec('Your quests', `<div class="kvline"><span><b>${yt.length - ytDone}</b> open for you</span><span><b>${ytDone}</b> ticked off</span></div>${bar(yt.length ? ytDone / yt.length : 0, 'ok')}<div class="btnrow"><button class="btn primary" data-act="quest">${icon('board', 2)} Open quest board</button><button class="btn" data-act="chronicle">${icon('scroll', 2)} Read the Chronicle</button></div>`),
+      hermesBlock(),
       cyclesBlock(),
       runsBlock(4),
-      auKeys.length ? sec(`Autonomy \u00b7 ${au.profile || 'custom'}`, `<div class="chips">${auKeys.map((k) => `<span class="pill ${au[k] === 'auto' ? 'ok' : au[k] === 'never' ? 'crit' : 'warn'}">${esc(k)}: ${esc(au[k])}</span>`).join('')}</div>`) : '',
+      auKeys.length ? sec(`Autonomy · ${au.profile || 'custom'}`, `<div class="chips">${auKeys.map((k) => `<span class="pill ${au[k] === 'auto' ? 'ok' : au[k] === 'never' ? 'crit' : 'warn'}">${esc(k)}: ${esc(au[k])}</span>`).join('')}</div>`) : '',
       tasksSection('hub'),
     ];
   };
+
+  /* ================================================================ Hermes */
+  function shortModel(m) {
+    const s = String(m || 'auto').split('/').pop().replace(/:free$/, '');
+    return s.length > 22 ? s.slice(0, 21) + '…' : s;
+  }
+  /** Hermes is the free drafting model; S.data.hermes = {enabled, model, available, reason, checked, use_for}. */
+  function hermesState() {
+    const h = D().hermes;
+    if (!h || typeof h !== 'object') return { on: false, text: 'Hermes off · needs key', tip: 'No Hermes status in the data yet.' };
+    if (h.enabled === false) return { on: false, text: 'Hermes off', tip: 'Hermes is switched off in config.json.' };
+    if (h.available === true) return { on: true, text: `Hermes online · ${shortModel(h.model)}`, tip: `Hermes is online (${h.model || 'auto'})${h.checked ? ', checked ' + rel(h.checked) : ''}.` };
+    return { on: false, text: 'Hermes off · needs key', tip: h.reason ? String(h.reason) : 'Hermes has not been checked yet. The next cycle checks it.' };
+  }
+  const HERMES_LINE = 'Hermes is a free AI model that drafts bulk work, and Claude checks it. Turn it on in SETUP step 6.';
+  function hermesBlock() {
+    const h = D().hermes || {}, st = hermesState();
+    const uses = arr(h.use_for);
+    return sec('Hermes, the drafting helper', `<div class="chips">${pill(st.text, st.on ? 'ok' : 'mute')}</div><p class="note">${esc(HERMES_LINE)}</p>${!st.on && h.reason ? `<p class="note"><b>Why it’s off:</b> ${esc(h.reason)}</p>` : ''}${uses.length ? `<div class="chips">${uses.map((u) => `<span class="tag">${esc(u)}</span>`).join('')}</div>` : ''}`, { icon: 'wing' });
+  }
 
   /* ================================================================ weather */
   const WEATHER = {
@@ -817,7 +837,7 @@
     const w = WEATHER[worst];
     let ic = w.icon, word = w.word;
     if (worst === 'ok') { ic = S.time.isNight ? 'moon' : 'sun'; word = S.time.isNight ? 'Clear night' : 'Clear'; }
-    if (worst === 'warn' || worst === 'critical') word += ' over ' + (where.length > 2 ? where.length + ' biomes' : where.map((b) => b[0].toUpperCase() + b.slice(1)).join(' & '));
+    if (worst === 'warn' || worst === 'critical') word += ' over ' + (where.length > 2 ? where.length + ' islands' : where.map((b) => PLACE[b]).join(' & '));
     const tip = S.BIOMES.map((b) => `${THEME[b].name}: ${WEATHER[(S.status[b] || {}).level || 'ok'].word}`).join('\n');
     return { icon: ic, word, tip, level: worst };
   }
@@ -829,43 +849,51 @@
     if (!c.next) return 'no schedule';
     return dur(c.next.at.getTime() - S.now().getTime());
   }
+  /** "8:45 PM" for a cycle's "20:45" local time. */
+  function cycleClock(name) {
+    const c = arr(D().cycles).find((x) => x.name === name);
+    const m = c && /^(\d{1,2}):(\d{2})/.exec(c.local_time || '');
+    if (!m) return null;
+    const h = +m[1];
+    return `${((h + 11) % 12) + 1}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+  }
 
   /* =============================================================== DOM refs */
   const $ = (id) => document.getElementById(id);
   let hud, panel, toast;
-  const H = {}; // HUD element refs
   let current = null; // {kind, key}
   let lastHud = {};
 
-  /* =================================================================== HUD */
+  /* =================================================================== HUD
+   * Two small surfaces placed in the starry gaps so the islands stay clear at
+   * fit view: a status card above Clockspire, a control dock below it. */
   function buildHud() {
     hud = $('hud'); panel = $('panel'); toast = $('toast');
     if (!hud || !panel) return;
-    const season = S.time.season || 'autumn';
     const sample = !!D().sample;
     hud.innerHTML = `
-      <div class="hud-group hud-main pixel-frame" role="group" aria-label="Status">
-        <button class="hud-cell hud-brand" data-act="biome" data-arg="square" title="Town Square: Mayor Tock's overview">
-          ${icon('logo', 2)}
-          <span style="display:flex;flex-direction:column"><span class="hud-title">THE SHACK</span><span class="hud-place">${esc((D().home_area || 'Cold Spring, NY').toUpperCase())}</span></span>
-        </button>
-        <div class="hud-cell"><div class="hud-stat"><span class="k" id="hud-day">\u2014</span><span class="v" id="hud-clock">\u2014</span></div></div>
-        <div class="hud-cell c-season" id="hud-wx-cell"><span id="hud-season-ico">${icon(season, 2, season)}</span><div class="hud-stat"><span class="k" id="hud-season">${esc(season)}</span><span class="v txt" id="hud-wx"></span></div></div>
-        <div class="hud-cell hud-cycle-cell"><span id="hud-cyc-ico">${icon('bell', 2)}</span><div class="hud-stat hud-cycle" id="hud-cycle"><span class="k" id="hud-cyc-k">Next cycle</span><span class="v" id="hud-cyc-v">\u2014</span><span class="minibar"><i id="hud-cyc-bar"></i></span></div></div>
-        <div class="hud-cell c-alerts"><button class="hud-chip" id="hud-alerts" data-act="alerts" title="Alerts"></button>${sample ? '<span class="sample-badge" title="Previewing with example data, not your real state">SAMPLE DATA</span>' : ''}</div>
-      </div>
-      <div class="hud-group hud-ctrl pixel-frame" role="toolbar" aria-label="Controls">
-        <div class="hud-cell" style="gap:6px">
-          <button class="hud-btn" data-act="quest" title="Quest board (Q)">${icon('board', 2)}<span class="lbl">Quest board</span><kbd>Q</kbd><b class="count" id="hud-qcount" hidden></b></button>
-          <button class="hud-btn" data-act="replay" title="Replay the cycle ceremony">${icon('replay', 2)}<span class="lbl">Replay cycle</span></button>
-          <button class="hud-btn" data-act="sound" id="hud-sound" aria-pressed="false" title="Sound">${icon('soundOff', 2)}<span class="lbl">Sound off</span></button>
+      <div class="hud-top pixel-frame" role="group" aria-label="Status">
+        <div class="ht-r1">
+          <button class="hud-brand" data-act="biome" data-arg="square" title="${esc(THEME.square.name)}: Mayor Tock’s overview">${icon('logo', 2)}<span class="hud-title">THE SHACK</span></button>
+          <span class="hud-time" title="New York time"><b id="hud-clock">—</b><span class="hud-day" id="hud-day"></span></span>
         </div>
-        <div class="hud-cell c-zoom"><div class="hud-zoom">
-          <button class="hud-btn sq" data-act="zoomout" title="Zoom out (-)" aria-label="Zoom out">${icon('minus', 2)}</button>
-          <button class="hud-btn sq" data-act="fit" title="Fit the whole map (F)" aria-label="Fit map">${icon('fit', 2)}</button>
-          <button class="hud-btn sq" data-act="zoomin" title="Zoom in (+)" aria-label="Zoom in">${icon('plus', 2)}</button>
-          <span class="zl" id="hud-zoom">1.0\u00d7</span>
-        </div></div>
+        <div class="ht-r2" id="hud-cycle">${icon('bell', 2)}<span class="k" id="hud-cyc-k">Next cycle</span><span class="v" id="hud-cyc-v">—</span><span class="minibar"><i id="hud-cyc-bar"></i></span></div>
+        <div class="ht-r3">
+          <button class="hud-chip" id="hud-alerts" data-act="alerts"></button>
+          <button class="hud-chip" id="hud-hermes" data-act="hermes"></button>
+          ${sample ? '<span class="sample-badge" title="Previewing with example data, not your real state">SAMPLE DATA</span>' : ''}
+        </div>
+      </div>
+      <div class="hud-dock pixel-frame" role="toolbar" aria-label="Controls">
+        <button class="hud-btn" data-act="quest" title="Quest board (Q)">${icon('board', 2)}<span class="lbl">Quest board</span><kbd>Q</kbd><b class="count" id="hud-qcount" hidden></b></button>
+        <button class="hud-btn" data-act="chronicle" title="The Chronicle: Mayor Tock’s recaps (C)">${icon('scroll', 2)}<span class="lbl">Chronicle</span><kbd>C</kbd></button>
+        <span class="sep" aria-hidden="true"></span>
+        <button class="hud-btn sq" data-act="replay" title="Replay the cycle ceremony" aria-label="Replay the cycle ceremony">${icon('replay', 2)}</button>
+        <button class="hud-btn sq" data-act="sound" id="hud-sound" aria-pressed="false" title="Sound" aria-label="Sound">${icon('soundOff', 2)}</button>
+        <span class="sep" aria-hidden="true"></span>
+        <button class="hud-btn sq z-step" data-act="zoomout" title="Zoom out (-)" aria-label="Zoom out">${icon('minus', 2)}</button>
+        <button class="hud-btn sq" data-act="fit" title="Fit the whole map (F)" aria-label="Fit the whole map">${icon('fit', 2)}</button>
+        <button class="hud-btn sq z-step" data-act="zoomin" title="Zoom in (+)" aria-label="Zoom in">${icon('plus', 2)}</button>
       </div>`;
     hud.addEventListener('click', onAction);
     panel.addEventListener('click', onAction);
@@ -877,66 +905,74 @@
     window.addEventListener('resize', measureHud);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureHud, () => {});
   }
-  /** Keep the drawer just below the HUD, however many rows the HUD wraps to. */
+  /** On narrow desktops the drawer starts below the status card. */
   let hudH = 0;
   function measureHud() {
-    if (!hud) return;
-    const r = hud.getBoundingClientRect();
-    const h = Math.round(r.bottom - (hud.parentElement ? hud.parentElement.getBoundingClientRect().top : 0));
-    if (h !== hudH) { hudH = h; document.getElementById('app').style.setProperty('--hud-h', h + 'px'); }
+    const top = hud && hud.querySelector('.hud-top');
+    if (!top) return;
+    const h = Math.round(top.getBoundingClientRect().bottom - (hud.getBoundingClientRect().top || 0));
+    if (h !== hudH) { hudH = h; const app = $('app'); if (app) app.style.setProperty('--hud-h', h + 'px'); }
   }
 
   function setText(id, v) { if (lastHud[id] !== v) { lastHud[id] = v; const el = $(id); if (el) el.textContent = v; } }
   function setHTML(id, v) { if (lastHud[id] !== v) { lastHud[id] = v; const el = $(id); if (el) el.innerHTML = v; } }
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   function hudUpdate() {
     if (!hud || !hud.firstElementChild) return;
     const now = S.now();
     const p = S.time.ny || S.nyParts(now);
     const cp = clockParts(now);
-    setText('hud-day', `${WD[p.dow]} \u00b7 NEW YORK`);
     setHTML('hud-clock', `${esc(cp.hm)}<small>${esc(cp.ap)}</small>`);
-    // season + weather
-    const season = S.time.season || 'autumn';
-    setText('hud-season', season);
-    setHTML('hud-season-ico', icon(season, 2, season));
-    const wx = townWeather();
-    setHTML('hud-wx', `${icon(wx.icon, 2)}<span>${esc(wx.word)}</span>`);
-    const cell = $('hud-wx-cell');
-    if (cell && cell.title !== wx.tip) cell.title = wx.tip;
+    setText('hud-day', `${DAYS[p.dow]} · New York`);
     // cycle
     const c = S.cycle || {};
     const cyc = $('hud-cycle');
     if (c.ceremony) {
-      setText('hud-cyc-k', c.ceremony.name === 'manual' ? 'Cycle replay' : `Cycle \u00b7 ${c.ceremony.name}`);
-      setText('hud-cyc-v', beatName(c.ceremony.progress));
-      cyc && cyc.classList.add('live');
+      setHTML('hud-cyc-k', c.ceremony.name === 'manual' ? 'Cycle replay: <b>' + esc(beatName(c.ceremony.progress)) + '</b>' : `Cycle <b>${esc(c.ceremony.name)}</b>: ${esc(beatName(c.ceremony.progress))}`);
+      setText('hud-cyc-v', 'now');
+      if (cyc) cyc.classList.add('live');
       const b = $('hud-cyc-bar'); if (b) b.style.setProperty('--p', (clamp(c.ceremony.progress, 0, 1) * 100).toFixed(1) + '%');
     } else {
-      cyc && cyc.classList.remove('live');
+      if (cyc) cyc.classList.remove('live');
       if (c.next) {
-        setText('hud-cyc-k', `Next \u00b7 ${c.next.name}`);
-        setText('hud-cyc-v', dur(c.next.at.getTime() - now.getTime()));
+        setHTML('hud-cyc-k', `Next cycle: <b>${esc(c.next.name)}</b>`);
+        setText('hud-cyc-v', 'in ' + dur(c.next.at.getTime() - now.getTime()));
         const lastAt = c.last ? c.last.at.getTime() : c.next.at.getTime() - 8 * 3600e3;
         const pr = clamp((now.getTime() - lastAt) / Math.max(1, c.next.at.getTime() - lastAt), 0, 1);
         const b = $('hud-cyc-bar'); if (b) b.style.setProperty('--p', (pr * 100).toFixed(1) + '%');
-        if (cyc && c.next.focus && cyc.title !== c.next.focus) cyc.title = `${c.next.name}: ${c.next.focus}`;
-      } else { setText('hud-cyc-k', 'Next cycle'); setText('hud-cyc-v', 'none set'); }
+        const tip = `${c.next.name} at ${fmtClock.format(c.next.at)}${c.next.focus ? ': ' + c.next.focus : ''}`;
+        if (cyc && cyc.title !== tip) cyc.title = tip;
+      } else { setHTML('hud-cyc-k', 'Next cycle'); setText('hud-cyc-v', 'none set'); }
     }
-    // alerts
+    // alerts (with the weather over the islands as its icon)
     const al = arr(D().alerts);
     const lvl = al.some((a) => a.level === 'critical') ? 'critical' : al.length ? 'warn' : 'zero';
+    const wx = townWeather();
     const ab = $('hud-alerts');
     if (ab) {
-      const key = al.length + lvl;
+      const key = al.length + lvl + wx.icon;
       if (lastHud.alerts !== key) {
         lastHud.alerts = key;
         ab.className = 'hud-chip ' + lvl;
-        ab.innerHTML = `${icon(lvl === 'critical' ? 'alertCrit' : lvl === 'warn' ? 'alert' : 'ok', 2)}<b>${al.length}</b><span>${al.length === 1 ? 'alert' : 'alerts'}</span>`;
-        ab.title = al.length ? al.map((a) => `${a.agent}: ${a.msg}`).join('\n') : 'No alerts';
+        ab.innerHTML = `${icon(wx.icon, 2)}<span><b>${al.length}</b> ${al.length === 1 ? 'alert' : 'alerts'}</span>`;
+        ab.title = (al.length ? al.map((a) => `${a.agent}: ${a.msg}`).join('\n') : 'No alerts') + `\n\nWeather: ${wx.word}\n${wx.tip}`;
+        ab.setAttribute('aria-label', `${al.length} ${al.length === 1 ? 'alert' : 'alerts'}. ${wx.word}. Open Mayor Tock’s overview.`);
       }
     }
-    // quest count: open you-tasks + quests with a fresh reply
+    // Hermes
+    const hb = $('hud-hermes');
+    if (hb) {
+      const st = hermesState();
+      const key = st.text + st.on;
+      if (lastHud.hermes !== key) {
+        lastHud.hermes = key;
+        hb.className = 'hud-chip ' + (st.on ? 'on' : 'off');
+        hb.innerHTML = `<span class="dot"></span><span>${esc(st.text)}</span>`;
+        hb.title = st.tip + '\n' + HERMES_LINE;
+      }
+    }
+    // quest count: open you-tasks
     const open = youTasks().filter((t) => !(checks[t.id] && checks[t.id].done)).length;
     const qc = $('hud-qcount');
     if (qc) { const v = open ? String(open) : ''; if (qc.textContent !== v) qc.textContent = v; qc.hidden = !open; qc.title = `${open} open task${open === 1 ? '' : 's'} for you`; }
@@ -949,11 +985,11 @@
         lastHud.sound = key;
         sb.setAttribute('aria-pressed', on ? 'true' : 'false');
         sb.disabled = !has;
-        sb.innerHTML = `${icon(on ? 'soundOn' : 'soundOff', 2)}<span class="lbl">${on ? 'Sound on' : 'Sound off'}</span>`;
+        sb.innerHTML = icon(on ? 'soundOn' : 'soundOff', 2);
         sb.title = has ? (on ? 'Sound is on (chiptune). Click to mute.' : 'Sound is off. Click for chiptune.') : 'Sound is not available';
+        sb.setAttribute('aria-label', on ? 'Sound on' : 'Sound off');
       }
     }
-    setText('hud-zoom', (S.cam ? S.cam.z : 1).toFixed(1) + '\u00d7');
     // live bits inside the open panel
     if (current && panel && !panel.hidden) {
       const cd = countdownText();
@@ -963,25 +999,29 @@
 
   /* ================================================================ drawer */
   function navStrip(active) {
-    return `<nav class="ph-nav" aria-label="Biomes">${NAV.map((b, i) => `<button data-act="biome" data-arg="${b}" style="--c:${THEME[b].color}"${active === b ? ' aria-current="true"' : ''} title="${esc(THEME[b].name)}${i ? ` (${i})` : ''}"><i></i>${esc(NAV_SHORT[b])}</button>`).join('')}</nav>`;
+    return `<nav class="ph-nav" aria-label="Islands">${NAV.map((b, i) => `<button data-act="biome" data-arg="${b}" style="--c:${THEME[b].color}"${active === b ? ' aria-current="true"' : ''} title="${esc(THEME[b].name)} (${i + 1})"><i></i>${esc(NAV_SHORT[b])}</button>`).join('')}</nav>`;
   }
-  function head({ who, theme, kicker, title, sub }) {
+  function head({ who, theme, kicker, title, sub, island }) {
     return `<div class="panel-head">
       <div class="ph-banner" style="background-image:url(${bannerURL(theme)})"></div>
       <img class="portrait" src="${portraitURL(who, theme)}" alt="">
-      <div class="ph-text"><div class="ph-kicker">${esc(kicker)}</div><h2 class="ph-title" id="panel-title">${esc(title)}</h2></div>
+      <div class="ph-text"><div class="ph-kicker">${esc(kicker)}</div><h2 class="ph-title${island ? ' island' : ''}" id="panel-title">${esc(title)}</h2></div>
       ${sub ? `<div class="ph-sub">${esc(sub)}</div>` : ''}
       <button class="ph-x" data-act="close" aria-label="Close panel" title="Close (Esc)">${icon('close', 2)}</button>
     </div>`;
   }
-  function show(theme, html, side, navActive) {
+  /** side: 'left' | 'right' (desktop drawer). wy: world y of what it's about, so on a phone the sheet
+   * goes to the top for things in the lower half of the world and to the bottom otherwise. */
+  function show(theme, html, side, navActive, wy) {
     if (!panel) return;
     const wasHidden = panel.hidden;
-    panel.dataset.theme = theme;
+    panel.classList.toggle('top', isPhone() && wy != null && wy > S.H / 2);
+    panel.dataset.theme = THEME[theme] ? theme : 'square';
     panel.setAttribute('aria-labelledby', 'panel-title');
     panel.classList.toggle('left', side === 'left');
     panel.innerHTML = html.replace('<!--NAV-->', navStrip(navActive));
     panel.hidden = false;
+    setDrawerSide(side === 'left' ? 'left' : 'right');
     const body = panel.querySelector('.panel-body');
     if (body) body.scrollTop = 0;
     if (wasHidden && !S.reducedMotion) {
@@ -989,13 +1029,65 @@
       requestAnimationFrame(() => requestAnimationFrame(() => panel.classList.remove('enter')));
     }
   }
+  function setDrawerSide(side) {
+    const app = $('app');
+    if (!app) return;
+    app.classList.toggle('drawer-left', side === 'left');
+    app.classList.toggle('drawer-right', side === 'right');
+  }
   /** Which side the drawer goes on so it doesn't cover what you clicked. */
   function sideFor(tx) { return tx >= 38 ? 'left' : 'right'; }
+  const isPhone = () => (S.canvas ? S.canvas.clientWidth : window.innerWidth) <= 700;
+
+  /** The part of the screen the open drawer leaves free: {x, y, w, h} in CSS px. */
+  function freeRect() {
+    const vw = S.canvas ? S.canvas.clientWidth : window.innerWidth, vh = S.canvas ? S.canvas.clientHeight : window.innerHeight;
+    // keep clear of the status card on top and the dock at the bottom (when they are showing)
+    const top = hud && hud.querySelector('.hud-top'), dock = hud && hud.querySelector('.hud-dock');
+    const vis = (el) => el && el.offsetParent !== null && getComputedStyle(el).visibility !== 'hidden';
+    const y0 = vis(top) ? Math.round(top.getBoundingClientRect().bottom) + 6 : 0;
+    const y1 = vis(dock) ? Math.round(dock.getBoundingClientRect().top) - 6 : vh;
+    if (!panel || panel.hidden) return { x: 0, y: y0, w: vw, h: Math.max(120, y1 - y0) };
+    const pr = panel.getBoundingClientRect();
+    if (isPhone()) {
+      return panel.classList.contains('top')
+        ? { x: 0, y: Math.round(pr.bottom) + 6, w: vw, h: Math.max(100, y1 - Math.round(pr.bottom) - 6) }
+        : { x: 0, y: y0, w: vw, h: Math.max(100, Math.round(pr.top) - 6 - y0) };
+    }
+    const pw = panel.offsetWidth + 24;
+    return { x: panel.classList.contains('left') ? pw : 0, y: y0, w: Math.max(160, vw - pw), h: Math.max(120, y1 - y0) };
+  }
+  /** Glide so world point (wx, wy) lands in the middle of the free area. The core keeps the camera
+   * inside the world, so zoom in just enough that the shift is allowed. */
+  function glideTo(wx, wy, z) {
+    if (!S.cam || typeof S.panTo !== 'function' || !S.canvas) return;
+    const f = freeRect(), vw = S.canvas.clientWidth, vh = S.canvas.clientHeight;
+    const dx = vw / 2 - (f.x + f.w / 2), dy = vh / 2 - (f.y + f.h / 2);
+    const need = (d, c, size, view) => (d > 0 ? (view / 2 + d) / Math.max(1, size - c) : d < 0 ? (view / 2 - d) / Math.max(1, c) : 0);
+    z = clamp(Math.max(z, need(dx, wx, S.W, vw), need(dy, wy, S.H, vh)), S.cam.minZ || 0.3, Math.min(4, S.cam.maxZ || 4));
+    S.cam.follow = null;
+    S.panTo(wx + dx / z, wy + dy / z, z);
+  }
+  function islandCy(id) { const r = S.islands[id]; return r ? ((r.y - 3 + r.y + r.h + r.depth) / 2 + 0.5) * S.TILE : S.H / 2; }
+  function villagerY(id, island) { const v = S.villagers && S.villagers.byId && S.villagers.byId[id]; return v && !v.hidden ? v.y : islandCy(island); }
+  /** Glide to an island so it sits, whole if it fits, in the part of the screen the drawer leaves free. */
+  function focusIsland(id) {
+    const r = S.islands && S.islands[id];
+    if (!r || !S.cam) return;
+    const T = S.TILE, f = freeRect();
+    const top = r.y - 3, bottom = r.y + r.h + r.depth;
+    const z = clamp(Math.min(f.w / ((r.w + 4) * T), f.h / ((bottom - top + 1) * T)), Math.min(1, S.cam.fitZ), 4);
+    glideTo((r.x + r.w / 2) * T, ((top + bottom) / 2 + 0.5) * T, z);
+  }
+  /** If a world point is hidden under the drawer or the HUD (or off screen), glide it into the free area. */
+  function revealPoint(wx, wy) {
+    if (!S.cam || typeof S.worldToScreen !== 'function') return;
+    const f = freeRect(), p = S.worldToScreen(wx, wy), m = 40;
+    if (p.x >= f.x + m && p.x <= f.x + f.w - m && p.y >= f.y + m && p.y <= f.y + f.h - m) return;
+    glideTo(wx, wy, S.cam.z);
+  }
 
   function openBiome(biome) {
-    if (biome === 'north') return openLandmark('school');
-    if (biome === 'savings') return openSavings();
-    if (biome === 'riverside') return openLandmark('inn');
     const t = THEME[biome];
     if (!t) return;
     const agent = t.agent;
@@ -1003,26 +1095,18 @@
     const th = threadOf(agent) || {};
     current = { kind: 'biome', key: biome };
     const parts = BODY[agent] ? BODY[agent]() : [];
-    const reg = S.regions[biome];
-    show(biome, head({ who: whoFor(agent), theme: biome, kicker: `${t.name} \u00b7 ${th.label || inf.label}`, title: inf.name, sub: inf.role }) +
-      `<!--NAV--><div class="panel-body"><div class="chips">${phasePill(th.phase || (agent === 'hub' ? 'idle' : 'uninit'))}${agent !== 'hub' ? pill(WEATHER[(S.status[biome] || {}).level || 'ok'].word + ' over ' + PLACE[biome], (S.status[biome] || {}).level === 'critical' ? 'crit' : (S.status[biome] || {}).level === 'warn' ? 'warn' : 'mute') : ''}${agent !== 'hub' ? `<span class="pill plain mute">growth ${esc((S.status[biome] || {}).growth ?? 0)}/3</span>` : ''}</div>${parts.join('')}</div>`,
-      reg ? sideFor(reg.x + reg.w / 2) : 'right', biome);
-    try { S.focusRegion(biome); } catch (e) { /* camera optional */ }
-  }
-
-  function openSavings() {
-    current = { kind: 'biome', key: 'savings' };
-    const m = metricsOf('ledger-fi');
-    const goals = arr(m.savings).length ? arr(m.savings) : arr(D().savings_goals);
-    const total = goals.reduce((s, g) => s + (num(g.current) || 0), 0);
-    const targ = goals.reduce((s, g) => s + (num(g.target) || 0), 0);
-    const bld = [['apartment', 'Apartment fund', 'Floors rise as the fund fills'], ['garage', 'Car insurance', 'The shield fills in'], ['investTree', 'Invest', 'The tree grows and fruits']];
-    show('savings', head({ who: 'ledger-fi', theme: 'savings', kicker: 'Savings Row \u00b7 Ledger-Fi', title: 'Savings Row', sub: 'Three buildings that grow with your three savings goals.' }) +
-      `<!--NAV--><div class="panel-body">${tiles([{ k: 'Saved', v: esc(moneyShort(total)), tone: total ? 'ok' : 'mute' }, { k: 'Targets', v: esc(targ ? moneyShort(targ) : '\u2014'), tone: targ ? '' : 'mute' }, { k: 'Overall', v: targ ? Math.round(total / targ * 100) + '%' : '\u2014', tone: targ ? 'accent' : 'mute' }], 3)}
-      ${savingsBlock(m)}
-      ${sec('The buildings', `<ul class="rows">${bld.map(([k, n, d]) => `<li class="row click" data-act="landmark" data-arg="${k}" style="--g:1fr auto"><span><span class="t" style="display:block">${esc(S.landmarks[k] ? S.landmarks[k].label : n)}</span><span class="d">${esc(d)}</span></span><span class="d">open \u203a</span></li>`).join('')}</ul>`)}
-      </div>`, 'right', null);
-    try { S.focusRegion('savings'); } catch (e) { /* camera optional */ }
+    const reg = S.islands[biome];
+    const st = S.status[biome] || {};
+    const tr = transportOf(biome);
+    const chips = phasePill(th.phase || (agent === 'hub' ? 'idle' : 'uninit')) + (agent !== 'hub'
+      ? pill(WEATHER[st.level || 'ok'].word, st.level === 'critical' ? 'crit' : st.level === 'warn' ? 'warn' : 'mute')
+        + `<span class="pill plain mute">growth ${esc(st.growth ?? 0)} of 3</span>`
+        + (tr ? `<span class="pill plain mute">to ${esc(PLACE.square)} by ${esc(tr.short)}</span>` : '')
+      : `<span class="pill plain mute">the hub: four docks</span>`);
+    const side = reg ? sideFor(reg.x + reg.w / 2) : 'right';
+    show(biome, head({ who: whoFor(agent), theme: biome, kicker: `${inf.name} · ${agent === 'hub' ? 'the Director' : th.label || inf.label}`, title: t.name, island: true, sub: inf.role }) +
+      `<!--NAV--><div class="panel-body"><div class="chips">${chips}</div>${parts.join('')}</div>`, side, biome, islandCy(biome));
+    focusIsland(biome);
   }
 
   /* ---------------------------------------------------------------- villagers */
@@ -1032,9 +1116,10 @@
     const v = S.villagers && S.villagers.byId && S.villagers.byId[id];
     clearTimeout(followTimer);
     if (!v || v.hidden || !S.cam) return;
-    S.panTo(v.x, v.y - 10, Math.max(S.cam.z, Math.min(3, S.cam.maxZ || 3)));
+    glideTo(v.x, v.y - 10, Math.max(S.cam.z, Math.min(3, S.cam.maxZ || 3)));
     following = v;
-    followTimer = setTimeout(() => { if (following === v && current && current.kind === 'villager') S.cam.follow = v; }, 520);
+    // Only follow when the drawer isn't hiding half the view (the follow keeps the villager dead centre).
+    followTimer = setTimeout(() => { if (following === v && current && current.kind === 'villager' && (!panel || panel.hidden)) S.cam.follow = v; }, 520);
   }
   function openVillager(h) {
     const agent = h.agent && AGENT_INFO[h.agent] ? h.agent : null;
@@ -1044,10 +1129,11 @@
       if (isHudson) { openHudson(); followVillager('player'); return; }
       const isCat = /cat|kitty/i.test(label);
       current = { kind: 'villager', key: h.id || label };
-      const name = label.split(/[\u00b7,(]/)[0].trim() || 'A neighbour';
-      const rest = label.slice(name.length).replace(/^[\s\u00b7,(-]+|\)$/g, '');
-      show('square', head({ who: isCat ? 'cat' : 'folk', theme: 'square', kicker: 'Townsfolk \u00b7 Cold Spring', title: name, sub: rest || (isCat ? 'Patrols the square. Accepts chin scratches.' : 'A neighbour of the Shack.') }) +
-        `<!--NAV--><div class="panel-body">${emptyBox(isCat ? 'Not an agent. Does no work at all, and is proud of it.' : 'Not one of your agents, just someone who lives here and keeps the town lively.', 'ok')}</div>`, 'right', null);
+      const name = label.split(/[·,(]/)[0].trim() || 'A neighbour';
+      const rest = label.slice(name.length).replace(/^[\s·,(-]+|\)$/g, '');
+      const where = THEME[h.biome] ? h.biome : 'square';
+      show(where, head({ who: isCat ? 'cat' : 'folk', theme: where, kicker: `Islander · ${PLACE[where]}`, title: name, sub: rest || (isCat ? 'Patrols the plaza. Accepts chin scratches.' : 'A neighbour on the islands.') }) +
+        `<!--NAV--><div class="panel-body">${emptyBox(isCat ? 'Not an agent. Does no work at all, and is proud of it.' : 'Not one of your agents, just someone who lives here and keeps the islands lively.', 'ok')}</div>`, 'right', null);
       return;
     }
     const inf = AGENT_INFO[agent], th = threadOf(agent) || {}, biome = inf.biome;
@@ -1056,19 +1142,20 @@
     const bub = arr((m.world || {}).bubbles);
     const al = alertsFor(agent);
     const ceremony = S.cycle && S.cycle.ceremony;
-    let doing = 'Going about the day in ' + THEME[biome].name + '.';
-    if (ceremony) doing = 'At the fountain for the cycle ceremony.';
+    const tr = transportOf(biome);
+    let doing = 'Going about the day on ' + THEME[biome].name + '.';
+    if (ceremony) doing = 'At the Clockspire fountain for the cycle ceremony.';
     else if (S.time.isNight && S.time.ny && (S.time.ny.hour >= 23 || S.time.ny.hour < 5)) doing = 'Asleep. Zzz.';
     else if (agent === 'hub') doing = 'Minding the clock tower and the quest board.';
-    show(biome, head({ who: whoFor(agent), theme: biome, kicker: `${agent === 'hub' ? 'Director' : th.label || inf.label} \u00b7 ${THEME[biome].name}`, title: inf.name, sub: inf.role }) +
+    show(biome, head({ who: whoFor(agent), theme: biome, kicker: `${agent === 'hub' ? 'Director' : th.label || inf.label} · ${THEME[biome].name}`, title: inf.name, sub: inf.role }) +
       `<!--NAV--><div class="panel-body">
-        <div class="chips">${phasePill(th.phase || (agent === 'hub' ? 'idle' : 'uninit'))}<span class="pill plain mute">${esc(doing)}</span></div>
+        <div class="chips">${phasePill(th.phase || (agent === 'hub' ? 'idle' : 'uninit'))}<span class="pill plain mute">${esc(doing)}</span>${tr ? `<span class="pill plain mute">commutes by ${esc(tr.short)}</span>` : ''}</div>
         ${agent === 'hub' ? '' : threadHeader(agent)}
-        ${bub.length ? sec('Says', `<div class="chips">${bub.map((x) => `<span class="quote">\u201c${esc(x)}\u201d</span>`).join('')}</div>`) : sec('Says', `<p class="quote">\u201c${esc(agent === 'hub' ? (S.cycle.next ? `Next bell rings for ${S.cycle.next.name} in ${countdownText()}.` : 'The clock keeps ticking.') : 'Waiting for my first cycle. Nothing to report yet!')}\u201d</p>`)}
+        ${bub.length ? sec('Says', `<div class="chips">${bub.map((x) => `<span class="quote">“${esc(x)}”</span>`).join('')}</div>`) : sec('Says', `<p class="quote">“${esc(agent === 'hub' ? (ceremony ? 'The bell is ringing. Gather round, everyone!' : S.cycle.next ? `Next bell rings for ${S.cycle.next.name} in ${countdownText()}.` : 'The clock keeps ticking.') : 'Waiting for my first cycle. Nothing to report yet!')}”</p>`)}
         ${alertsSection(al)}
         ${glance(agent)}
-        <div class="btnrow"><button class="btn primary" data-act="biome" data-arg="${biome}">${icon('fit', 1)} Visit ${esc(THEME[biome].name)}</button>${agent === 'hub' ? `<button class="btn" data-act="quest">${icon('board', 1)} Quest board</button>` : ''}</div>
-      </div>`, sideFor((S.regions[biome].x + S.regions[biome].w / 2)), biome);
+        <div class="btnrow"><button class="btn primary" data-act="biome" data-arg="${biome}">${icon('fit', 2)} Visit ${esc(THEME[biome].name)}</button>${agent === 'hub' ? `<button class="btn" data-act="chronicle">${icon('scroll', 2)} Chronicle</button><button class="btn" data-act="quest">${icon('board', 2)} Quest board</button>` : ''}</div>
+      </div>`, sideFor((S.islands[biome].x + S.islands[biome].w / 2)), biome, villagerY(agent, biome));
     followVillager(agent);
   }
   /** A compact slice of the agent's domain for the villager card. */
@@ -1088,62 +1175,57 @@
     current = { kind: 'villager', key: 'hudson' };
     const yt = youTasks();
     const name = (D().player || {}).name || 'Hudson';
-    show('square', head({ who: 'hudson', theme: 'square', kicker: 'You \u00b7 ' + (D().home_area || 'Cold Spring, NY'), title: name, sub: 'High-school student, busboy at Hudson House Inn, store owner. The boss of this whole town.' }) +
+    show('square', head({ who: 'hudson', theme: 'square', kicker: 'You · ' + PLACE.square, title: name, sub: 'High-school student and store owner. The boss of all five islands.' }) +
       `<!--NAV--><div class="panel-body">
         ${sec('On your plate', yt.length ? taskRows(yt) : emptyBox('Nothing on your plate. The agents have it covered.', 'ok'), { n: yt.length })}
-        <div class="btnrow"><button class="btn primary" data-act="quest">${icon('board', 1)} Open quest board</button></div>
-      </div>`, 'right', 'square');
+        <div class="btnrow"><button class="btn primary" data-act="quest">${icon('board', 2)} Open quest board</button><button class="btn" data-act="chronicle">${icon('scroll', 2)} Read the Chronicle</button></div>
+      </div>`, 'right', 'square', villagerY('player', 'square'));
   }
 
   /* --------------------------------------------------------------- landmarks */
   const LM = {};
-  LM.inn = () => {
-    const m = metricsOf('ledger-fi');
-    const t2 = arr(D().tasks).find((t) => /M&T|bank|paycheck/i.test(t.title || '') && t.autonomy === 'human');
-    return { who: 'hudson', owner: 'ledger-fi', sub: 'Where you bus tables. On Fridays the payday cart rolls coins to the mine vault.', body: [
-      paydayBlock(m),
-      sec('Bank feed', `<div class="chips">${feedPill(m.bank_feed)}</div><p class="note">${m.bank_feed === 'connected'
-        ? 'Grit reads the M&T alert emails, so purchases and deposits show up in the mine.'
-        : 'Your paycheck already direct-deposits to M&T checking every Friday, so nothing to fix there. Connecting the M&T alert emails later only lets Grit see deposits and purchases. Ask Claude for the walkthrough when you are ready.'}</p>${t2 ? taskRows([t2]) : ''}`),
-    ] };
-  };
-  LM.school = () => {
-    const m = metricsOf('academic-core');
-    const t1 = arr(D().tasks).find((t) => /classroom/i.test(t.title || '') && t.autonomy === 'human');
-    return { who: 'academic-core', sub: 'Classroom alerts fly from here to the monastery by carrier bird.', body: [
-      sec('Classroom feed', `<div class="chips">${feedPill(m.classroom_feed)}</div>${m.classroom_feed === 'connected' ? '' : '<p class="note">Forward Classroom emails from the school Gmail to your personal Gmail and the birds start flying.</p>'}${t1 ? taskRows([t1]) : ''}`),
-      deadlinesBlock(m, 4),
-    ] };
-  };
   LM.temple = () => { const m = metricsOf('academic-core'); return { who: 'academic-core', sub: 'Glowing scrolls on the board are your upcoming deadlines.', body: [deadlinesBlock(m), prepBlock(m)] }; };
-  LM.studyGarden = () => { const m = metricsOf('academic-core'); return { who: 'academic-core', sub: 'Raked sand, bonsai and the week\u2019s study blocks.', body: [studyBlock(m), prepBlock(m)] }; };
+  LM.studyGarden = () => { const m = metricsOf('academic-core'); return { who: 'academic-core', sub: 'Raked sand, bonsai and the week’s study blocks.', body: [studyBlock(m), prepBlock(m)] }; };
   LM.mineEntrance = () => { const m = metricsOf('ledger-fi'); return { who: 'ledger-fi', sub: 'Where spending gets dug through, category by category.', body: [sec(monthLabel(m.month), moneyTiles(m)), categoriesBlock(m), anomaliesBlock(m)] }; };
   LM.vault = () => {
     const m = metricsOf('ledger-fi');
-    return { who: 'ledger-fi', sub: 'Coin piles grow with this month\u2019s income.', body: [sec(monthLabel(m.month), `<div class="chips">${feedPill(m.bank_feed)}</div>` + moneyTiles(m)), paydayBlock(m), savingsBlock(m)] };
+    return { who: 'ledger-fi', sub: 'Coin piles grow with this month’s income.', body: [sec(monthLabel(m.month), `<div class="chips">${feedPill(m.bank_feed)}</div>` + moneyTiles(m)), paydayBlock(m), savingsBlock(m)] };
   };
-  function goalLandmark(name, who, sub, how) {
+  /** A savings crystal: goal, current, target and % with a crystal-coloured bar. */
+  function crystalLandmark(name, color, sub) {
     const s = savingsGoal(name) || { name, current: 0, target: null };
     const t = num(s.target), c = num(s.current) || 0;
-    const stage = t ? Math.round(c / t * 100) : 0;
-    return { who, sub, body: [
-      tiles([{ k: 'Saved', v: esc(money(c, 0)), tone: c ? 'ok' : 'mute' }, { k: 'Target', v: esc(t ? money(t, 0) : '\u2014'), tone: t ? '' : 'mute' }, { k: 'Built', v: t ? stage + '%' : '0%', tone: t ? 'accent' : 'mute' }], 3),
-      sec(name, `<ul class="rows">${savingsRow(s)}</ul><p class="note">${esc(how)}</p>`),
-      t ? '' : emptyBox('No dollar target yet, so it stays at the starting stage. Tell Claude a target and deadline (task T-0004).', 'coin'),
-    ] };
+    const r = t ? c / t : 0;
+    const pct = t ? Math.round(r * 100) : null;
+    let pace = '';
+    if (t && c < t && s.deadline) {
+      const dl = daysUntil(s.deadline);
+      if (dl != null && dl > 0) pace = `${money((t - c) / Math.max(1, dl / 7), 0)} a week reaches it by ${dayLabel(s.deadline)}.`;
+      else pace = `The deadline (${dayLabel(s.deadline)}) has passed.`;
+    } else if (t && c >= t) pace = 'Goal reached. The crystal is fully grown.';
+    const card = `<div class="crystal-card" style="--cc:${color}">
+        <div class="big"><b>${esc(money(c, 0))}</b><span>${t ? 'of ' + esc(money(t, 0)) : 'saved so far'}</span><span class="pct">${pct != null ? pct + '%' : '—'}</span></div>
+        ${bar(r, '', false).replace('class="bar ', 'class="bar crystal ')}
+        <div class="kvline"><span>Goal <b>${esc(name)}</b></span><span>Saved <b>${esc(money(c, 0))}</b></span><span>Target <b>${t ? esc(money(t, 0)) : 'not set'}</b></span>${s.deadline ? `<span>By <b>${esc(dayLabel(s.deadline))}</b></span>` : ''}</div>
+      </div>`;
+    const body = [card];
+    if (pace) body.push(`<p class="note">${esc(pace)}</p>`);
+    if (!t) body.push(`<div class="empty">${icon('crystal', 2)}<span>No target yet, so the crystal stays a small seed. <b>Set a target on the quest board</b> (for example “Set the ${esc(name)} target to $___ by ___”) and it starts to grow.</span></div><div class="btnrow"><button class="btn primary" data-act="quest" data-arg="Set the ${esc(name)} savings target to $">${icon('board', 2)} Set a target on the quest board</button></div>`);
+    body.push(sec('All savings goals', `<ul class="rows">${(arr(metricsOf('ledger-fi').savings).length ? arr(metricsOf('ledger-fi').savings) : arr(D().savings_goals)).map((g) => savingsRow(g).replace('<li class="row"', `<li class="row${g.name === name ? ' hl' : ''}"`)).join('')}</ul>`));
+    return { who: 'ledger-fi', sub, body };
   }
-  LM.apartment = () => goalLandmark('Apartment fund', 'ledger-fi', 'Under construction. One floor at a time.', 'Floors, scaffolding and the crane track the Apartment fund.');
-  LM.garage = () => goalLandmark('Car insurance', 'ledger-fi', 'The shield over the door fills as you save.', 'The shield emblem fills with the Car insurance fund.');
-  LM.investTree = () => goalLandmark('Invest', 'ledger-fi', 'Size, leaves and gold fruit follow the Invest goal.', 'From sapling to a fruiting tree as Invest grows.');
+  LM.crystalInvest = () => crystalLandmark('Invest', CRYSTAL_COL.Invest, 'A gold crystal that grows with the Invest goal.');
+  LM.crystalCar = () => crystalLandmark('Car insurance', CRYSTAL_COL['Car insurance'], 'A blue crystal that grows with the Car insurance fund.');
+  LM.crystalHome = () => crystalLandmark('Apartment fund', CRYSTAL_COL['Apartment fund'], 'A violet crystal that grows with the Apartment fund.');
   LM.clockTower = () => ({ who: 'hub', sub: 'Shows real New York time. The bell starts each cycle.', body: [
-    `<div class="btnrow"><button class="btn primary" data-act="replay">${icon('bell', 1)} Ring the bell (replay cycle)</button></div>`, cyclesBlock(), runsBlock(8)] });
+    `<div class="btnrow"><button class="btn primary" data-act="replay">${icon('bell', 2)} Ring the bell (replay cycle)</button></div>`, cyclesBlock(), runsBlock(8)] });
   LM.mailPost = () => ({ who: 'hub', sub: 'Every change to the system arrives here as a letter.', body: [commitsBlock(10)] });
   LM.fountain = () => {
     const goals = arr(D().goals);
     return { who: 'hub', sub: 'Everyone gathers here at each cycle to hand in their reports.', body: [
-      `<p class="summary">${S.cycle.next ? `Next gathering: <b>${esc(S.cycle.next.name)}</b> in <span data-live="countdown">${esc(countdownText())}</span>.` : 'No cycles scheduled.'}<small>Coins in the fountain are your goals</small></p>`,
+      `<p class="summary">${S.cycle.next ? `Next gathering: <b>${esc(S.cycle.next.name)}</b> in <span data-live="countdown">${esc(countdownText())}</span>.` : 'No cycles scheduled.'}<small>Coins in the fountain are your goals.</small></p>`,
       sec('Wishes (goals)', goals.length ? `<ul class="rows">${goals.map((g) => { const ag = g.agent, b = AGENT_INFO[ag] ? AGENT_INFO[ag].biome : 'square'; return `<li class="row click" data-act="biome" data-arg="${b}" style="--g:auto 1fr auto"><span class="tag">${esc(g.id)}</span><span class="t wrap">${esc(g.title)}</span><span class="d">${esc(AGENT_INFO[ag] ? AGENT_INFO[ag].name : '')}</span></li>`; }).join('')}</ul>` : emptyBox('No goals set.'), { n: goals.length }),
-      `<div class="btnrow"><button class="btn" data-act="replay">${icon('replay', 1)} Replay the gathering</button></div>`,
+      `<div class="btnrow"><button class="btn" data-act="replay">${icon('replay', 2)} Replay the gathering</button></div>`,
     ] };
   };
   LM.broadcastTower = () => {
@@ -1160,14 +1242,20 @@
     const c = clientBy(/angie/i);
     const t5 = arr(D().tasks).find((t) => /angie/i.test(t.title || '') && t.autonomy === 'human');
     const body = c ? [
-      tiles([{ k: 'Posts 7d', v: esc(c.posts_next_7d ?? 0), tone: c.posts_next_7d ? 'accent' : 'mute' }, { k: 'Retainer', v: esc(num(c.retainer) != null ? money(c.retainer, 0) : '\u2014'), tone: num(c.retainer) != null ? 'ok' : 'mute', s: 'per month' }, { k: 'Networks', v: esc(arr(c.networks).length || '\u2014'), tone: arr(c.networks).length ? '' : 'mute' }], 3),
+      tiles([{ k: 'Posts 7d', v: esc(c.posts_next_7d ?? 0), tone: c.posts_next_7d ? 'accent' : 'mute' }, { k: 'Retainer', v: esc(num(c.retainer) != null ? money(c.retainer, 0) : '—'), tone: num(c.retainer) != null ? 'ok' : 'mute', s: 'per month' }, { k: 'Networks', v: esc(arr(c.networks).length || '—'), tone: arr(c.networks).length ? '' : 'mute' }], 3),
       arr(c.networks).length ? `<div class="chips">${arr(c.networks).map((n) => `<span class="net ${esc(n)}">${esc(n)}</span>`).join('')}</div>` : '',
-      c.location ? `<p class="note">Client in ${esc(c.location)}.</p>` : '',
     ] : [emptyBox("Angie's isn't in the client list yet.")];
     if (t5) body.push(sec('To do', taskRows([t5])));
-    return { who: 'social-ops', sub: "Lumi's stall for Angie's, the Cold Spring client.", body };
+    return { who: 'social-ops', sub: "Lumi's stall for Angie's, your social media client. Busier when more posts are queued.", body };
   };
-  LM.fidgetStall = () => { const m = metricsOf('social-ops'); const c = clientBy(/fidget/i); return { who: 'social-ops', sub: 'Promo stall for your fidget store: TikTok, Reels, Shorts.', body: [storeAdsBlock(m), c && arr(c.networks).length ? sec('Channels', `<div class="chips">${arr(c.networks).map((n) => `<span class="net ${esc(n)}">${esc(n)}</span>`).join('')}</div><p class="note">${esc(c.posts_next_7d ?? 0)} posts planned for the next 7 days.</p>`) : ''] }; };
+  LM.fidgetStall = () => {
+    const m = metricsOf('social-ops'), c = clientBy(/fidget/i), a = m.store_ads || {};
+    const live = /^(active|running|live|on)$/i.test(String(a.status || '').trim());
+    return { who: 'social-ops', sub: 'Promo stall for Fidgetly, your fidget store: TikTok, Reels and Shorts.', body: [
+      `<div class="chips">${live ? pill('ads running', 'ok') : pill('on hold', 'mute')}</div>`,
+      storeAdsBlock(m),
+      c && arr(c.networks).length ? sec('Channels', `<div class="chips">${arr(c.networks).map((n) => `<span class="net ${esc(n)}">${esc(n)}</span>`).join('')}</div><p class="note">${esc(c.posts_next_7d ?? 0)} posts planned for the next 7 days.</p>`) : ''] };
+  };
   LM.billboard = () => {
     const m = metricsOf('social-ops'), a = m.store_ads || {};
     return { who: 'social-ops', sub: 'Scrolls the numbers that matter this week.', body: [
@@ -1175,34 +1263,160 @@
       (m.scheduled_posts_7d || a.videos_planned) ? '' : emptyBox('Standby screen: nothing queued yet.')] };
   };
   LM.bazaar = () => { const m = metricsOf('hustle-engine'); return { who: 'hustle-engine', sub: 'Stalls of spinners, cubes and pop-its. Ideas get tested here.', body: [oppsBlock(m), storeProjectBlock()] }; };
-  LM.dock = () => {
+  LM.skyDock = () => {
     const m = metricsOf('hustle-engine'), sh = m.shopify || {};
     const o = num(sh.orders_7d);
-    const line = o == null ? 'One ship stays moored, empty, until Shopify is connected.' : o === 0 ? 'No orders this week, so the ship rides high and empty.' : `${plural(o, 'order')} this week means cargo ships at the pier.`;
-    return { who: 'hustle-engine', sub: 'Cargo ships bring in the week\'s orders.', body: [`<p class="summary">${esc(line)}<small>Ships moored scale with orders in the last 7 days</small></p>`, sec('Shopify \u00b7 last 7 days', shopTiles(m)), alertsSection(alertsFor('hustle-engine'), 'Harbour alerts'), storeProjectBlock()] };
+    const line = o == null ? 'One sky-ship stays moored, empty, until Shopify is connected.' : o === 0 ? 'No orders this week, so the sky-ship rides high and empty.' : `${plural(o, 'order')} this week, so cargo ships crowd the dock.`;
+    return { who: 'hustle-engine', sub: 'Sky-ships bring in the week’s orders and carry Cap’n Twirl to Clockspire.', body: [`<p class="summary">${esc(line)}<small>Ships at the dock scale with orders in the last 7 days.</small></p>`, sec('Shopify · last 7 days', shopTiles(m)), alertsSection(alertsFor('hustle-engine'), 'Harbor alerts'), dockRun('port'), storeProjectBlock()] };
   };
   LM.warehouse = () => { const m = metricsOf('hustle-engine'); return { who: 'hustle-engine', sub: 'Crates of stock. Red tags mean running low.', body: [lowStockBlock(m)] }; };
 
+  /* Docks: every spoke island reaches Clockspire by its own transport. */
+  /** The delivery run between a spoke island and Clockspire: route, last delivery, cargo. */
+  function dockRun(biome) {
+    const agent = THEME[biome].agent, inf = AGENT_INFO[agent], th = threadOf(agent) || {};
+    const tr = transportOf(biome) || { name: 'transport', short: 'transport', icon: 'bird' };
+    const w = metricsOf(agent).world || {};
+    const del = num(w.deliveries) || 0;
+    const last = th.last_run;
+    const cargo = arr(w.bubbles);
+    const lead = last
+      ? `${inf.name}’s last delivery reached ${PLACE.square} ${rel(last)} (${dayLabel(last)}).`
+      : `No deliveries yet. ${inf.name} makes the first run after the first cycle.`;
+    return sec('Delivery run', `<div class="route">${icon(tr.icon, 2)}<b>${esc(PLACE[biome])}</b><span class="arrow" aria-hidden="true"></span><b>${esc(PLACE.square)}</b></div>
+      <p class="summary">${esc(lead)}<small>Travels by ${esc(tr.name)}.</small></p>
+      ${tiles([
+        { k: 'Parcels', v: esc(del), tone: del ? 'accent' : 'mute', s: 'this cycle' },
+        { k: 'Last delivery', v: esc(last ? rel(last) : 'never'), sm: true, tone: last ? '' : 'mute' },
+        { k: 'Status', v: esc((PHASE[th.phase] || [th.phase || 'not started'])[0]), sm: true, tone: th.phase && th.phase !== 'uninit' ? '' : 'mute' },
+      ], 3)}
+      ${cargo.length ? `<div class="chips">${cargo.map((x) => `<span class="quote">“${esc(x)}”</span>`).join('')}</div>` : ''}`, { icon: tr.icon });
+  }
+  function dockLandmark(biome, sub, extra) {
+    const agent = THEME[biome].agent;
+    return () => ({ who: agent, owner: agent, sub, body: [dockRun(biome)].concat(extra ? extra() : []) });
+  }
+  LM.dockNW = dockLandmark('monastery', `Abbot Quill lands here on a paper kite with scrolls from ${PLACE.monastery}.`, () => [deadlinesBlock(metricsOf('academic-core'), 3)]);
+  LM.dockNE = dockLandmark('market', `The neon blimp from ${PLACE.market} moors here with Lumi’s posters.`);
+  LM.dockSW = dockLandmark('port', `Cap’n Twirl’s sky-ship ties up here with crates from ${PLACE.port}.`, () => [sec('Shopify · last 7 days', shopTiles(metricsOf('hustle-engine')))]);
+  LM.dockSE = dockLandmark('mine', `The minecart rolls in over the sky-rail from ${PLACE.mine} with coins for the vault.`, () => [paydayBlock(metricsOf('ledger-fi'))]);
+  LM.kitePad = dockLandmark('monastery', `Abbot Quill launches from here on a paper kite to ${PLACE.square}.`);
+  LM.blimpMast = dockLandmark('market', `Lumi boards the neon blimp here for ${PLACE.square}.`);
+  LM.railStation = dockLandmark('mine', `Grit Copperpot’s minecart leaves for ${PLACE.square} along the sky-rail.`, () => [paydayBlock(metricsOf('ledger-fi'))]);
+  LM.dock = LM.skyDock; // old name
+
   function openLandmark(key, h) {
     if (key === 'questBoard') return openQuestBoard();
-    const lm = S.landmarks[key] || { region: (h && h.biome) || 'square', label: (h && h.label) || key, x: 32, y: 20 };
+    if (key === 'chronicle') return openChronicle();
+    const lm = S.landmarks[key] || { island: (h && (h.island || h.biome)) || 'square', label: (h && h.label) || key, x: 40, y: 23 };
     const fn = LM[key];
-    const region = lm.region || (h && h.biome) || 'square';
+    const region = lm.island || lm.region || (h && h.biome) || 'square';
     const theme = THEME[region] ? region : 'square';
-    const info = fn ? fn() : { who: whoFor((h && h.agent) || THEME[theme].agent || 'hub'), sub: '', body: [emptyBox('A quiet corner of town.')] };
+    const info = fn ? fn() : { who: whoFor((h && h.agent) || THEME[theme].agent || 'hub'), sub: '', body: [emptyBox('A quiet corner of the islands.')] };
     current = { kind: 'landmark', key };
     const ownerAgent = info.owner || (info.who && AGENT_INFO[info.who] ? info.who : null);
     const navB = ownerAgent ? AGENT_INFO[ownerAgent].biome : null;
-    const goto = navB && navB !== 'square' ? `<div class="btnrow"><button class="btn" data-act="biome" data-arg="${navB}">${icon('fit', 1)} ${esc(AGENT_INFO[ownerAgent].name)}\u2019s full report</button></div>` : '';
-    show(theme, head({ who: info.who || 'folk', theme, kicker: `${THEME[theme].name}${ownerAgent ? ' \u00b7 ' + AGENT_INFO[ownerAgent].name : ''}`, title: lm.label.replace(/\s*\(.*\)$/, ''), sub: info.sub }) +
-      `<!--NAV--><div class="panel-body">${info.body.join('')}${goto}</div>`, sideFor(lm.x), navB);
+    const goto = navB && navB !== 'square' ? `<div class="btnrow"><button class="btn" data-act="biome" data-arg="${navB}">${icon('fit', 2)} ${esc(AGENT_INFO[ownerAgent].name)}’s full report</button></div>` : '';
+    const title = String(lm.label || key).replace(/\s*\(.*\)$/, '');
+    show(theme, head({ who: info.who || 'folk', theme, kicker: `${THEME[theme].name}${ownerAgent ? ' · ' + AGENT_INFO[ownerAgent].name : ''}`, title, sub: info.sub }) +
+      `<!--NAV--><div class="panel-body">${info.body.join('')}${goto}</div>`, sideFor(lm.x), navB || theme, (lm.y + 0.5) * S.TILE);
+    revealPoint((lm.x + 0.5) * S.TILE, (lm.y + 0.5) * S.TILE + S.bob(region));
+  }
+
+  /* ============================================================ Chronicle
+   * Mayor Tock's recaps from S.data.recaps.{daily,weekly,monthly} (newest first). */
+  let chronTab = 'daily';
+  const CHRON_TABS = [['daily', 'Day'], ['weekly', 'Week'], ['monthly', 'Month']];
+  const AREAS = [['school', 'School', 'monastery'], ['money', 'Money', 'mine'], ['social', 'Social', 'market'], ['store', 'Store', 'port'], ['system', 'System', 'square']];
+  const fmtLongDay = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' });
+  const fmtShortDay = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+  function periodLabel(p) {
+    p = String(p || '');
+    let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(p);
+    if (m) {
+      const n = daysUntil(p);
+      return { title: fmtLongDay.format(new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12))), tag: n === 0 ? 'today' : n === -1 ? 'yesterday' : n < 0 ? `${-n} days ago` : '' };
+    }
+    m = /^(\d{4})-W(\d{1,2})$/.exec(p);
+    if (m) {
+      const jan4 = Date.UTC(+m[1], 0, 4), dow = (new Date(jan4).getUTCDay() + 6) % 7;
+      const mon = jan4 - dow * 864e5 + (+m[2] - 1) * 7 * 864e5;
+      return { title: `Week ${+m[2]}`, tag: `${fmtShortDay.format(new Date(mon + 432e5))} – ${fmtShortDay.format(new Date(mon + 6 * 864e5 + 432e5))}` };
+    }
+    if (/^\d{4}-\d{2}$/.test(p)) return { title: monthLabel(p), tag: '' };
+    return { title: p || 'Undated entry', tag: '' };
+  }
+  function statValue(k, v) {
+    if (typeof v === 'number' && isFinite(v)) {
+      if (/income|spend|spent|revenue|saved|earn|cost|amount|paid|money|balance|retainer/i.test(k)) return money(v);
+      if (/hours?$/i.test(k)) return (Math.round(v * 10) / 10) + ' h';
+      if (/pct|percent/i.test(k)) return Math.round(v) + '%';
+      return (Math.round(v * 10) / 10).toLocaleString('en-US');
+    }
+    if (typeof v === 'boolean') return v ? 'yes' : 'no';
+    if (v == null || v === '') return '—';
+    if (Array.isArray(v)) return String(v.length);
+    if (typeof v === 'object') return '…';
+    return String(v);
+  }
+  const statKey = (k) => String(k).replace(/_/g, ' ').replace(/\bpct\b/i, '%').replace(/\s+hours?$/i, '').replace(/\b7d\b/, '(7 days)').trim();
+  function statsTable(stats) {
+    if (!stats || typeof stats !== 'object') return '';
+    const keys = AREAS.map((a) => a[0]).concat(Object.keys(stats).filter((k) => !AREAS.some((a) => a[0] === k)));
+    const rows = keys.filter((k) => stats[k] && typeof stats[k] === 'object' && Object.keys(stats[k]).length).map((k) => {
+      const a = AREAS.find((x) => x[0] === k) || [k, k.charAt(0).toUpperCase() + k.slice(1), 'square'];
+      const cells = Object.keys(stats[k]).map((sk) => `<span><b>${esc(statValue(sk, stats[k][sk]))}</b>${esc(statKey(sk))}</span>`).join('');
+      return `<tr><th scope="row" style="--c:${THEME[a[2]] ? THEME[a[2]].color : 'var(--ink-4)'}">${esc(a[1])}</th><td>${cells}</td></tr>`;
+    });
+    return rows.length ? `<table class="stats"><tbody>${rows.join('')}</tbody></table>` : '';
+  }
+  function chronEntry(e) {
+    const pl = periodLabel(e.period);
+    const hl = arr(e.highlights), nu = arr(e.needs_you);
+    return `<article class="chron">
+      <h3 class="chron-h">${esc(pl.title)}${pl.tag ? `<small>${esc(pl.tag)}</small>` : ''}</h3>
+      ${e.chronicle ? `<p class="chron-lead">${esc(e.chronicle)}<cite>Mayor Tock, ${esc(PLACE.square)}</cite></p>` : `<p class="note">No chronicle text for this entry.</p>`}
+      ${hl.length ? sec('Highlights', `<ul class="chron-list">${hl.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`, { n: hl.length }) : ''}
+      ${nu.length ? sec('Needs you', `<ul class="chron-list you">${nu.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`, { n: nu.length }) : ''}
+      ${e.stats ? sec('By the numbers', statsTable(e.stats)) : ''}
+    </article>`;
+  }
+  function chronEmpty(tab) {
+    const at = cycleClock('night') || '8:45 PM';
+    if (tab === 'weekly') return `The first weekly entry appears after Sunday’s ${at} cycle.`;
+    if (tab === 'monthly') return `The first monthly entry appears after the ${at} cycle on the last day of the month.`;
+    return `The first daily entry appears after tonight’s ${at} cycle.`;
+  }
+  function chronicleList(tab) {
+    return arr((D().recaps || {})[tab]).filter((e) => e && typeof e === 'object').slice().sort((a, b) => String(b.period || '').localeCompare(String(a.period || '')));
+  }
+  function openChronicle(tab) {
+    if (tab && CHRON_TABS.some(([k]) => k === tab)) chronTab = tab;
+    current = { kind: 'chronicle', key: chronTab };
+    const list = chronicleList(chronTab);
+    const tabs = `<nav class="ph-nav" role="tablist" aria-label="Chronicle period">${CHRON_TABS.map(([k, l]) => {
+      const n = chronicleList(k).length;
+      return `<button role="tab" data-act="chron-tab" data-arg="${k}" aria-selected="${k === chronTab}" style="--c:var(--brass)">${esc(l)}${n ? ` <span class="tag">${n}</span>` : ''}</button>`;
+    }).join('')}</nav>`;
+    const body = list.length ? list.slice(0, 31).map(chronEntry).join('') : emptyBox(chronEmpty(chronTab), 'scroll');
+    const lm = S.landmarks.chronicle || { x: 43 };
+    show('square', head({ who: 'hub', theme: 'square', kicker: `${PLACE.square} · Mayor Tock`, title: 'The Chronicle', sub: 'Mayor Tock’s recaps of what every island actually did.' }) +
+      `${tabs}<div class="panel-body" role="tabpanel">${body}</div>`, sideFor(lm.x), null);
+  }
+  /** One-paragraph teaser of the newest daily entry, for Mayor Tock's overview. */
+  function chronicleTeaser() {
+    const e = chronicleList('daily')[0];
+    if (!e || !e.chronicle) return sec('The Chronicle', `${emptyBox(chronEmpty('daily'), 'scroll')}`, { icon: 'scroll' });
+    const t = String(e.chronicle);
+    const cut = t.length > 200 ? t.slice(0, 200).replace(/\s+\S*$/, '') + '…' : t;
+    return sec('The Chronicle', `<p class="summary">${esc(cut)}<small>${esc(periodLabel(e.period).title)}</small></p><div class="btnrow"><button class="btn" data-act="chronicle">${icon('scroll', 2)} Read the Chronicle</button></div>`, { icon: 'scroll' });
   }
 
   /* ============================================================= Quest board */
   let db = null, dbState = 'none', dbNote = '';
   let quests = [], questsLoaded = false, checks = {}, pendingChecks = {};
   let canWrite = true;
-  const BIOME_OPTS = [['auto', 'Auto: Mayor Tock decides'], ['monastery', 'Monastery: school'], ['mine', 'Mine: money'], ['market', 'Market: social'], ['port', 'Port: fidget store']];
+  const BIOME_OPTS = [['auto', 'Auto: Mayor Tock decides'], ['monastery', `${THEME.monastery.name}: school`], ['mine', `${THEME.mine.name}: money`], ['market', `${THEME.market.name}: social`], ['port', `${THEME.port.name}: fidget store`]];
   const QSTATUS = { new: ['new', 'info'], accepted: ['accepted', 'brass'], done: ['done', 'ok'], declined: ['declined', 'mute'] };
 
   function initDb() {
@@ -1235,10 +1449,10 @@
     return 'Read-only preview: posting quests and ticking tasks work when this page is opened on claude.ai.';
   }
 
-  function openQuestBoard() {
+  function openQuestBoard(prefill) {
     current = { kind: 'quest', key: 'questBoard' };
     const live = dbState === 'ready' && canWrite;
-    show('square', head({ who: 'hub', theme: 'square', kicker: 'Town Square \u00b7 Mayor Tock', title: 'Quest Board', sub: 'Pin a request. Mayor Tock routes it to the right biome and replies at the next cycle.' }) +
+    show('square', head({ who: 'hub', theme: 'square', kicker: `${PLACE.square} \u00b7 Mayor Tock`, title: 'Quest Board', sub: 'Pin a request. Mayor Tock sends it to the right island and replies at the next cycle.' }) +
       `<!--NAV--><div class="panel-body">
         <form class="qform" id="qform" autocomplete="off">
           <label class="sec-h" for="qtext" style="color:#e0c9a0"><span>New quest</span></label>
@@ -1253,6 +1467,8 @@
         <section class="sec"><h3 class="sec-h"><span>Your tasks</span><span class="n" id="tcount"></span></h3><div id="tprog"></div><div id="tlist" class="rows"></div></section>
       </div>`, 'right', 'square');
     renderQuests(); renderChecks();
+    const ta = $('qtext');
+    if (prefill && typeof prefill === 'string' && ta && !ta.disabled) { ta.value = prefill; ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
   }
   function refreshBoard() {
     if (current && current.kind === 'quest' && panel && !panel.hidden) {
@@ -1338,18 +1554,19 @@
 
   /* ================================================================ toast */
   let toastTimer = 0;
-  function showToast(msg, ic) {
+  function showToast(msg, ic, ms) {
     if (!toast) return;
     toast.innerHTML = `${ic ? icon(ic, 2) : ''}<span>${esc(msg)}</span>`;
     toast.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { toast.hidden = true; }, 2400);
+    toastTimer = setTimeout(() => { toast.hidden = true; }, ms || 2400);
   }
 
   /* ================================================================ actions */
   function close() {
     if (!panel) return;
     panel.hidden = true; panel.innerHTML = ''; current = null;
+    setDrawerSide(null);
     if (following && S.cam && S.cam.follow === following) S.cam.follow = null;
     following = null; clearTimeout(followTimer);
   }
@@ -1361,8 +1578,11 @@
       case 'close': close(); break;
       case 'biome': openBiome(arg); break;
       case 'landmark': openLandmark(arg); break;
-      case 'quest': if (current && current.kind === 'quest') close(); else openQuestBoard(); break;
+      case 'quest': if (current && current.kind === 'quest' && el.closest('#hud')) close(); else openQuestBoard(arg); break;
+      case 'chronicle': if (current && current.kind === 'chronicle' && el.closest('#hud')) close(); else openChronicle(); break;
+      case 'chron-tab': openChronicle(arg); break;
       case 'alerts': openBiome('square'); break;
+      case 'hermes': { const st = hermesState(); showToast(`${st.text}. ${HERMES_LINE}`, 'wing', 7000); break; }
       case 'replay': S.startCeremony(); showToast('Mayor Tock rings the bell\u2026', 'bell'); try { S.audio.sfx('bell'); } catch (err) { /* optional */ } break;
       case 'sound':
         if (S.audio && typeof S.audio.toggle === 'function') { try { S.audio.toggle(); } catch (err) { /* optional */ } lastHud.sound = null; hudUpdate(); showToast(S.audio.enabled ? 'Sound on' : 'Sound off', S.audio.enabled ? 'soundOn' : 'soundOff'); }
@@ -1399,11 +1619,9 @@
     if (typing) return;
     const k = e.key.toLowerCase();
     if (k === 'q') { if (current && current.kind === 'quest') close(); else openQuestBoard(); }
+    else if (k === 'c') { if (current && current.kind === 'chronicle') close(); else openChronicle(); }
     else if (k === 'f') fit();
-    else if (k === '1') openBiome('monastery');
-    else if (k === '2') openBiome('market');
-    else if (k === '3') openBiome('port');
-    else if (k === '4') openBiome('mine');
+    else if (/^[1-5]$/.test(k)) openBiome(NAV[+k - 1]);
     else return;
     e.preventDefault();
   }
@@ -1415,6 +1633,7 @@
       if (h.kind === 'landmark' && h.landmark) return openLandmark(h.landmark, h);
       if (h.kind === 'villager') return openVillager(h);
       if (h.kind === 'quest' || h.id === 'questBoard') return openQuestBoard();
+      if (h.kind === 'chronicle' || h.id === 'chronicle') return openChronicle();
       if (h.kind === 'biome') {
         const b = h.biome || (h.agent && AGENT_INFO[h.agent] && AGENT_INFO[h.agent].biome);
         return openBiome(b || 'square');
@@ -1426,7 +1645,7 @@
     }
   }
 
-  S.ui = { open, hudUpdate, close, questBoard: openQuestBoard, toast: showToast };
+  S.ui = { open, hudUpdate, close, questBoard: openQuestBoard, chronicle: openChronicle, island: openBiome, landmark: openLandmark, toast: showToast };
 
   S.on('boot', () => {
     buildHud();
