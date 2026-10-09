@@ -7,11 +7,13 @@
  *               pier (SW) and the sky-rail station end with its buffers (SE)
  *   dyn 100     fountain overflow running down its channel and off the south
  *               edge as a little waterfall into space          {island: square}
- *   dyn 200     fountain jets + splashes; the top of the spire (it rises above
- *               the island's static box)                      {island: square}
+ *   dyn 200     fountain jets + splashes                      {island: square}
  *   dyn 400     the bell swinging during the ceremony's bell beat, the wind
  *               sock and the mast pennant                     {island: square}
- *   dyn 700     clock face with real New York time, lamp glass, lit slits,
+ *   dyn 650     the top of the spire, which rises above the island's static
+ *               box: drawn after the darkness, tinted to the sky the way the
+ *               atmosphere tints the island (cached per sky)  {island: square}
+ *   dyn 700    clock face with real New York time, lamp glass, lit slits,
  *               the Chronicle's glowing pages, dock beacons   {island: square}
  *   dyn 800     bobbing quest marker while "you" tasks are open {island: square}
  *   entities    lamp posts (y-sorted so people pass in front of and behind them)
@@ -186,7 +188,14 @@
       c.fillRect(Math.round(cx - w), Math.round(cy + dy), w * 2 + 1, 1);
     }
   }
-  const shadow = (c, cx, cy, rx, ry) => ell(c, cx, cy, rx, ry, P.shadow);
+  /** Run fn with 'source-atop', so a cast shadow only lands on art already painted
+   * (the island's ground, a deck) and never on open space past the rim. */
+  function onGround(c, fn) {
+    const op = c.globalCompositeOperation;
+    c.globalCompositeOperation = 'source-atop';
+    try { fn(); } finally { c.globalCompositeOperation = op; }
+  }
+  const shadow = (c, cx, cy, rx, ry) => onGround(c, () => ell(c, cx, cy, rx, ry, P.shadow));
   function box(c, x, y, w, h, base, opt = {}) {
     R(c, x, y, w, h, opt.outline || OUT);
     R(c, x + 1, y + 1, w - 2, h - 2, base);
@@ -855,7 +864,7 @@
   /* ---------------------------------------------------------- dockNE: blimp mooring mast */
   function drawMast(c) {
     const x = MAST.x, base = MAST.base, top = MAST.top, winter = isWinter();
-    shadow(c, x + 5, base + 1, 10, 3);
+    shadow(c, x + 2, base + 1, 9, 2);   // tucked under the footing: the mast stands at the east rim
     // stone footing
     box(c, x - 9, base - 7, 19, 8, STONE.b, { light: STONE.hi, dark: STONE.d });
     R(c, x - 8, base - 2, 17, 1, STONE.deep);
@@ -908,7 +917,7 @@
     R(c, x0 + 1, y1 + 3, 1, 8, '#6e5a3e'); R(c, x0, y1 + 11, 3, 4, OUT); D(c, x0 + 1, y1 + 12, '#ffcf6e');
     GLOW.push([x0 + 1, y1 + 12, 1, 2]);
     // deck: boards run north-south (across the walkway)
-    c.fillStyle = 'rgba(20,16,30,0.28)'; c.fillRect(x0 + 3, y1 + 3, x1 - x0 - 4, 3);
+    onGround(c, () => R(c, x0 + 3, y1 + 3, x1 - x0 - 4, 3, P.shadow));
     for (let x = x0; x < x1; x++) {
       const b = ((x - x0) / 4) | 0, k = (x - x0) % 4;
       const tone = hash(b, 1, 61);
@@ -1031,9 +1040,11 @@
     GLOW.push([TOWER.x0 + 6, 281, 2, 7], [TOWER.x1 - 8, 281, 2, 7], [CX - 2, 180, 4, 3]);
     const winter = isWinter();
     ensureTower();
-    // tower shadow (falls to the bottom-right) then the tower
-    for (let y = 200; y < TOWER.base; y++) R(ctx, TOWER.x1, y, Math.min(10, ((y - 200) / 10) | 0), 1, P.shadow);
-    R(ctx, TOWER.x0 + 4, TOWER.base, TOWER.x1 - TOWER.x0 + 4, 3, P.shadow);
+    // tower shadow (falls to the bottom-right, on the ground only) then the tower
+    onGround(ctx, () => {
+      for (let y = 200; y < TOWER.base; y++) R(ctx, TOWER.x1, y, Math.min(10, ((y - 200) / 10) | 0), 1, P.shadow);
+      R(ctx, TOWER.x0 + 4, TOWER.base, TOWER.x1 - TOWER.x0 + 4, 3, P.shadow);
+    });
     ctx.drawImage(towerCv, TWR.x, TWR.y);
     bellAt(ctx, BELL.x, BELL.y, 0);
     for (const [x, y, w, h] of PLANTERS) drawPlanter(ctx, x, y, w, h);
@@ -1061,13 +1072,9 @@
   }, { island: ID });
 
   /* ======================================================================
-   * dynamic 200: fountain jets; the spire tip above the static box
+   * dynamic 200: fountain jets
    * ==================================================================== */
   S.registerDynamic(200, (ctx, t) => {
-    if (towerCv && SPIRE_CUT > TWR.y) {
-      const h = SPIRE_CUT - TWR.y;
-      ctx.drawImage(towerCv, 0, 0, TWR.w, h, TWR.x, TWR.y, TWR.w, h);
-    }
     if (isWinter()) return;
     if (!fountainFrames) buildFountainFrames();
     const f = Math.floor(t * (S.reducedMotion ? 3 : 10)) % fountainFrames.frames.length;
@@ -1110,6 +1117,93 @@
       R(ctx, mx + i, my + wy, 1, hh, i < 2 ? '#ff8ad0' : P.neonPink);
       D(ctx, mx + i, my + wy + hh, OUT);
     }
+  }, { island: ID });
+
+  /* ======================================================================
+   * dynamic 650: the spire tip. The tower rises above the island's static box
+   * (SPIRE_CUT), so the island darkness (600) never reaches its top rows. They
+   * are drawn here, after the darkness, and tinted the way the atmosphere tints
+   * the island: the faint night tint and the island multiply, then the blue
+   * veil, with the moonlit rim on the spire's real top-left edge. The strip
+   * reaches TIP_SEAM rows into the box so it also covers the rim band the
+   * darkness lays along the cut. Drawn after the 500 wisps, so they slip behind
+   * the tip like the rest of the island. Cached per sky: a frame is one blit.
+   * ==================================================================== */
+  const TIP_SEAM = 3;
+  const TIP_H = Math.max(0, Math.min(TWR.h, SPIRE_CUT + TIP_SEAM - TWR.y));
+  const TIP = { cv: null, mul: null, veil: null, key: '', rim: null, rimKey: null, rimCol: {} };
+  const sstep = (e0, e1, v) => { const k = clamp((v - e0) / (e1 - e0), 0, 1); return k * k * (3 - 2 * k); };
+  /** The atmosphere's moonlit-rim rule applied to the tower's own outline (white; alpha = rim strength). */
+  function tipRim() {
+    if (TIP.rim && TIP.rimKey === towerKey) return TIP.rim;
+    const w = TWR.w, h = TIP_H;
+    const a = towerCv.getContext('2d').getImageData(0, 0, w, h).data;
+    const at = (i, j) => i >= 0 && j >= 0 && i < w && j < h && a[(j * w + i) * 4 + 3] > 96;
+    const cv = TIP.rim || mk(w, h), x = cv.getContext('2d'), img = x.createImageData(w, h), d = img.data;
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      if (!at(i, j) || !at(i - 1, j) || !at(i, j - 1)) continue;          // outside, or the outline pixel itself
+      const ring2 = !at(i - 2, j) || !at(i, j - 2) || !at(i - 1, j - 1) || !at(i - 2, j - 1) || !at(i - 1, j - 2);
+      const ring3 = !ring2 && (!at(i - 3, j) || !at(i, j - 3) || !at(i - 2, j - 2));
+      const v = ring2 ? 255 : ring3 && ((TWR.x + i - BOX.x + TWR.y + j - BOX.y) & 1) ? 150 : 0;
+      if (!v) continue;
+      const k = (j * w + i) * 4;
+      d[k] = d[k + 1] = d[k + 2] = 255; d[k + 3] = v;
+    }
+    x.putImageData(img, 0, 0);
+    TIP.rim = cv; TIP.rimKey = towerKey; TIP.rimCol = {};
+    return cv;
+  }
+  function tipRimTint(col) {
+    if (TIP.rimCol[col]) return TIP.rimCol[col];
+    const cv = mk(TWR.w, TIP_H), x = cv.getContext('2d');
+    x.drawImage(TIP.rim, 0, 0);
+    x.globalCompositeOperation = 'source-in';
+    x.fillStyle = col; x.fillRect(0, 0, cv.width, cv.height);
+    return (TIP.rimCol[col] = cv);
+  }
+  function tipTinted(sk, gk) {
+    const key = sk.key + '|' + gk.toFixed(3) + '|' + towerKey;
+    if (TIP.cv && TIP.key === key) return TIP.cv;
+    TIP.key = key;
+    const w = TWR.w, h = TIP_H;
+    const cv = TIP.cv || (TIP.cv = mk(w, h)), x = cv.getContext('2d');
+    const mulC = TIP.mul || (TIP.mul = mk(w, h)), mx = mulC.getContext('2d');
+    const veilC = TIP.veil || (TIP.veil = mk(w, h)), vx = veilC.getContext('2d');
+    const rim = sk.rimK > 0.01 ? tipRim() : null, veil = sk.la > 0.002;
+    // multiply: the island tint (paler on the moonlit rim) times the faint night tint over everything
+    mx.globalCompositeOperation = 'source-over'; mx.globalAlpha = 1;
+    mx.fillStyle = sk.mul; mx.fillRect(0, 0, w, h);
+    if (rim) { mx.globalAlpha = 0.4 * sk.rimK; mx.drawImage(tipRimTint('#dfe4ff'), 0, 0); mx.globalAlpha = 1; }
+    if (gk >= 0.01) { mx.globalCompositeOperation = 'multiply'; mx.fillStyle = mix('#ffffff', '#d3d6f0', gk); mx.fillRect(0, 0, w, h); }
+    mx.globalCompositeOperation = 'source-over';
+    // veil: the thin blue film, thinned and moon-blue on the rim
+    vx.globalCompositeOperation = 'source-over'; vx.globalAlpha = 1;
+    vx.clearRect(0, 0, w, h);
+    if (veil) { vx.fillStyle = CO.rgba(sk.lift, sk.la); vx.fillRect(0, 0, w, h); }
+    if (rim) {
+      if (veil) { vx.globalCompositeOperation = 'destination-out'; vx.globalAlpha = 0.6 * sk.rimK; vx.drawImage(rim, 0, 0); }
+      vx.globalCompositeOperation = 'source-over'; vx.globalAlpha = 0.42 * sk.rimK; vx.drawImage(tipRimTint('#9fb2ff'), 0, 0);
+      vx.globalAlpha = 1;
+    }
+    // the tip: tower rows, multiplied, cut back to the tower's shape, then veiled
+    x.globalCompositeOperation = 'source-over';
+    x.clearRect(0, 0, w, h);
+    x.drawImage(towerCv, 0, 0, w, h, 0, 0, w, h);
+    x.globalCompositeOperation = 'multiply'; x.drawImage(mulC, 0, 0);
+    x.globalCompositeOperation = 'destination-in'; x.drawImage(towerCv, 0, 0, w, h, 0, 0, w, h);
+    x.globalCompositeOperation = 'source-atop'; x.drawImage(veilC, 0, 0);
+    x.globalCompositeOperation = 'source-over';
+    return cv;
+  }
+  S.registerDynamic(650, (ctx) => {
+    if (!towerCv || TIP_H <= 0) return;
+    const sk = S.atmo && S.atmo.sky ? S.atmo.sky() : null;
+    const gk = sk ? sstep(0.25, 1, sk.n) : 0;
+    if (!sk || (sk.mul === '#ffffff' && !(sk.la > 0.002) && gk < 0.01)) {
+      ctx.drawImage(towerCv, 0, 0, TWR.w, TIP_H, TWR.x, TWR.y, TWR.w, TIP_H);   // daylight: as painted
+      return;
+    }
+    ctx.drawImage(tipTinted(sk, gk), TWR.x, TWR.y);
   }, { island: ID });
 
   /* ======================================================================
