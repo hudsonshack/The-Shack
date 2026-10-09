@@ -126,11 +126,13 @@ img.ico, .ico { image-rendering: pixelated; display: inline-block; flex: none; v
 .hud-btn.sq { width: 34px; padding: 0; justify-content: center; }
 .hud-btn:focus-visible, .hud-chip:focus-visible, .hud-brand:focus-visible, .panel button:focus-visible, #panel button:focus-visible, #panel input:focus-visible, #panel textarea:focus-visible, #panel select:focus-visible { outline: var(--px) solid var(--brass); outline-offset: 2px; }
 @media (max-width: 1399px) { .hud-btn kbd { display: none; } }
-/* With the drawer open, the dock re-centres in the part of the screen the drawer leaves free. */
+/* With the drawer open, the dock slides only as far as it must to clear the drawer, so on wide
+   screens it stays in its reserved gap below Clockspire. --dock-half is about half the dock's width
+   plus an 8px margin. */
 @media (min-width: 701px) {
-  .hud-dock { transition: left 160ms steps(4); }
-  #app.drawer-right .hud-dock { left: calc((100% - min(420px, 100% - 24px) - 24px) / 2); }
-  #app.drawer-left .hud-dock { left: calc(100% - (100% - min(420px, 100% - 24px) - 24px) / 2); }
+  .hud-dock { --dock-half: 283px; transition: left 160ms steps(4); }
+  #app.drawer-right .hud-dock { left: max(var(--dock-half), min(50%, calc(100% - min(420px, 100% - 24px) - 24px - var(--dock-half)))); }
+  #app.drawer-left .hud-dock { left: min(calc(100% - var(--dock-half)), max(50%, calc(min(420px, 100% - 24px) + 24px + var(--dock-half)))); }
 }
 
 /* ================================================================ Drawer */
@@ -173,6 +175,7 @@ img.ico, .ico { image-rendering: pixelated; display: inline-block; flex: none; v
 .sec-h::after { content: ""; flex: 1; height: var(--px); background: repeating-linear-gradient(90deg, var(--ink-3) 0 4px, transparent 4px 6px); order: 1; }
 .sec-h .n { order: 2; color: var(--parch-dim); font: 700 13px/1 var(--font-ui); font-variant-numeric: tabular-nums; background: var(--ink-3); padding: 2px 6px; border-radius: 2px; }
 .sec-h .ico { margin-right: -2px; }
+.sec-h .n:empty { display: none; }
 .summary { margin: 0; padding: 10px 12px 11px 13px; background: var(--ink-2); border-left: 3px solid var(--accent); font: 15px/1.5 var(--font-ui); color: var(--parch); position: relative; }
 .summary small { display: block; margin-top: 4px; font: 13px/1.35 var(--font-ui); color: var(--parch-dim); }
 .tiles { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 4px; }

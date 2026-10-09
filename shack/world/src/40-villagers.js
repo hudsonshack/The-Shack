@@ -1135,18 +1135,18 @@
     visitGrit: place('MAIL', [[722, 384], [722, 396]], 'left'),
     visitLumi: place('SQ', [[618, 362]], 'down'),
     visitTwirl: place('SQ', [[664, 362]], 'down'),
-    // the ceremony ring around the fountain
-    // (Tock on the plaza medallion north of the fountain; the four agents in a shallow arc
-    //  in front of him, open in the middle so he stays in view; Hudson watching from the
-    //  west end of the row. One row only, so name tags never land on someone's body.)
-    cTock: place('SQ', [[640, 372]], 'down'),
-    cQuill: place('QUEST', [[574, 384], [574, 396]], 'right'),
-    cLumi: place('MAIL', [[706, 384], [706, 396]], 'left'),
-    cGrit: place('QUEST', [[604, 384], [604, 410]], 'right'),
-    cTwirl: place('MAIL', [[676, 384], [676, 410]], 'left'),
-    cHudson: place('QUEST', [[544, 384], [544, 394]], 'right'),
+    // the council round the fountain, in two rows so the name tags never pile into a tower
+    // over the Quest Board or the clock-tower door: Tock on the compass medallion with Hudson
+    // and Lumi (short names) flanking him well clear of the board; Twirl, Quill and Grit in a
+    // staggered row south of the fountain, facing him across the water.
+    cTock: place('SQ', [[644, 396]], 'down'),
+    cHudson: place('QUEST', [[512, 384], [512, 398]], 'right'),
+    cLumi: place('MAIL', [[742, 384], [742, 398]], 'left'),
+    cTwirl: place('QUEST', [[544, 384], [544, 468], [562, 468]], 'up'),
+    cQuill: place('CHRON', [[726, 448], [726, 488], [654, 488]], 'up'),
+    cGrit: place('CHRON', [[726, 448], [726, 468], [750, 468]], 'up'),
     // Hudson's wander
-    h1: place('QUEST', [[552, 384], [552, 340]], 'down'),
+    h1: place('QUEST', [[536, 384], [536, 336]], 'down'),   // tag ends left of the board's '!' marker
     h2: place('SQ', [[640, 352]], 'down'),
     h3: place('MAIL', [[752, 384], [752, 336]], 'down'),
     h4: place('SQ', [[600, 392]], 'right'),
@@ -1214,12 +1214,12 @@
   const MK = (S.market && S.market.dock) || { x: 884, y: 102 };
   const BLIMP_HOME = [Math.round(MK.x) - 32, Math.round(MK.y)], BLIMP_HUB = [836, 232];
   const blimpPath = arcTable((u) => [lerp(BLIMP_HOME[0], BLIMP_HUB[0], u) - Math.sin(Math.PI * u) * 34, lerp(BLIMP_HOME[1], BLIMP_HUB[1], smooth(u))]);
-  // ship: deck centre from the Spindrift pier head (bow east) to the Clockspire pier (bow west)
-  const PD = (S.port && S.port.dock) || { x: 448, y: 544 };
-  const SHIP_HOME = [Math.round(PD.x) + 32, Math.round(PD.y) - 2], SHIP_HUB = [414, 482];
-  // Out east from the Spindrift pier head, round in front of Clockspire's pier (south of it,
-  // so the hull never crosses the planks), then up into the berth at the pier's west end.
-  const shipPath = arcTable((u) => bezier(SHIP_HOME, [SHIP_HOME[0] + 65, SHIP_HOME[1] + 11], [SHIP_HUB[0] + 56, SHIP_HUB[1] + 28], SHIP_HUB, u));
+  // ship: deck centre, bow east at both berths. Home: alongside the north face of Spindrift's
+  // pier head (stern clear of the beacon, bow clear of Clockspire's pier). Hub: along the south
+  // face of Clockspire's SW pier. The trip dips out into space south of the gap and sails east.
+  const PD = (S.port && S.port.dock) || { x: 448, y: 543 };
+  const SHIP_HOME = [Math.round(PD.x) - 12, Math.round(PD.y) - 27], SHIP_HUB = [488, 514];
+  const shipPath = arcTable((u) => bezier(SHIP_HOME, [SHIP_HOME[0] + 16, SHIP_HOME[1] + 46], [SHIP_HUB[0] - 14, SHIP_HUB[1] + 46], SHIP_HUB, u));
   // rail: the cart follows S.nav.rails exactly (rounded corners like the bridge), sampled per px
   const RAIL = (function () {
     const pts = (S.nav.rails || []).map(([x, y]) => [x * T + 8, y * T + 8]);
@@ -1322,6 +1322,8 @@
       else { out.push(cur); cur = w; }
     }
     if (cur) out.push(cur);
+    // never strand a short last word in a bubble of its own ('…yet', '…cycle')
+    if (out.length > 1) { const lst = out[out.length - 1], prev = out[out.length - 2]; if (lst.length <= 8 && prev.length + 1 + lst.length <= 28) out.splice(-2, 2, prev + ' ' + lst); }
     if (max && out.length > max) { out.length = max; out[max - 1] = out[max - 1].replace(/[\s,.;:]*$/, '') + '…'; }
     return out.map((s, i) => (i > 0 && !/^[A-Z0-9]/.test(s) ? '…' : '') + (i < out.length - 1 && !/[.!?…,;:]$/.test(s) ? s + '…' : s));
   }
@@ -1661,8 +1663,9 @@
   /** Wrap a vehicle's draw so it is tinted while its anchor is out over space. box(V) -> [x, y, w, h]. */
   function tintWhenInSpace(V, box) {
     const raw = V.draw;
+    if (!V.inSpace) V.inSpace = (W) => overSpace(W.ax, W.ay);
     V.draw = (ctx, t) => {
-      if (!overSpace(V.ax, V.ay)) { raw(ctx, t); return; }
+      if (!V.inSpace(V)) { raw(ctx, t); return; }
       const b = box(V);
       drawTinted(ctx, b[0], b[1], b[2], b[3], (g) => raw(g, t));
     };
@@ -1741,10 +1744,10 @@
 
   // ---- the sky-ship (Spindrift Harbor <-> Clockspire)
   const ship = makeVehicle({
-    mode: 'ship', id: 'ship', owner: 'hustle-engine', home: 'port', dur: 8.5, turns: true, facing: 1, homeFacing: 1, hubFacing: -1,
+    mode: 'ship', id: 'ship', owner: 'hustle-engine', home: 'port', dur: 7, turns: true, facing: 1, homeFacing: 1, hubFacing: 1,
     ends: {
-      home: { node: 'SHIP', board: [[Math.round(PD.x) - 4, Math.round(PD.y)], [SHIP_HOME[0] + SH_WHEEL, SHIP_HOME[1], 2]] },
-      hub: { node: 'D_SW', board: [[458, 480], [SHIP_HUB[0] - SH_WHEEL, SHIP_HUB[1], 2]] },
+      home: { node: 'SHIP', board: [[SHIP_HOME[0] + SH_WHEEL + 4, SHIP_HOME[1] + 20], [SHIP_HOME[0] + SH_WHEEL, SHIP_HOME[1], 2]] },
+      hub: { node: 'D_SW', board: [[SHIP_HUB[0] + SH_WHEEL + 2, 486], [SHIP_HUB[0] + SH_WHEEL, SHIP_HUB[1], 2]] },
     },
     path: (u) => shipPath.at(u),
     seat: () => [Math.round(ship.ax + SH_WHEEL * Math.sign(ship.facing || 1) * Math.max(0.2, Math.abs(ship.facing))), Math.round(ship.ay)],
@@ -1801,6 +1804,9 @@
 
   tintWhenInSpace(kite, (V) => [V.ax - 40, V.ay + V.off - 64, 80, 80]);
   tintWhenInSpace(blimp, (V) => { const x0 = Math.min(V.ax - 46, 794), x1 = Math.max(V.ax + 46, Math.round(MK.x) + 22); return [x0, V.ay + V.off - 22, x1 - x0, 76]; });
+  // both berths and the whole crossing hang out over open space (rect tests can misread the
+  // narrow gap between Spindrift and Clockspire), so the sky-ship is always sky-tinted
+  ship.inSpace = () => true;
   tintWhenInSpace(ship, (V) => [V.ax - 64, V.ay + V.off - 50, 128, 72]);
   tintWhenInSpace(cart, (V) => [V.ax - 20, V.ay + V.off - 52, 40, 64]);
 
@@ -2065,10 +2071,23 @@
   };
 
   /* ================================================================ the cycle ceremony */
-  function ceremonyName(c) {
-    if (c.name && c.name !== 'manual') return c.name;
-    const l = S.cycle && S.cycle.last;
-    return l ? l.name : 'cycle';
+  /** Tock's bell line. A scheduled ceremony names its cycle; a manual replay names the last
+   *  cycle that really ran (data.runs), or just rings the bell when none has run yet. */
+  function bellLine(c) {
+    if (c.name && c.name !== 'manual') return 'Ding! The ' + c.name + ' cycle';
+    let last = null;
+    for (const r of arr(S.data && S.data.runs)) {
+      if (!r || !r.cycle) continue;
+      const ts = Date.parse(r.finished || r.started || '') || 0;
+      if (!last || ts > last.ts) last = { name: String(r.cycle), ts };
+    }
+    return last ? 'Ding! The ' + last.name + ' cycle' : 'Ding! Cycle bell';
+  }
+  /** Something real to hand Tock at the council: deliveries, or a thread that has run. */
+  function hasReport(agent) {
+    if (deliveriesOf(agent) > 0) return true;
+    const th = thread(agent);
+    return !!(th && th.last_run);
   }
   function beatOf(p) {
     const B = S.CEREMONY_BEATS || { bell: [0, 0.15], gather: [0.15, 0.45], council: [0.45, 0.7], disperse: [0.7, 1] };
@@ -2114,7 +2133,7 @@
     if (beat === 'bell') {
       if (tock.at !== PL.tower) planTo(tock, PL.tower, 1.6);
       tock.onArrive = null;
-      say(tock, { text: 'Ding! The ' + ceremonyName(c) + ' cycle', tone: 'info' }, clock + 0.3);
+      say(tock, { text: bellLine(c), tone: 'info' }, clock + 0.3);
       sfx('bell'); CER.rung = 1; CER.nextRing = clock + 1.8;
       gatherAll(fast);
     } else if (beat === 'gather') {
@@ -2163,7 +2182,8 @@
         const v = s.v;
         if (s.done || clock < s.at || v.at !== spotOf(v) || v.plan) continue;
         s.done = true;
-        fly(itemSprite(v.item), v.x, v.y - 18, tock.x, tock.y - 20, 0.9, 18, 'square', (f) => {
+        // no data, no parcel: an agent with nothing to report just speaks up, empty-handed
+        if (hasReport(v.agent)) fly(itemSprite(v.item), v.x, v.y - 18, tock.x, tock.y - 20, 0.9, 18, 'square', (f) => {
           burst(f.x1, f.y1, '#fff3b0', 8, 'square');
           if (v.item === 'coins') sfx('coin');
         });
@@ -2308,21 +2328,41 @@
   // riders' tags clear their vehicle: above the kite sail, above the blimp's envelope
   const rideLift = (v) => (v.riding === kite && kite.open > 0.5 ? 26 : v.riding === blimp ? 20 : 0);
   const baseDy = (v) => v.tagDy + rideLift(v);
+  // asleep indoors: the villager is hidden, so the tag moves to the front door ("· asleep")
+  // and every island still reads with its character's name after dark
+  const indoorsAsleep = (v) => v.hidden && v.sleeping && v.home && !v.home.stay && v.home.px;
+  const DOOR_DY = 30;
+  function tagAnchor(T) {
+    const v = T.v;
+    if (indoorsAsleep(v)) {
+      const H = v.home.px;
+      if (!T.door || T.door.x !== H[0] || T.door.y !== H[1]) T.door = { x: H[0], y: H[1], island: v.homeIsland, hidden: false };
+      if (T.L.anchor !== T.door) { T.L.anchor = T.door; T.L.setText(v.name + ' · asleep'); T.off = 0; }
+      return T.door;
+    }
+    if (T.L.anchor !== v) { T.L.anchor = v; T.L.setText(v.name); T.off = 0; }
+    return v;
+  }
   function updateTags() {
     const z = Math.max(0.3, S.cam ? S.cam.z : 1), live = [];
     for (const T of tags) {
-      const v = T.v;
+      const v = T.v, a = tagAnchor(T), door = a !== v;
       if (T.off == null) T.off = 0;
-      if (v.hidden) { T.off = 0; T.L.dy = baseDy(v); continue; }
+      if (!door && v.hidden) { T.off = 0; T.L.dy = baseDy(v); continue; }
+      const dy = door ? DOOR_DY : baseDy(v);
       // widths are estimated from the text (12-13 px UI font) so this never forces a DOM layout
-      let wpx = v.name.length * 7 + 14, hpx = 21;
+      let wpx = (v.name.length + (door ? 9 : 0)) * 7 + 14, hpx = 21;
       // a speech bubble rides just above its speaker's tag: treat tag + bubble as one block
-      for (const B of liveBubbles) if (B.v === v && B.b && B.b.el && B.b.el.isConnected) {
-        wpx = Math.max(wpx, Math.min(182, B.text.length * 7 + 18)); hpx = 21 + 30;
+      if (!door) for (const B of liveBubbles) if (B.v === v && B.b && B.b.el && B.b.el.isConnected) {
+        wpx = Math.max(wpx, Math.min(222, B.text.length * 7 + 18)); hpx = 21 + 30;
       }
-      live.push({ T, x: v.x, y: v.y + S.bob(v.island) - baseDy(v), w: (wpx + 4) / z, h: hpx / z });
+      const y = a.y + S.bob(a.island) - dy;
+      // sort key: where the tag is drawn now (last frame's offset), so a tag already on top of
+      // a stack stays on top while its owner walks past; tags never slide through each other
+      live.push({ T, a, dy, x: a.x, y, key: y - T.off, w: (wpx + 4) / z, h: hpx / z });
     }
-    live.sort((a, b) => b.y - a.y);
+    live.sort((p, q) => q.key - p.key || (p.T.rank || 0) - (q.T.rank || 0));
+    live.forEach((it, i) => { it.T.rank = i; });
     for (let pass = 0; pass < 4; pass++) {
       let moved = false;
       for (let i = 1; i < live.length; i++) {
@@ -2335,11 +2375,11 @@
       if (!moved) break;
     }
     for (const it of live) {
-      const T = it.T, v = T.v, want = v.y + S.bob(v.island) - baseDy(v) - it.y;
+      const T = it.T, v = T.v, want = it.a.y + S.bob(it.a.island) - it.dy - it.y;
       T.off += (want - T.off) * (RM ? 1 : 0.35);
       if (Math.abs(want - T.off) < 0.3) T.off = want;
-      v.tagOff = T.off;
-      T.L.dy = baseDy(v) + Math.round(T.off);
+      v.tagOff = it.a === v ? T.off : 0;
+      T.L.dy = it.dy + Math.round(T.off);
     }
   }
   S.villagers = { list: villagers, byId, vehicles: VEH, parcels };
@@ -2424,13 +2464,14 @@
       if (v.riding) { zzzAt(ctx, t, v.x + 4, v.y - v.h - 4 + (v.island ? S.bob(v.island) : 0), seed); continue; }
       if (v === baker || (v === hudson && tock.sleeping)) continue;   // one Zzz per door
       const H = v.home && v.home.px;
-      if (H) zzzAt(ctx, t, H[0] + 6, H[1] - 40 + S.bob(v.homeIsland), seed);
+      // the Zzz rise from just above the door's '· asleep' tag
+      if (H) zzzAt(ctx, t, H[0] + 6, H[1] - DOOR_DY - Math.round(24 / Math.max(0.5, S.cam ? S.cam.z : 1)) + S.bob(v.homeIsland), seed);
     }
     if (!cat.plan && cat.mode === 'loaf') zzzAt(ctx, t, cat.x + 6, cat.y - 14 + S.bob('square'), 0.5);
     const night = 1 - clamp(S.time.light == null ? 1 : S.time.light, 0, 1);
     if (night > 0.3) {
       // lanterns on the vehicles out in space (their art is sky-tinted, so these read as lit)
-      if (overSpace(ship.ax, ship.ay)) {
+      if (ship.inSpace(ship)) {
         const f = ship.facing, x = Math.round(ship.ax), y = Math.round(ship.ay) + ship.off;
         halo(ctx, x - Math.round(30 * f), y - 21, 9, P.lanternGlow, night);
         ctx.globalAlpha = 0.85 * night;
@@ -2453,8 +2494,15 @@
       const V = blimp, x = Math.round(V.ax), y = Math.round(V.ay) + V.off;
       // the neon blimp should be the brightest thing in the night sky: glow, both stripes, a lit gondola
       const af = Math.abs(V.facing), sg = V.facing >= 0 ? 1 : -1;
-      halo(ctx, x, y + BL_FLOOR - 7, 15, P.neonCyan, 0.55 * night);
+      halo(ctx, x, y + BL_FLOOR - 7, 9, P.neonCyan, 0.35 * night);
       halo(ctx, x - Math.round(6 * V.facing), y, 12, P.neonPink, 0.5 * night);
+      // the gondola stays visibly hung from the envelope: dim neon struts and its top/bottom rails
+      ctx.globalAlpha = 0.6 * night;
+      const sx = (dx) => x + Math.round(dx * V.facing);
+      for (const [a0, b0, a1] of [[-11, 10, -13], [11, 10, 12], [-4, 11, -7], [4, 11, 6]]) S.px.line(ctx, sx(a0), y + b0, sx(a1), y + BL_FLOOR - 13, '#7a5aa8');
+      const gy = y + BL_FLOOR - 13, gl = Math.round(14 * af), gr = Math.round(13 * af), bl = Math.round(5 * af), br = Math.round(4 * af);
+      R(ctx, sg > 0 ? x - gl : x - gr, gy, gl + gr + 1, 1, '#7a5aa8');
+      R(ctx, sg > 0 ? x - bl : x - br, gy + 16, bl + br + 1, 1, '#7a5aa8');
       ctx.globalAlpha = 0.85 * night;
       for (let dx = -26; dx <= 26; dx += 2) {
         const yy = Math.round(12 * Math.sqrt(Math.max(0, 1 - (dx / 31) * (dx / 31))) * 0.55), xx = x + Math.round(dx * af);
