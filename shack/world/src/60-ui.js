@@ -697,7 +697,7 @@
     const list = arr(m.prospects);
     const body = list.length
       ? `<ul class="rows">${list.map((p) => `<li class="row" style="--g:1fr auto"><span class="t">${esc(p.name)}</span>${pill(p.status || 'new', p.status === 'signed' ? 'ok' : p.status === 'drafted' ? 'info' : 'mute')}</li>`).join('')}</ul><p class="note">Outreach DMs are drafted only. You send them yourself.</p>`
-      : emptyBox('No prospects yet. Lumi drafts outreach to local businesses during night cycles.');
+      : emptyBox('No prospects yet. Lumi drafts outreach to local businesses during the daily cycle.');
     return sec('Prospects', body, { n: list.length });
   }
   function shopTiles(m) {
@@ -1382,10 +1382,11 @@
     </article>`;
   }
   function chronEmpty(tab) {
-    const at = cycleClock('night') || '8:45 PM';
+    const first = arr(D().cycles)[0];
+    const at = (first && cycleClock(first.name)) || '11:00 AM';
     if (tab === 'weekly') return `The first weekly entry appears after Sunday’s ${at} cycle.`;
-    if (tab === 'monthly') return `The first monthly entry appears after the ${at} cycle on the last day of the month.`;
-    return `The first daily entry appears after tonight’s ${at} cycle.`;
+    if (tab === 'monthly') return `The first monthly entry appears after the ${at} cycle on the 1st of next month.`;
+    return `The next daily entry appears after the ${at} cycle.`;
   }
   function chronicleList(tab) {
     return arr((D().recaps || {})[tab]).filter((e) => e && typeof e === 'object').slice().sort((a, b) => String(b.period || '').localeCompare(String(a.period || '')));

@@ -1218,7 +1218,7 @@
   // pier head (stern clear of the beacon, bow clear of Clockspire's pier). Hub: along the south
   // face of Clockspire's SW pier. The trip dips out into space south of the gap and sails east.
   const PD = (S.port && S.port.dock) || { x: 448, y: 543 };
-  const SHIP_HOME = [Math.round(PD.x) - 12, Math.round(PD.y) - 27], SHIP_HUB = [488, 514];
+  const SHIP_HOME = [Math.round(PD.x) - 18, Math.round(PD.y) - 27], SHIP_HUB = [488, 514];
   const shipPath = arcTable((u) => bezier(SHIP_HOME, [SHIP_HOME[0] + 16, SHIP_HOME[1] + 46], [SHIP_HUB[0] - 14, SHIP_HUB[1] + 46], SHIP_HUB, u));
   // rail: the cart follows S.nav.rails exactly (rounded corners like the bridge), sampled per px
   const RAIL = (function () {
