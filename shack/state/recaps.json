@@ -1,6 +1,32 @@
 {
   "version": 1,
-  "daily": [],
+  "daily": [
+    {
+      "period": "2026-10-08",
+      "chronicle": "The bell rang at quarter to nine and the town stood quiet. Lantern Peak saw no Classroom scrolls, Copperhold no bank notices, and Neon Hollow's stalls are still unplugged from Metricool with Angie's Raw folder empty after shoot day. Spindrift Harbor's pulse showed no orders. I let the spokes rest and kept the clock wound. What the town needs now is the three connections on the quest board.",
+      "stats": {
+        "school": {},
+        "money": {},
+        "social": {},
+        "store": {
+          "orders": 0,
+          "unfulfilled": 0
+        },
+        "system": {
+          "cycles": 3,
+          "skipped_spokes": 4,
+          "hermes_drafts": 0
+        }
+      },
+      "highlights": [],
+      "needs_you": [
+        "Forward Classroom emails (T-0001)",
+        "Connect networks in Metricool (T-0007)",
+        "Drop Angie's shoot files in the Raw folder",
+        "Merge the setup PR (T-0003)"
+      ]
+    }
+  ],
   "weekly": [],
   "monthly": []
 }

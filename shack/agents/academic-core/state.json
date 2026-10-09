@@ -1,7 +1,7 @@
 {
   "agent": "academic-core",
   "phase": "idle",
-  "last_run": "2026-10-08T15:50:00-04:00",
+  "last_run": "2026-10-08T20:46-04:00",
   "next_run": null,
   "summary": "Skipped: no Classroom mail, no deadlines or study blocks",
   "alerts": [

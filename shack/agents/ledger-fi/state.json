@@ -1,7 +1,7 @@
 {
   "agent": "ledger-fi",
   "phase": "idle",
-  "last_run": "2026-10-08T15:50:00-04:00",
+  "last_run": "2026-10-08T20:46-04:00",
   "next_run": null,
   "summary": "Skipped: no M&T alert mail this month, not the 1st",
   "alerts": [
