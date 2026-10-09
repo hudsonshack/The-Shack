@@ -51,6 +51,7 @@
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const lerp = (a, b, u) => a + (b - a) * u;
   const smooth = (u) => u * u * (3 - 2 * u);
+  const sfx = (name) => { try { if (S.audio && typeof S.audio.sfx === 'function') S.audio.sfx(name); } catch (e) { /* sound is optional */ } };
 
   function mk(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, w | 0); c.height = Math.max(1, h | 0); return c; }
   const R = (g, x, y, w, h, c) => { if (w <= 0 || h <= 0) return; g.fillStyle = c; g.fillRect(x, y, w, h); };
@@ -1134,15 +1135,18 @@
     visitGrit: place('MAIL', [[722, 384], [722, 396]], 'left'),
     visitLumi: place('SQ', [[618, 362]], 'down'),
     visitTwirl: place('SQ', [[664, 362]], 'down'),
-    // the ceremony ring around the fountain
-    cTock: place('SQ', [[640, 390]], 'down'),
-    cQuill: place('SQ', [[590, 392], [590, 410]], 'right'),
-    cLumi: place('SQ', [[690, 392], [690, 410]], 'left'),
-    cGrit: place('SQ', [[612, 392], [612, 462]], 'right'),
-    cTwirl: place('MAIL', [[704, 400], [704, 452]], 'left'),
-    cHudson: place('QUEST', [[560, 392], [560, 484], [640, 484]], 'up'),
+    // the council round the fountain, in two rows so the name tags never pile into a tower
+    // over the Quest Board or the clock-tower door: Tock on the compass medallion with Hudson
+    // and Lumi (short names) flanking him well clear of the board; Twirl, Quill and Grit in a
+    // staggered row south of the fountain, facing him across the water.
+    cTock: place('SQ', [[644, 396]], 'down'),
+    cHudson: place('QUEST', [[512, 384], [512, 398]], 'right'),
+    cLumi: place('MAIL', [[742, 384], [742, 398]], 'left'),
+    cTwirl: place('QUEST', [[544, 384], [544, 468], [562, 468]], 'up'),
+    cQuill: place('CHRON', [[726, 448], [726, 488], [654, 488]], 'up'),
+    cGrit: place('CHRON', [[726, 448], [726, 468], [750, 468]], 'up'),
     // Hudson's wander
-    h1: place('QUEST', [[552, 384], [552, 340]], 'down'),
+    h1: place('QUEST', [[536, 384], [536, 336]], 'down'),   // tag ends left of the board's '!' marker
     h2: place('SQ', [[640, 352]], 'down'),
     h3: place('MAIL', [[752, 384], [752, 336]], 'down'),
     h4: place('SQ', [[600, 392]], 'right'),
@@ -1210,10 +1214,12 @@
   const MK = (S.market && S.market.dock) || { x: 884, y: 102 };
   const BLIMP_HOME = [Math.round(MK.x) - 32, Math.round(MK.y)], BLIMP_HUB = [836, 232];
   const blimpPath = arcTable((u) => [lerp(BLIMP_HOME[0], BLIMP_HUB[0], u) - Math.sin(Math.PI * u) * 34, lerp(BLIMP_HOME[1], BLIMP_HUB[1], smooth(u))]);
-  // ship: deck centre from the Spindrift pier head (bow east) to the Clockspire pier (bow west)
-  const PD = (S.port && S.port.dock) || { x: 448, y: 544 };
-  const SHIP_HOME = [Math.round(PD.x) + 32, Math.round(PD.y) - 2], SHIP_HUB = [420, 482];
-  const shipPath = arcTable((u) => bezier(SHIP_HOME, [SHIP_HOME[0] + 70, SHIP_HOME[1] + 8], [SHIP_HUB[0] + 96, SHIP_HUB[1] - 18], SHIP_HUB, u));
+  // ship: deck centre, bow east at both berths. Home: alongside the north face of Spindrift's
+  // pier head (stern clear of the beacon, bow clear of Clockspire's pier). Hub: along the south
+  // face of Clockspire's SW pier. The trip dips out into space south of the gap and sails east.
+  const PD = (S.port && S.port.dock) || { x: 448, y: 543 };
+  const SHIP_HOME = [Math.round(PD.x) - 12, Math.round(PD.y) - 27], SHIP_HUB = [488, 514];
+  const shipPath = arcTable((u) => bezier(SHIP_HOME, [SHIP_HOME[0] + 16, SHIP_HOME[1] + 46], [SHIP_HUB[0] - 14, SHIP_HUB[1] + 46], SHIP_HUB, u));
   // rail: the cart follows S.nav.rails exactly (rounded corners like the bridge), sampled per px
   const RAIL = (function () {
     const pts = (S.nav.rails || []).map(([x, y]) => [x * T + 8, y * T + 8]);
@@ -1308,7 +1314,7 @@
   }
   /** Split a line into bubble-sized chunks (one line each, ~24 chars). */
   function chunks(text, max) {
-    const LIM = 24, words = String(text).split(/\s+/), out = [];
+    const LIM = 25, words = String(text).split(/\s+/), out = [];
     let cur = '';
     for (const w of words) {
       if (!cur) cur = w;
@@ -1316,6 +1322,8 @@
       else { out.push(cur); cur = w; }
     }
     if (cur) out.push(cur);
+    // never strand a short last word in a bubble of its own ('…yet', '…cycle')
+    if (out.length > 1) { const lst = out[out.length - 1], prev = out[out.length - 2]; if (lst.length <= 8 && prev.length + 1 + lst.length <= 28) out.splice(-2, 2, prev + ' ' + lst); }
     if (max && out.length > max) { out.length = max; out[max - 1] = out[max - 1].replace(/[\s,.;:]*$/, '') + '…'; }
     return out.map((s, i) => (i > 0 && !/^[A-Z0-9]/.test(s) ? '…' : '') + (i < out.length - 1 && !/[.!?…,;:]$/.test(s) ? s + '…' : s));
   }
@@ -1630,6 +1638,38 @@
     const ax = facing >= 0 ? anchorX : cv.width - 1 - anchorX;
     ctx.drawImage(cv, 0, 0, cv.width, cv.height, Math.round(x - ax * f), Math.round(y - anchorY), w, cv.height);
   }
+  /* Night tint for art out in open space. The atmosphere darkens each island through a
+   * mask cut to its silhouette, so a vehicle over space would stay day-bright: draw it into
+   * a scratch canvas, multiply by the same sky colour, add the same veil, then blit. */
+  const tintA = mk(200, 128), tintB = mk(200, 128), tgA = tintA.getContext('2d'), tgB = tintB.getContext('2d');
+  function skyNow() {
+    const sk = S.atmo && typeof S.atmo.sky === 'function' ? S.atmo.sky() : null;
+    return sk && (sk.mul !== '#ffffff' || sk.la > 0.002) ? sk : null;
+  }
+  const overSpace = (x, y) => !S.islandAt(Math.floor(x / T), Math.floor(y / T));
+  function drawTinted(ctx, bx, by, bw, bh, fn) {
+    const sk = skyNow();
+    if (!sk) { fn(ctx); return; }
+    bx = Math.round(bx); by = Math.round(by); bw = Math.min(200, bw); bh = Math.min(128, bh);
+    tgA.setTransform(1, 0, 0, 1, 0, 0); tgA.clearRect(0, 0, bw, bh);
+    tgA.translate(-bx, -by); fn(tgA); tgA.setTransform(1, 0, 0, 1, 0, 0);
+    tgB.globalCompositeOperation = 'copy'; tgB.drawImage(tintA, 0, 0);
+    tgB.globalCompositeOperation = 'multiply'; tgB.fillStyle = sk.mul; tgB.fillRect(0, 0, bw, bh);
+    tgB.globalCompositeOperation = 'destination-in'; tgB.drawImage(tintA, 0, 0);
+    if (sk.la > 0.002) { tgB.globalCompositeOperation = 'source-atop'; tgB.fillStyle = S.color.rgba(sk.lift, Math.min(0.85, sk.la)); tgB.fillRect(0, 0, bw, bh); }
+    tgB.globalCompositeOperation = 'source-over';
+    ctx.drawImage(tintB, 0, 0, bw, bh, bx, by, bw, bh);
+  }
+  /** Wrap a vehicle's draw so it is tinted while its anchor is out over space. box(V) -> [x, y, w, h]. */
+  function tintWhenInSpace(V, box) {
+    const raw = V.draw;
+    if (!V.inSpace) V.inSpace = (W) => overSpace(W.ax, W.ay);
+    V.draw = (ctx, t) => {
+      if (!V.inSpace(V)) { raw(ctx, t); return; }
+      const b = box(V);
+      drawTinted(ctx, b[0], b[1], b[2], b[3], (g) => raw(g, t));
+    };
+  }
   function drawRider(V, ctx, t, x, y, dir, key) {
     const r = V.rider;
     if (!r || r.hidden) return null;
@@ -1704,10 +1744,10 @@
 
   // ---- the sky-ship (Spindrift Harbor <-> Clockspire)
   const ship = makeVehicle({
-    mode: 'ship', id: 'ship', owner: 'hustle-engine', home: 'port', dur: 8.5, turns: true, facing: 1, homeFacing: 1, hubFacing: -1,
+    mode: 'ship', id: 'ship', owner: 'hustle-engine', home: 'port', dur: 7, turns: true, facing: 1, homeFacing: 1, hubFacing: 1,
     ends: {
-      home: { node: 'SHIP', board: [[Math.round(PD.x) - 4, Math.round(PD.y)], [SHIP_HOME[0] + SH_WHEEL, SHIP_HOME[1], 2]] },
-      hub: { node: 'D_SW', board: [[458, 480], [SHIP_HUB[0] - SH_WHEEL, SHIP_HUB[1], 2]] },
+      home: { node: 'SHIP', board: [[SHIP_HOME[0] + SH_WHEEL + 4, SHIP_HOME[1] + 20], [SHIP_HOME[0] + SH_WHEEL, SHIP_HOME[1], 2]] },
+      hub: { node: 'D_SW', board: [[SHIP_HUB[0] + SH_WHEEL + 2, 486], [SHIP_HUB[0] + SH_WHEEL, SHIP_HUB[1], 2]] },
     },
     path: (u) => shipPath.at(u),
     seat: () => [Math.round(ship.ax + SH_WHEEL * Math.sign(ship.facing || 1) * Math.max(0.2, Math.abs(ship.facing))), Math.round(ship.ay)],
@@ -1745,7 +1785,7 @@
     bobAt: (u, x) => S.bobBetween('mine', 'square', railU(x)),
     seat: () => [Math.round(cart.ax), Math.round(cart.ay) + 1],
     sortY: () => cart.ay + 7,
-    onDepart() { if (onScreen(cart.ax, cart.ay)) S.audio.sfx('cart'); },
+    onDepart() { if (onScreen(cart.ax, cart.ay)) sfx('cart'); },
     draw(ctx, t) {
       const V = cart, C = cartSprites(), dv = V.dirv || [0, 0, -1, 0];
       const side = Math.abs(dv[2]) >= Math.abs(dv[3]);
@@ -1761,6 +1801,14 @@
       ctx.drawImage(set.front, x - MC_A[0], y - MC_A[1]);
     },
   });
+
+  tintWhenInSpace(kite, (V) => [V.ax - 40, V.ay + V.off - 64, 80, 80]);
+  tintWhenInSpace(blimp, (V) => { const x0 = Math.min(V.ax - 46, 794), x1 = Math.max(V.ax + 46, Math.round(MK.x) + 22); return [x0, V.ay + V.off - 22, x1 - x0, 76]; });
+  // both berths and the whole crossing hang out over open space (rect tests can misread the
+  // narrow gap between Spindrift and Clockspire), so the sky-ship is always sky-tinted
+  ship.inSpace = () => true;
+  tintWhenInSpace(ship, (V) => [V.ax - 64, V.ay + V.off - 50, 128, 72]);
+  tintWhenInSpace(cart, (V) => [V.ax - 20, V.ay + V.off - 52, 40, 64]);
 
   /* ================================================================ the characters */
   const roleOf = (agent, fb) => { const th = thread(agent); return (th && th.domain) || fb; };
@@ -1823,7 +1871,7 @@
         fly(itemSprite(kind), cx, cy, D0.at[0], D0.at[1] - 4, 0.7, 14, 'square', () => {
           parcels.push({ kind, x: D0.at[0], y: D0.at[1], place: D0.place, state: 'waiting' });
           burst(D0.at[0], D0.at[1] - 6, '#fff3b0', 5, 'square');
-          if (kind === 'coins' && onScreen(D0.at[0], D0.at[1])) S.audio.sfx('coin');
+          if (kind === 'coins' && onScreen(D0.at[0], D0.at[1])) sfx('coin');
         });
         after(1.6, () => { if (!VV.rider && VV.end === 'hub' && !VV.reserved) VV.go('home'); });
       } else after(rand(2, 4), () => { if (!VV.rider && VV.end === 'hub' && !VV.reserved) VV.go('home'); });
@@ -1997,7 +2045,7 @@
       if (pay.nextCoin <= 0 && pay.coins < 7) {
         pay.coins++; pay.nextCoin = 0.42;
         fly(COIN, pay.px, pay.py - 18, VAULT_DOOR[0] + rand(-4, 4), VAULT_DOOR[1] + rand(-3, 3), 0.65, 16, 'mine', (f) => { burst(f.x1, f.y1, '#fff3b0', 3, 'mine'); });
-        if (pay.coins === 1 && onScreen(VAULT_DOOR[0], VAULT_DOOR[1])) S.audio.sfx('coin');
+        if (pay.coins === 1 && onScreen(VAULT_DOOR[0], VAULT_DOOR[1])) sfx('coin');
       }
       if (pay.k > 4.2) { pay.state = 'out'; pay.k = 0; }
     } else {
@@ -2008,7 +2056,7 @@
     }
     pay.x = pay.px; pay.y = 1e5 + pay.py;
   };
-  pay.draw = (ctx, t) => {
+  pay.drawRaw = (ctx, t) => {
     const F = paySprites(), spr = F[RM ? 0 : Math.floor(t * 6) & 1], x = Math.round(pay.px), y = Math.round(pay.py);
     if (pay.facing > 0) { ctx.save(); ctx.scale(-1, 1); ctx.drawImage(spr, -x - 18, y - 24); ctx.restore(); }
     else ctx.drawImage(spr, x - 18, y - 24);
@@ -2017,12 +2065,29 @@
     R(ctx, pxp, y - 13 - (ph ? 3 : 1), 1, ph ? 7 : 3, '#e8e4ee');
     if (pay.state !== 'off' && !RM) for (let k = 0; k < 3; k++) { const s = (t * 2 + k / 3) % 1; ctx.globalAlpha = 1 - s; D(ctx, x - pay.facing * Math.round(20 + s * 18), y - 10 + k * 3, '#fff3b0'); ctx.globalAlpha = 1; }
   };
+  pay.draw = (ctx, t) => {
+    if (!overSpace(pay.px, pay.py - 8)) { pay.drawRaw(ctx, t); return; }
+    drawTinted(ctx, pay.px - 44, pay.py - 30, 88, 36, (g) => pay.drawRaw(g, t));
+  };
 
   /* ================================================================ the cycle ceremony */
-  function ceremonyName(c) {
-    if (c.name && c.name !== 'manual') return c.name;
-    const l = S.cycle && S.cycle.last;
-    return l ? l.name : 'cycle';
+  /** Tock's bell line. A scheduled ceremony names its cycle; a manual replay names the last
+   *  cycle that really ran (data.runs), or just rings the bell when none has run yet. */
+  function bellLine(c) {
+    if (c.name && c.name !== 'manual') return 'Ding! The ' + c.name + ' cycle';
+    let last = null;
+    for (const r of arr(S.data && S.data.runs)) {
+      if (!r || !r.cycle) continue;
+      const ts = Date.parse(r.finished || r.started || '') || 0;
+      if (!last || ts > last.ts) last = { name: String(r.cycle), ts };
+    }
+    return last ? 'Ding! The ' + last.name + ' cycle' : 'Ding! Cycle bell';
+  }
+  /** Something real to hand Tock at the council: deliveries, or a thread that has run. */
+  function hasReport(agent) {
+    if (deliveriesOf(agent) > 0) return true;
+    const th = thread(agent);
+    return !!(th && th.last_run);
   }
   function beatOf(p) {
     const B = S.CEREMONY_BEATS || { bell: [0, 0.15], gather: [0.15, 0.45], council: [0.45, 0.7], disperse: [0.7, 1] };
@@ -2068,8 +2133,8 @@
     if (beat === 'bell') {
       if (tock.at !== PL.tower) planTo(tock, PL.tower, 1.6);
       tock.onArrive = null;
-      say(tock, { text: 'Ding! The ' + ceremonyName(c) + ' cycle', tone: 'info' }, clock + 0.3);
-      S.audio.sfx('bell'); CER.rung = 1; CER.nextRing = clock + 1.8;
+      say(tock, { text: bellLine(c), tone: 'info' }, clock + 0.3);
+      sfx('bell'); CER.rung = 1; CER.nextRing = clock + 1.8;
       gatherAll(fast);
     } else if (beat === 'gather') {
       tock.pose = null;
@@ -2109,7 +2174,7 @@
       if (there) {
         tock.dir = 'down';
         tock.pose = Math.floor(clock * 4) & 1 ? 'raise' : null;
-        if (clock >= CER.nextRing && CER.rung < 3) { CER.rung++; CER.nextRing = clock + 1.8; S.audio.sfx('bell'); }
+        if (clock >= CER.nextRing && CER.rung < 3) { CER.rung++; CER.nextRing = clock + 1.8; sfx('bell'); }
       } else tock.pose = null;
     } else if (beat === 'council') {
       for (const v of people()) if (!v.plan && !v.hidden && v.at === spotOf(v)) { if (v === tock) v.dir = 'down'; else faceTo(v, tock.x, tock.y); }
@@ -2117,9 +2182,10 @@
         const v = s.v;
         if (s.done || clock < s.at || v.at !== spotOf(v) || v.plan) continue;
         s.done = true;
-        fly(itemSprite(v.item), v.x, v.y - 18, tock.x, tock.y - 20, 0.9, 18, 'square', (f) => {
+        // no data, no parcel: an agent with nothing to report just speaks up, empty-handed
+        if (hasReport(v.agent)) fly(itemSprite(v.item), v.x, v.y - 18, tock.x, tock.y - 20, 0.9, 18, 'square', (f) => {
           burst(f.x1, f.y1, '#fff3b0', 8, 'square');
-          if (v.item === 'coins') S.audio.sfx('coin');
+          if (v.item === 'coins') sfx('coin');
         });
         say(v, nextLine(v), clock);
       }
@@ -2143,7 +2209,7 @@
     v.queue = parts.map((p, i) => ({ text: p, tone: line.tone, at: t + i * 2.7 }));
     v.bubbleUntil = t + parts.length * 2.7 + 0.6;
   }
-  const bubbleDy = (v) => v.tagDy + (v.riding === kite && kite.open > 0.5 ? 26 : 0) + Math.round(23 / Math.max(0.5, S.cam ? S.cam.z : 1));
+  const bubbleDy = (v) => v.tagDy + (v.tagOff ? Math.round(v.tagOff) : 0) + rideLift(v) + Math.round(23 / Math.max(0.5, S.cam ? S.cam.z : 1));
   function flushSpeech(t) {
     for (const v of villagers) {
       if (!v.queue.length) continue;
@@ -2153,7 +2219,7 @@
         v.queue.shift();
         const tone = q.tone && q.tone !== 'info' ? q.tone : undefined;
         const b = S.bubble(v, q.text, { tone, biome: v.homeIsland, ms: v.queue.length ? 2700 : 3800, dy: bubbleDy(v) });
-        if (b) liveBubbles.push({ b, v, end: t + (v.queue.length ? 2.7 : 3.8) });
+        if (b) liveBubbles.push({ b, v, text: q.text, end: t + (v.queue.length ? 2.7 : 3.8) });
       }
     }
     for (let i = liveBubbles.length - 1; i >= 0; i--) { const L = liveBubbles[i]; if (t > L.end) liveBubbles.splice(i, 1); else L.b.dy = bubbleDy(L.v); }
@@ -2214,12 +2280,23 @@
   const shipLamp = light({ x: -99, y: -99, r: 24, color: P.lantern, intensity: 0.8, flicker: 0.1 });
   const cartLamp = light({ x: -99, y: -99, r: 18, color: '#fff2b0', intensity: 0.75, on: () => !!cart.trip });
   const payLight = light({ x: -99, y: -99, r: 30, color: P.gold, intensity: 0.75, on: () => pay.state !== 'off' });
-  function lightAt(L, v, dx, dy) { L.x = Math.round(v.x + dx); L.y = Math.round(v.y + dy); L.island = v.island || null; }
+  // soft personal glows so nobody vanishes into the dark at fit zoom (Tock's watch-chain lamp,
+  // Twirl's pocket lantern, Hudson's phone screen); hidden or riding people switch theirs off
+  const onFoot = (v) => () => !v.hidden && !v.riding && !(v.sleeping && v.home && !v.home.stay);
+  const tockGlow = light({ x: -99, y: -99, r: 20, color: '#ffd9a0', intensity: 0.6, on: onFoot(tock) });
+  const twirlGlow = light({ x: -99, y: -99, r: 20, color: P.lantern, intensity: 0.65, flicker: 0.08, on: () => !twirl.hidden && !(twirl.riding && twirl.riding.trip) });
+  const hudsonGlow = light({ x: -99, y: -99, r: 17, color: '#cfe6ff', intensity: 0.5, on: onFoot(hudson) });
+  // positions snap to a 3 px grid so a walking light rebuilds the island's darkness every few frames, not every frame
+  const q3 = (n) => Math.round(n / 3) * 3;
+  function lightAt(L, v, dx, dy) { L.x = q3(v.x + dx); L.y = q3(v.y + dy); L.island = v.island || null; }
   function vehLight(L, V, dx, dy) { L.x = Math.round(V.ax + dx); L.island = V.trip ? null : ISL_OF(V, V.end); L.y = Math.round(V.ay + dy + (V.trip ? V.off : 0)); }
   function followLights() {
     lightAt(quillLamp, quill, quill.dir === 'left' ? -6 : quill.dir === 'right' ? 6 : 5, -10);
     lightAt(gritLamp, grit, grit.dir === 'left' ? -4 : grit.dir === 'right' ? 4 : 0, -26);
     lightAt(lumiGlow, lumi, 0, -14);
+    lightAt(tockGlow, tock, 0, -16);
+    lightAt(twirlGlow, twirl, 0, -14);
+    lightAt(hudsonGlow, hudson, 0, -14);
     vehLight(blimpGlow, blimp, 0, 4);
     vehLight(shipLamp, ship, -31 * (ship.facing >= 0 ? 1 : -1), -20);
     vehLight(cartLamp, cart, 0, -4);
@@ -2245,7 +2322,66 @@
   }
   addVillagerHotspot(hudson, hudson.name + ' · that’s you', null);
   tags.push({ v: hudson, L: S.label(hudson, hudson.name, { color: '#9fd4ff', dy: hudson.tagDy }) });
-  function updateTags() { for (const { v, L } of tags) L.dy = v.tagDy + (v.riding === kite && kite.open > 0.5 ? 26 : 0); }
+  /* Name tags are DOM boxes of fixed screen size, so when people stand close (the council,
+   * Tock passing Hudson) or the view is zoomed out they pile up. Each frame, stack any
+   * overlapping tags upward (lowest tag keeps its place) and ease toward that offset. */
+  // riders' tags clear their vehicle: above the kite sail, above the blimp's envelope
+  const rideLift = (v) => (v.riding === kite && kite.open > 0.5 ? 26 : v.riding === blimp ? 20 : 0);
+  const baseDy = (v) => v.tagDy + rideLift(v);
+  // asleep indoors: the villager is hidden, so the tag moves to the front door ("· asleep")
+  // and every island still reads with its character's name after dark
+  const indoorsAsleep = (v) => v.hidden && v.sleeping && v.home && !v.home.stay && v.home.px;
+  const DOOR_DY = 30;
+  function tagAnchor(T) {
+    const v = T.v;
+    if (indoorsAsleep(v)) {
+      const H = v.home.px;
+      if (!T.door || T.door.x !== H[0] || T.door.y !== H[1]) T.door = { x: H[0], y: H[1], island: v.homeIsland, hidden: false };
+      if (T.L.anchor !== T.door) { T.L.anchor = T.door; T.L.setText(v.name + ' · asleep'); T.off = 0; }
+      return T.door;
+    }
+    if (T.L.anchor !== v) { T.L.anchor = v; T.L.setText(v.name); T.off = 0; }
+    return v;
+  }
+  function updateTags() {
+    const z = Math.max(0.3, S.cam ? S.cam.z : 1), live = [];
+    for (const T of tags) {
+      const v = T.v, a = tagAnchor(T), door = a !== v;
+      if (T.off == null) T.off = 0;
+      if (!door && v.hidden) { T.off = 0; T.L.dy = baseDy(v); continue; }
+      const dy = door ? DOOR_DY : baseDy(v);
+      // widths are estimated from the text (12-13 px UI font) so this never forces a DOM layout
+      let wpx = (v.name.length + (door ? 9 : 0)) * 7 + 14, hpx = 21;
+      // a speech bubble rides just above its speaker's tag: treat tag + bubble as one block
+      if (!door) for (const B of liveBubbles) if (B.v === v && B.b && B.b.el && B.b.el.isConnected) {
+        wpx = Math.max(wpx, Math.min(222, B.text.length * 7 + 18)); hpx = 21 + 30;
+      }
+      const y = a.y + S.bob(a.island) - dy;
+      // sort key: where the tag is drawn now (last frame's offset), so a tag already on top of
+      // a stack stays on top while its owner walks past; tags never slide through each other
+      live.push({ T, a, dy, x: a.x, y, key: y - T.off, w: (wpx + 4) / z, h: hpx / z });
+    }
+    live.sort((p, q) => q.key - p.key || (p.T.rank || 0) - (q.T.rank || 0));
+    live.forEach((it, i) => { it.T.rank = i; });
+    for (let pass = 0; pass < 4; pass++) {
+      let moved = false;
+      for (let i = 1; i < live.length; i++) {
+        const a = live[i];
+        for (let j = 0; j < i; j++) {
+          const b = live[j];
+          if (Math.abs(a.x - b.x) < (a.w + b.w) / 2 && a.y > b.y - b.h && a.y - a.h < b.y) { a.y = b.y - b.h; moved = true; }
+        }
+      }
+      if (!moved) break;
+    }
+    for (const it of live) {
+      const T = it.T, v = T.v, want = it.a.y + S.bob(it.a.island) - it.dy - it.y;
+      T.off += (want - T.off) * (RM ? 1 : 0.35);
+      if (Math.abs(want - T.off) < 0.3) T.off = want;
+      v.tagOff = it.a === v ? T.off : 0;
+      T.L.dy = it.dy + Math.round(T.off);
+    }
+  }
   S.villagers = { list: villagers, byId, vehicles: VEH, parcels };
 
   /* ================================================================ dynamic layers */
@@ -2307,6 +2443,11 @@
     ctx.fillStyle = col || '#e9e6ff';
     rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] === '#') ctx.fillRect(x + i, y + j, 1, 1); });
   }
+  /** A soft three-step glow (alpha discs) over the dark. */
+  function halo(ctx, x, y, r, col, a) {
+    for (const [k, al] of [[1, 0.1], [0.66, 0.14], [0.36, 0.22]]) { ctx.globalAlpha = a * al; S.px.circle(ctx, x, y, Math.max(1, Math.round(r * k)), col); }
+    ctx.globalAlpha = 1;
+  }
   function zzzAt(ctx, t, zx, zy, seed) {
     for (let i = 0; i < 3; i++) {
       const ph = (t * (RM ? 0.15 : 0.32) + i / 3 + seed) % 1;
@@ -2323,15 +2464,54 @@
       if (v.riding) { zzzAt(ctx, t, v.x + 4, v.y - v.h - 4 + (v.island ? S.bob(v.island) : 0), seed); continue; }
       if (v === baker || (v === hudson && tock.sleeping)) continue;   // one Zzz per door
       const H = v.home && v.home.px;
-      if (H) zzzAt(ctx, t, H[0] + 6, H[1] - 40 + S.bob(v.homeIsland), seed);
+      // the Zzz rise from just above the door's '· asleep' tag
+      if (H) zzzAt(ctx, t, H[0] + 6, H[1] - DOOR_DY - Math.round(24 / Math.max(0.5, S.cam ? S.cam.z : 1)) + S.bob(v.homeIsland), seed);
     }
     if (!cat.plan && cat.mode === 'loaf') zzzAt(ctx, t, cat.x + 6, cat.y - 14 + S.bob('square'), 0.5);
     const night = 1 - clamp(S.time.light == null ? 1 : S.time.light, 0, 1);
     if (night > 0.3) {
+      // lanterns on the vehicles out in space (their art is sky-tinted, so these read as lit)
+      if (ship.inSpace(ship)) {
+        const f = ship.facing, x = Math.round(ship.ax), y = Math.round(ship.ay) + ship.off;
+        halo(ctx, x - Math.round(30 * f), y - 21, 9, P.lanternGlow, night);
+        ctx.globalAlpha = 0.85 * night;
+        D(ctx, x - Math.round(30 * f), y - 21, '#fff3c0');
+        for (const dx of [-8, 4, 16]) R(ctx, Math.round(x + (dx + (f < 0 ? 1 : 0)) * f), y + 3, 2, 2, '#ffd890');
+        ctx.globalAlpha = 1;
+      }
+      if (kite.trip && kite.open > 0.5) {
+        // a little paper lantern swings from the end of the kite bar after dark
+        const sway = !RM ? Math.round(Math.sin(t * 2.3) * 1.5) : 0, bar = Math.round(kite.ay) + kite.off - 23 + sway;
+        const lx = Math.round(kite.ax) + (kite.trip.to === 'hub' ? 8 : -8), ly = bar + 4 + (!RM ? Math.round(Math.sin(t * 3.1)) : 0);
+        halo(ctx, lx, ly + 2, 9, P.lanternGlow, night);
+        ctx.globalAlpha = Math.min(1, 0.4 + night);
+        D(ctx, lx, bar + 1, '#3a2a20'); D(ctx, lx, bar + 2, '#3a2a20');
+        R(ctx, lx - 1, ly, 3, 4, '#e0662f'); R(ctx, lx, ly + 1, 1, 2, '#ffd27a'); D(ctx, lx - 1, ly, '#f59a52');
+        ctx.globalAlpha = 1;
+      }
+      if (cart.trip && cart.rider && overSpace(cart.ax, cart.ay)) halo(ctx, Math.round(cart.ax), Math.round(cart.ay) + cart.off - 25, 8, '#fff2b0', night);
+      if (pay.state !== 'off' && overSpace(pay.px, pay.py - 8)) halo(ctx, Math.round(pay.px), Math.round(pay.py) - 12, 13, P.gold, 0.8 * night);
       const V = blimp, x = Math.round(V.ax), y = Math.round(V.ay) + V.off;
-      ctx.globalAlpha = 0.5 * night;
-      for (let dx = -26; dx <= 26; dx += 2) { const yy = Math.round(12 * Math.sqrt(Math.max(0, 1 - (dx / 31) * (dx / 31))) * 0.55); D(ctx, x + Math.round(dx * Math.abs(V.facing)), y - yy, '#ff9fd0'); }
+      // the neon blimp should be the brightest thing in the night sky: glow, both stripes, a lit gondola
+      const af = Math.abs(V.facing), sg = V.facing >= 0 ? 1 : -1;
+      halo(ctx, x, y + BL_FLOOR - 7, 9, P.neonCyan, 0.35 * night);
+      halo(ctx, x - Math.round(6 * V.facing), y, 12, P.neonPink, 0.5 * night);
+      // the gondola stays visibly hung from the envelope: dim neon struts and its top/bottom rails
+      ctx.globalAlpha = 0.6 * night;
+      const sx = (dx) => x + Math.round(dx * V.facing);
+      for (const [a0, b0, a1] of [[-11, 10, -13], [11, 10, 12], [-4, 11, -7], [4, 11, 6]]) S.px.line(ctx, sx(a0), y + b0, sx(a1), y + BL_FLOOR - 13, '#7a5aa8');
+      const gy = y + BL_FLOOR - 13, gl = Math.round(14 * af), gr = Math.round(13 * af), bl = Math.round(5 * af), br = Math.round(4 * af);
+      R(ctx, sg > 0 ? x - gl : x - gr, gy, gl + gr + 1, 1, '#7a5aa8');
+      R(ctx, sg > 0 ? x - bl : x - br, gy + 16, bl + br + 1, 1, '#7a5aa8');
+      ctx.globalAlpha = 0.85 * night;
+      for (let dx = -26; dx <= 26; dx += 2) {
+        const yy = Math.round(12 * Math.sqrt(Math.max(0, 1 - (dx / 31) * (dx / 31))) * 0.55), xx = x + Math.round(dx * af);
+        D(ctx, xx, y - yy, '#ff9fd0'); if (!(dx & 2)) D(ctx, xx, y + yy, '#e050a8');
+      }
+      ctx.globalAlpha = 0.95 * night;
       for (let dx = -10; dx <= 10; dx += 5) R(ctx, x + dx - 1, y + BL_FLOOR - 8, 3, 3, '#bff8ff');
+      R(ctx, x - 13, y + BL_FLOOR - 12, 27, 1, P.neonPink);
+      D(ctx, x + Math.round((31 - 1) * af) * sg, y - 1, '#fff1b0');
       ctx.globalAlpha = 1;
     }
   });
@@ -2380,6 +2560,7 @@
     for (let i = sparks.length - 1; i >= 0; i--) { sparks[i].t += dt; if (sparks[i].t > sparks[i].life) sparks.splice(i, 1); }
   } });
   void driver;
-  /*DBG*/S._vdbg = { buildFrames, designs: { TOCK, QUILL, GRIT, LUMI, TWIRL, HUDSON, BAKER, KID }, catFrames, itemSprite, kiteSprites, blimpSprites, shipSprites, cartSprites, paySprites };
+  if (window.SHACK_DEBUG) S._vdbg = {   // preview-only hook (sprite sheets in tests)
+     buildFrames, designs: { TOCK, QUILL, GRIT, LUMI, TWIRL, HUDSON, BAKER, KID }, catFrames, itemSprite, kiteSprites, blimpSprites, shipSprites, cartSprites, paySprites };
 
 })();

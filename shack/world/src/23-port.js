@@ -21,6 +21,11 @@
  *   dyn 400     sky-birds, signal flag (status), rotor/propeller wind {island}
  *   dyn 700     windows, lanterns, beacon lamp and beam at night      {island}
  *
+ * Night: the atmosphere's darkness is cut to the island's static silhouette,
+ * so everything above that reaches out over space (pier decks, crane jib,
+ * cargo ships, the waterfall and its spray, the signal mast, birds) takes the
+ * same sky tint here (S.atmo.sky()), masked to the pixels off the silhouette.
+ *
  * Data (never invented):
  *   ships     = metrics('hustle-engine').shopify.orders_7d: one crate on deck per
  *               order (5 per ship, up to 3 ships). With no orders (or no data) a
@@ -135,6 +140,143 @@
   }
   const season = () => (S.time && S.time.season) || 'autumn';
   const night = () => { const l = S.time && S.time.light != null ? S.time.light : 1; return clamp((0.62 - l) / 0.35, 0, 1); };
+
+  /* ====================================================================
+   * NIGHT TINT for art out over space.
+   * The atmosphere darkens each island through a mask cut from its static
+   * silhouette (S.islandLayers alpha > 96). Everything this module draws past
+   * the rim (pier decks and braces, the crane jib, the cargo ships, the
+   * waterfall and its spray, the signal mast, birds over the void) would stay
+   * day-bright beside a dark island. Out there we apply the same sky the
+   * villagers' vehicles use: multiply by S.atmo.sky().mul, then a veil of
+   * sky.lift at sky.la. Pixels on the island silhouette are left raw, since
+   * the atmosphere already darkens them, so nothing is darkened twice and
+   * there is no seam at the rim. Our own lamps (pier heads, ship sterns, the
+   * falls' starlight) light dithered pools out there, like the atmosphere's.
+   * Cached sprites are re-tinted only when sky.key or the static art changes.
+   * ================================================================== */
+  const NT = { sky: null, key: '', frame: -1, mask: null, maskV: 0, stale: true, hex: new Map() };
+  const OWN_LIGHTS = []; // every lamp this module adds (see light() below)
+  S.on('static:ready', () => { NT.stale = true; });
+  function buildMask() {
+    NT.stale = false; NT.maskV++;
+    const L = (S.islandLayers || []).find((l) => l.id === ID);
+    if (!L) { NT.mask = null; return; }
+    const [c, g] = mk(L.w, L.h);
+    g.drawImage(L.canvas, 0, 0);
+    const im = g.getImageData(0, 0, L.w, L.h), d = im.data, n = L.w * L.h, a = new Uint8Array(n);
+    for (let k = 0; k < n; k++) {
+      const on = d[k * 4 + 3] > 96 ? 1 : 0; // the atmosphere's threshold, so the two masks agree exactly
+      a[k] = on; d[k * 4] = d[k * 4 + 1] = d[k * 4 + 2] = 255; d[k * 4 + 3] = on ? 255 : 0;
+    }
+    g.putImageData(im, 0, 0);
+    NT.mask = { x: L.x, y: L.y, w: L.w, h: L.h, a, c };
+  }
+  /** The current sky if it dims anything (else null). Refreshed once per frame. */
+  function nightSky() {
+    if (NT.frame === S.frame) return NT.sky;
+    NT.frame = S.frame;
+    const sk = S.atmo && typeof S.atmo.sky === 'function' ? S.atmo.sky() : null;
+    NT.sky = sk && (sk.mul !== '#ffffff' || sk.la > 0.002) ? sk : null;
+    if (NT.sky && NT.stale) buildMask();
+    const key = NT.sky ? NT.sky.key + '|' + NT.maskV : '';
+    if (key !== NT.key) { NT.key = key; NT.hex.clear(); }
+    return NT.sky;
+  }
+  /** True if world px (x, y) is on Spindrift Harbor's static silhouette (the atmosphere darkens it). */
+  function onIsl(x, y) {
+    const m = NT.mask; if (!m) return false;
+    const i = Math.round(x) - m.x, j = Math.round(y) - m.y;
+    return i >= 0 && j >= 0 && i < m.w && j < m.h && m.a[j * m.w + i] === 1;
+  }
+  const NRGB = {};
+  const nrgb = (h) => NRGB[h] || (NRGB[h] = CO.hexToRgb(h));
+  /** Sky-tinted rgb of a colour. `soft` keeps highlights a little brighter (moonlit foam). */
+  function nightRGB(hex, soft) {
+    const sk = NT.sky, c = nrgb(hex);
+    const m = CO.hexToRgb(soft ? mix(sk.mul, '#ffffff', 0.3) : sk.mul), l = CO.hexToRgb(sk.lift);
+    const la = Math.min(0.85, sk.la) * (soft ? 0.6 : 1);
+    return [0, 1, 2].map((i) => (c[i] * m[i] / 255) * (1 - la) + l[i] * la);
+  }
+  /** Colour lit by a lamp: the art multiplied by the lamp's pool tint (as the atmosphere does). */
+  function litRGB(hex, lamp) {
+    const c = nrgb(hex), m = CO.hexToRgb(mix(lamp || '#ffd27a', '#ffffff', 0.12));
+    return [0, 1, 2].map((i) => c[i] * m[i] / 255);
+  }
+  function nightHex(hex, soft) {
+    const k = soft ? '~' + hex : hex;
+    let v = NT.hex.get(k);
+    if (!v) { const c = nightRGB(hex, soft); v = CO.rgbToHex(c[0], c[1], c[2]); NT.hex.set(k, v); }
+    return v;
+  }
+  /** Colour for something drawn per frame at world (x, y): sky-tinted while out over space. */
+  const nc = (x, y, hex, soft) => (NT.sky && !onIsl(x, y) ? nightHex(hex, soft) : hex);
+
+  const STAMPS = new Map();
+  /** Dithered radial light-pool mask (world-aligned Bayer), like the atmosphere's lamp pools. */
+  function poolStamp(r, ox, oy) {
+    const key = r + '|' + (ox & 3) + '|' + (oy & 3);
+    const hit = STAMPS.get(key);
+    if (hit) return hit;
+    const s = 2 * r + 1, [c, g] = mk(s, s), im = g.createImageData(s, s), d = im.data;
+    for (let j = 0; j < s; j++) for (let i = 0; i < s; i++) {
+      const dd = Math.hypot(i - r, j - r) / (r + 0.5);
+      if (dd >= 1) continue;
+      const f = (1 - dd * dd) * (1 - dd * dd), q = Math.min(6, Math.floor(f * 6 + bay(i + ox, j + oy))) / 6;
+      if (q <= 0) continue;
+      const k = (j * s + i) * 4; d[k] = d[k + 1] = d[k + 2] = 255; d[k + 3] = Math.round(q * 255);
+    }
+    g.putImageData(im, 0, 0);
+    STAMPS.set(key, c);
+    return c;
+  }
+  let scratchC = null;
+  /**
+   * Night-tinted copy of a cached sprite whose top-left sits at world (wx, wy).
+   * masked: leave the island silhouette raw (the atmosphere darkens it).
+   * pools:  let our own lamps light it. Returns `src` itself by day.
+   */
+  function nightSprite(src, wx, wy, rec, masked, pools) {
+    const sk = NT.sky;
+    if (!sk) return src;
+    if (rec.c && rec.key === NT.key) return rec.c;
+    const w = src.width, h = src.height;
+    if (!rec.c || rec.c.width !== w || rec.c.height !== h) { rec.c = document.createElement('canvas'); rec.c.width = w; rec.c.height = h; }
+    const g = rec.c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    g.clearRect(0, 0, w, h);
+    g.drawImage(src, 0, 0);
+    g.globalCompositeOperation = 'multiply'; g.fillStyle = sk.mul; g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = 'destination-in'; g.drawImage(src, 0, 0);
+    if (sk.la > 0.002) { g.globalCompositeOperation = 'source-atop'; g.fillStyle = CO.rgba(sk.lift, Math.min(0.85, sk.la)); g.fillRect(0, 0, w, h); }
+    const lk = sk.lampK || 0;
+    if (pools && lk > 0.02) for (const L of OWN_LIGHTS) {
+      const a = (L.intensity == null ? 1 : +L.intensity) * lk, r = Math.max(3, Math.round(L.r || 24));
+      const gx = Math.round(L.x), gy = Math.round(L.y), lx = gx - wx, ly = gy - wy;
+      if (a < 0.02 || lx + r < 0 || ly + r < 0 || lx - r >= w || ly - r >= h) continue;
+      if (!scratchC || scratchC.width < w || scratchC.height < h) {
+        const nw = Math.max(w, scratchC ? scratchC.width : 0), nh = Math.max(h, scratchC ? scratchC.height : 0);
+        scratchC = document.createElement('canvas'); scratchC.width = nw; scratchC.height = nh;
+      }
+      const sg = scratchC.getContext('2d');
+      sg.globalAlpha = 1; sg.globalCompositeOperation = 'source-over';
+      sg.clearRect(0, 0, scratchC.width, scratchC.height);
+      sg.drawImage(src, 0, 0);
+      sg.globalCompositeOperation = 'multiply'; sg.fillStyle = mix(L.color || '#ffd27a', '#ffffff', 0.12); sg.fillRect(0, 0, w, h);
+      sg.globalCompositeOperation = 'destination-in'; sg.drawImage(src, 0, 0);
+      sg.globalAlpha = Math.min(1, a); sg.drawImage(poolStamp(r, gx - r, gy - r), lx - r, ly - r);
+      sg.globalAlpha = 1; sg.globalCompositeOperation = 'source-over';
+      g.globalCompositeOperation = 'source-atop'; g.drawImage(scratchC, 0, 0);
+    }
+    if (masked && NT.mask) { // put the raw art back wherever it sits on the island silhouette
+      g.globalCompositeOperation = 'destination-out'; g.drawImage(NT.mask.c, NT.mask.x - wx, NT.mask.y - wy);
+      g.globalCompositeOperation = 'destination-over'; g.drawImage(src, 0, 0);
+    }
+    g.globalCompositeOperation = 'source-over';
+    rec.key = NT.key;
+    return rec.c;
+  }
 
   /* ======================================================== ISLAND SHAPE
    * The islands module draws Spindrift Harbor's organic top but does not
@@ -823,6 +965,7 @@
       outline(c, OUT); PROP.push(c);
     }
   })();
+  const PROP_NIGHT = PROP.map(() => ({})); // night-tinted copies (see nightSprite)
 
   /* ====================================================================
    * Cargo crane: lattice tower on the island, jib reaching over berth A.
@@ -1263,9 +1406,9 @@
   /* ====================================================================
    * Entities: sky-ships and the crane
    * ================================================================== */
-  function ropeLine(ctx, x0, y0, x1, y1, sag) {
+  function ropeLine(ctx, x0, y0, x1, y1, sag, col) {
     const steps = Math.max(2, Math.ceil(Math.abs(x1 - x0) + Math.abs(y1 - y0)));
-    ctx.fillStyle = ROPE.dark;
+    ctx.fillStyle = col || ROPE.dark;
     for (let i = 0; i <= steps; i++) {
       const u = i / steps, x = x0 + (x1 - x0) * u, y = y0 + (y1 - y0) * u + (sag || 3) * 4 * u * (1 - u);
       ctx.fillRect(Math.round(x), Math.round(y), 1, 1);
@@ -1279,18 +1422,21 @@
       this.bob = Math.round(Math.sin(t * sp + i * 1.9) * 1.2);
     },
     draw(ctx, t) {
+      // Moored ships hang wholly out over space (past the island box), so they take the night tint whole.
+      nightSky();
       const K = getCache(curSeason).ships[i];
       const y = s.y + this.bob;
-      ctx.drawImage(K.c, s.x - SOX, y - SOY);
+      ctx.drawImage(nightSprite(K.c, s.x - SOX, s.y - SOY, K.night || (K.night = {}), false, true), s.x - SOX, y - SOY);
       // propeller at the stern (still when idle)
       const pf = s.empty || RM ? 0 : Math.floor(t * 14) % 3;
-      ctx.drawImage(PROP[pf], s.x + K.prop.x - 1, y + K.prop.y - 6);
+      ctx.drawImage(nightSprite(PROP[pf], 0, 0, PROP_NIGHT[pf], false, false), s.x + K.prop.x - 1, y + K.prop.y - 6);
       // mooring line from the bow to the pier head (or an anchor line into the void)
-      if (s.pier) ropeLine(ctx, s.x - 6, y + K.mid - 5, s.pier.x1 - 2, s.pier.y0 + 6 - (s.y - s.pier.y1 > 8 ? 0 : 0), 3);
+      const rope = nc(s.x - 6, y, ROPE.dark);
+      if (s.pier) ropeLine(ctx, s.x - 6, y + K.mid - 5, s.pier.x1 - 2, s.pier.y0 + 6, 3, rope);
       else { // anchored: a rope down to a little drifting anchor-stone
         const ax = s.x - 14, ay = y + 30;
-        ropeLine(ctx, s.x + 2, y + 6, ax + 2, ay, 2);
-        R(ctx, ax - 1, ay, 6, 5, OUT); R(ctx, ax, ay + 1, 4, 3, STONE.base); D(ctx, ax, ay + 1, STONE.light);
+        ropeLine(ctx, s.x + 2, y + 6, ax + 2, ay, 2, rope);
+        R(ctx, ax - 1, ay, 6, 5, nc(ax, ay, OUT)); R(ctx, ax, ay + 1, 4, 3, nc(ax, ay, STONE.base)); D(ctx, ax, ay + 1, nc(ax, ay, STONE.light));
       }
     },
   }));
@@ -1300,8 +1446,10 @@
   const craneEnt = S.addEntity({
     x: CRANE.x, y: CRANE.base, island: ID,
     draw(ctx, t) {
+      // The tower stands on the island (darkened by the atmosphere); the jib reaches out over space (tinted here).
+      nightSky();
       const K = getCache(curSeason).crane;
-      ctx.drawImage(K.c, K.ox, K.oy);
+      ctx.drawImage(nightSprite(K.c, K.ox, K.oy, K.night || (K.night = {}), true, true), K.ox, K.oy);
       const ship = SHIPS[0], se = shipEnts[0];
       const deck = ship.y + (se ? se.bob : 0) - 6;
       const overShip = ship.x + 12, overPier = PIER_A.x0 + 22, pierY = PIER_A.y1 - 2;
@@ -1324,16 +1472,19 @@
         hookY = CRANE.top + 16 + (RM ? 0 : Math.round(Math.sin(t * 0.6)));
       }
       tx = Math.round(tx); hookY = Math.round(hookY);
-      R(ctx, tx - 2, CRANE.top + 3, 5, 3, OUT); R(ctx, tx - 1, CRANE.top + 4, 3, 1, IRON.light);
-      R(ctx, tx, CRANE.top + 6, 1, hookY - CRANE.top - 6, '#2a2630');
-      R(ctx, tx - 1, hookY, 3, 2, IRON.dark); D(ctx, tx + 1, hookY + 2, IRON.dark); D(ctx, tx, hookY + 3, IRON.dark);
+      const ty = CRANE.top + 4, cy = (CRANE.top + 6 + hookY) >> 1;
+      R(ctx, tx - 2, CRANE.top + 3, 5, 3, nc(tx, ty, OUT)); R(ctx, tx - 1, ty, 3, 1, nc(tx, ty, IRON.light));
+      R(ctx, tx, CRANE.top + 6, 1, hookY - CRANE.top - 6, nc(tx, cy, '#2a2630'));
+      const hk = nc(tx, hookY, IRON.dark);
+      R(ctx, tx - 1, hookY, 3, 2, hk); D(ctx, tx + 1, hookY + 2, hk); D(ctx, tx, hookY + 3, hk);
       if (load) drawCrateSmall(ctx, tx - 3, hookY + 11);
     },
   });
   function drawCrateSmall(ctx, x, base) {
-    R(ctx, x - 1, base - 8, 9, 9, '#2a1c12');
-    R(ctx, x, base - 7, 7, 2, '#d8ad75'); R(ctx, x, base - 5, 7, 5, '#b07e48'); R(ctx, x, base - 5, 7, 1, '#cd9c62');
-    D(ctx, x + 3, base - 3, '#7f5630'); R(ctx, x, base - 1, 7, 1, '#7f5630');
+    const k = (hex) => nc(x + 3, base - 4, hex);
+    R(ctx, x - 1, base - 8, 9, 9, k('#2a1c12'));
+    R(ctx, x, base - 7, 7, 2, k('#d8ad75')); R(ctx, x, base - 5, 7, 5, k('#b07e48')); R(ctx, x, base - 5, 7, 1, k('#cd9c62'));
+    D(ctx, x + 3, base - 3, k('#7f5630')); R(ctx, x, base - 1, 7, 1, k('#7f5630'));
   }
   void craneEnt;
 
@@ -1371,13 +1522,48 @@
   const RGB = {};
   const rgbOf = (h) => RGB[h] || (RGB[h] = CO.hexToRgb(h));
   const SPLIT = 128; // below this the curtain frays into three streams
+  /* Night: the curtain falls beside the island, out over space, where the
+   * atmosphere's darkness does not reach, so it takes the sky tint per pixel.
+   * Pixels over the island silhouette stay raw (the atmosphere darkens them).
+   * Foam and highlight streaks keep a softer tint so it still reads as water, and
+   * the falls' own starlight lamp lights a dithered pool where it tips over. */
+  let FALL_ON = null, FALL_POOL = null, fallMaskV = -1, fallKey = '';
+  let FALL_LIGHT = null; // set with the lights below
+  const fallTints = new Map();
+  const FALL_SOFT = new Set([WATER.foam, WATER.hi, '#ffffff', '#e6f2fa', '#d4e8f4']);
+  function buildFallMaps() {
+    fallMaskV = NT.maskV;
+    FALL_ON = new Uint8Array(FW * FH); FALL_POOL = new Float32Array(FW * FH);
+    const L = FALL_LIGHT, r = L ? L.r : 0, a0 = L ? L.intensity : 0;
+    for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) {
+      const wx = FX0 + x, wy = FALL_TOP + y, p = y * FW + x;
+      FALL_ON[p] = onIsl(wx, wy) ? 1 : 0;
+      if (!L) continue;
+      const dd = Math.hypot(wx - L.x, wy - L.y) / (r + 0.5);
+      if (dd < 1) { const f = (1 - dd * dd) * (1 - dd * dd); FALL_POOL[p] = (Math.min(6, Math.floor(f * 6 + bay(wx, wy))) / 6) * a0; }
+    }
+  }
   function renderFall(flow, winter) {
     const d = fallImg.data;
     d.fill(0);
+    const sk = nightSky();
+    let lk = 0;
+    if (sk) {
+      if (fallMaskV !== NT.maskV) buildFallMaps();
+      if (fallKey !== NT.key) { fallKey = NT.key; fallTints.clear(); }
+      lk = sk.lampK || 0;
+    }
+    const lampCol = FALL_LIGHT ? FALL_LIGHT.color : '#9fdcff';
     const put = (x, y, hex, a) => {
       const lx = x - FX0; if (lx < 0 || lx >= FW) return;
-      const c = rgbOf(hex), i = (y * FW + lx) * 4;
-      d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = a;
+      const p = y * FW + lx, i = p * 4;
+      if (sk && !FALL_ON[p]) {
+        let e = fallTints.get(hex);
+        if (!e) { e = { t: nightRGB(hex, FALL_SOFT.has(hex)), l: litRGB(hex, lampCol) }; fallTints.set(hex, e); }
+        const w = FALL_POOL[p] * lk;
+        d[i] = e.t[0] + (e.l[0] - e.t[0]) * w; d[i + 1] = e.t[1] + (e.l[1] - e.t[1]) * w; d[i + 2] = e.t[2] + (e.l[2] - e.t[2]) * w;
+      } else { const c = rgbOf(hex); d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; }
+      d[i + 3] = a;
     };
     const runs = [];
     for (let y = 0; y < FH; y++) {
@@ -1434,10 +1620,11 @@
     // ---- the waterfall
     const flow = tt * 46;
     // lip: the river tips over the edge with a bright curl of foam
+    nightSky();
     for (let y = MOUTH_Y - 6; y <= MOUTH_Y + 6; y++) {
       const e = Math.abs(y - MOUTH_Y) / 6.5;
       const x = LIP_X - 1 - Math.round((1 - e * e) * 2);
-      D(ctx, x, y, winter ? '#eaf4fa' : WATER.foam); D(ctx, x + 1, y, WATER.hi);
+      D(ctx, x, y, nc(x, y, winter ? '#eaf4fa' : WATER.foam, true)); D(ctx, x + 1, y, nc(x + 1, y, WATER.hi, true));
     }
     // the falling curtain (fraying into three streams far below)
     renderFall(Math.floor(flow), winter);
@@ -1448,7 +1635,7 @@
       const ph = (tt * 0.35 + m.ph) % 1;
       const x = Math.round(LIP_X - 6 - m.dx * 22 - ph * 8), y = Math.round(MOUTH_Y - 4 + ph * 34 + Math.sin(ph * 6 + m.dx * 9) * 2);
       ctx.globalAlpha = 0.3 * (1 - ph);
-      ctx.fillStyle = '#e8f6fb';
+      ctx.fillStyle = nc(x, y, '#e8f6fb', true);
       ctx.fillRect(x - (m.r >> 1), y - (m.r >> 1), m.r, m.r);
     }
     // droplets peeling off the sheet as it falls
@@ -1458,12 +1645,12 @@
       const [xc, hw] = fallShape(y);
       const x = xc + dr.dx * (hw * 2 + 4 + ph * 16);
       ctx.globalAlpha = (1 - ph) * 0.85;
-      D(ctx, x, y, winter ? '#ffffff' : WATER.hi);
-      if (dr.big) D(ctx, x, y - 1, WATER.light);
+      D(ctx, x, y, nc(x, y, winter ? '#ffffff' : WATER.hi, true));
+      if (dr.big) D(ctx, x, y - 1, nc(x, y - 1, WATER.light));
     }
     ctx.globalAlpha = 1;
     if (winter) { // icicles hanging off the lip either side of the flow
-      for (const [dy, l] of [[-8, 4], [-9, 2], [8, 3], [9, 5], [10, 2]]) R(ctx, LIP_X - 1, MOUTH_Y + dy, 1, l, '#e8f4ff');
+      for (const [dy, l] of [[-8, 4], [-9, 2], [8, 3], [9, 5], [10, 2]]) R(ctx, LIP_X - 1, MOUTH_Y + dy, 1, l, nc(LIP_X - 1, MOUTH_Y + dy, '#e8f4ff', true));
     }
   }, ISL);
 
@@ -1499,7 +1686,9 @@
   const flag = STALLS.find((s) => s.flagship);
   S.registerDynamic(200, (ctx, t) => {
     const K = getCache(curSeason);
-    for (const pc of K.piers) ctx.drawImage(pc.c, pc.ox, pc.oy);
+    nightSky();
+    // the root of each pier is on the island (the atmosphere darkens it); the deck and braces out over space are tinted here
+    for (const pc of K.piers) ctx.drawImage(nightSprite(pc.c, pc.ox, pc.oy, pc.night || (pc.night = {}), true, true), pc.ox, pc.oy);
     if (!flag) return;
     if (!SPIN_FRAMES.length) buildSpinFrames();
     const x = flag.x + 17, y = flag.base - STALL_H;
@@ -1524,7 +1713,9 @@
     { cx: 70, cy: 600, rx: 30, ry: 40, sp: 0.2, ph: 1.0, col: '#f4f4f0', tip: '#7cc0e0' },
   ];
   const SIGNAL = { x: PIER_MAIN.x1 - 4, y: PIER_MAIN.y0 - 2 };
+  const BIRD_TIPS = BIRDS.map((b) => sh(b.tip, -0.1));
   S.registerDynamic(400, (ctx, t) => {
+    nightSky();
     const n = RM ? 1 : BIRDS.length;
     for (let i = 0; i < n; i++) {
       const b = BIRDS[i];
@@ -1535,27 +1726,30 @@
       const flip = Math.sin(a) * b.sp > 0;
       for (let j = 0; j < 4; j++) for (let k = 0; k < 7; k++) {
         const ch = fr[j][k]; if (ch === '.') continue;
-        const kk = flip ? 6 - k : k;
-        D(ctx, x + kk, y + j, ch === 'b' ? b.tip : (k === 0 || k === 6) ? sh(b.tip, -0.1) : b.col);
+        const kk = flip ? 6 - k : k, X = x + kk, Y = y + j;
+        D(ctx, X, Y, nc(X, Y, ch === 'b' ? b.tip : (k === 0 || k === 6) ? BIRD_TIPS[i] : b.col));
         if (ch === 'w' && fr[j + 1] === undefined) continue;
-        if (ch !== 'b') D(ctx, x + kk, y + j + 1, '#8c96a0');
+        if (ch !== 'b') D(ctx, X, Y + 1, nc(X, Y + 1, '#8c96a0'));
       }
-      D(ctx, x + (flip ? 2 : 4), y + 2, '#f2a03a'); // beak
+      const bk = x + (flip ? 2 : 4);
+      D(ctx, bk, y + 2, nc(bk, y + 2, '#f2a03a')); // beak
     }
-    // a little bird asleep on the idle ship's yard
+    // a little bird asleep on the idle ship's yard (out over space)
     const idle = SHIPS[0] && SHIPS[0].empty ? SHIPS[0] : null;
     if (idle) {
       const K = getCache(curSeason).ships[0], e = shipEnts[0];
       const bx = idle.x + K.perch.x, by = idle.y + e.bob + K.perch.y;
       const blink = !RM && Math.floor(t * 0.7) % 6 === 0;
-      spr(ctx, ['.ww..', 'wwwwo', '.bb..'], bx, by, { w: '#f6f6f2', o: '#f2a03a', b: '#5aa0d8' });
-      D(ctx, bx + 3, by, blink ? '#f6f6f2' : '#1d1a24');
-      R(ctx, bx, by - 1, 1, 1, OUT);
+      const qb = (hex) => nc(bx, by, hex);
+      spr(ctx, ['.ww..', 'wwwwo', '.bb..'], bx, by, { w: qb('#f6f6f2'), o: qb('#f2a03a'), b: qb('#5aa0d8') });
+      D(ctx, bx + 3, by, qb(blink ? '#f6f6f2' : '#1d1a24'));
+      R(ctx, bx, by - 1, 1, 1, qb(OUT));
     }
-    // signal mast at the main pier head: calm pennant / storm flags by status
+    // signal mast at the main pier head: calm pennant / storm flags by status (out over space)
     const px = SIGNAL.x, py = SIGNAL.y;
-    R(ctx, px - 1, py - 31, 3, 32, OUT); R(ctx, px, py - 30, 1, 31, '#d8d0c0');
-    R(ctx, px - 1, py - 32, 3, 2, P.gold);
+    const q = (hex) => nc(px, py - 16, hex);
+    R(ctx, px - 1, py - 31, 3, 32, q(OUT)); R(ctx, px, py - 30, 1, 31, q('#d8d0c0'));
+    R(ctx, px - 1, py - 32, 3, 2, q(P.gold));
     const wave = RM ? 0 : Math.floor(t * 3) % 3;
     const flagCols = LEVEL === 'critical' ? [RED.base, RED.base] : LEVEL === 'warn' ? [RED.base, P.gold] : LEVEL === 'idle' ? [TEAL.dark] : [TEAL.base];
     flagCols.forEach((col, k) => {
@@ -1564,10 +1758,10 @@
       for (let i = 0; i < len; i++) {
         const dy = LEVEL === 'idle' ? i : Math.round(Math.sin((i + wave * 2) * 0.8) * 0.8);
         const hgt = LEVEL === 'critical' ? 5 : Math.max(1, 5 - (i >> 1));
-        R(ctx, px + 1 + i, fy + dy, 1, hgt, i === 0 ? sh(col, 0.2) : col);
-        D(ctx, px + 1 + i, fy + dy + hgt, sh(col, -0.4));
+        R(ctx, px + 1 + i, fy + dy, 1, hgt, q(i === 0 ? sh(col, 0.2) : col));
+        D(ctx, px + 1 + i, fy + dy + hgt, q(sh(col, -0.4)));
       }
-      if (LEVEL === 'ok' || LEVEL === 'idle') D(ctx, px + 3, fy + 1, P.gold);
+      if (LEVEL === 'ok' || LEVEL === 'idle') D(ctx, px + 3, fy + 1, q(P.gold));
     });
     // warehouse chimney: a thin curl of smoke
     const cn = RM ? 2 : 4, chx = WH.x0 + 13, chy = WH.roof - 11;
@@ -1583,7 +1777,7 @@
   /* ====================================================================
    * Lights and night glow (700)
    * ================================================================== */
-  const light = (o) => S.addLight(Object.assign({ island: ID }, o));
+  const light = (o) => { const l = S.addLight(Object.assign({ island: ID }, o)); OWN_LIGHTS.push(l); return l; };
   const K0 = { lampY: BEACON.base - 49 };
   light({ x: BEACON.x, y: K0.lampY, r: 64, color: '#ffd27a', intensity: 1, flicker: false });
   STALLS.forEach((st) => light({ x: st.x + 3, y: st.base - 29, r: 24, color: P.lantern, intensity: 0.8, flicker: true }));
@@ -1593,7 +1787,7 @@
   light({ x: PIER_A.x1 - 3, y: PIER_A.y1 - 18, r: 26, color: P.lantern, intensity: 0.8, flicker: true });
   if (GROWTH >= 1) light({ x: PIER_B.x1 - 3, y: PIER_B.y1 - 18, r: 24, color: P.lantern, intensity: 0.75, flicker: true });
   SHIPS.forEach((s) => light({ x: s.x + s.L - 2, y: s.y - 7, r: 16, color: P.lantern, intensity: 0.7, flicker: true }));
-  light({ x: LIP_X - 8, y: MOUTH_Y + 20, r: 26, color: '#9fdcff', intensity: 0.35 }); // the falls catch a little starlight
+  FALL_LIGHT = light({ x: LIP_X - 8, y: MOUTH_Y + 20, r: 26, color: '#9fdcff', intensity: 0.35 }); // the falls catch a little starlight
 
   const winGlow = [
     [WH.x0 + 6, WH.eave + 9, 4, 3], [WH.x0 + 12, WH.eave + 9, 4, 3], [WH.x0 + 6, WH.eave + 13, 4, 4], [WH.x0 + 12, WH.eave + 13, 4, 4],
