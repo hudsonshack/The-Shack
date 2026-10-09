@@ -15,7 +15,8 @@
  *               progress rings, the vault, yard props, growth structures
  *   dyn 100     stream ripples and the waterfall off the south rim   {island:'mine'}
  *   dyn 200     ore / coin / crystal sparkles, lantern flames           {island:'mine'}
- *   dyn 200     the sky-rail bridge (no island: each column follows S.bobBetween)
+ *   dyn 200     the sky-rail bridge (no island: each column follows S.bobBetween;
+ *               the span over space is tinted with S.atmo.sky() at dusk and night)
  *   dyn 400     chimney smoke                                           {island:'mine'}
  *   dyn 700     crystal glow, mine-mouth glow                           {island:'mine'}
  *   dyn 700     bridge lantern glow at night (no island)
@@ -1256,7 +1257,8 @@
   const lab = (k, extra) => ((LM[k] && LM[k].label) || k) + (extra ? ' · ' + extra : '');
   const hs = (key, label, x, y, w, h) => S.addHotspot({ id: 'landmark:' + key, kind: 'landmark', landmark: key, biome: ISL, island: ISL, agent: AGENT, label, x, y, w, h, priority: 1 });
   hs('mineEntrance', lab('mineEntrance'), MOUTH.ox + 6, MOUTH.oy, 54, 58);
-  hs('vault', lab('vault', INCOME > 0 ? money(INCOME) + ' in this month' : 'empty this month'), VAULT.x - 2, VAULT.y - 4, VAULT.w + 20, VAULT.h + 14);
+  const FEED_ON = MET.bank_feed !== 'not connected' && (MET.month != null || INCOME > 0);
+  hs('vault', lab('vault', INCOME > 0 ? money(INCOME) + ' in this month' : FEED_ON ? 'empty this month' : 'bank not connected yet'), VAULT.x - 2, VAULT.y - 4, VAULT.w + 20, VAULT.h + 14);
   for (const cr of CRYS) {
     const p = cr.goal.pct, top = p == null ? 18 : 26 + Math.round(p * 52);
     hs(cr.lm, lab(cr.lm, goalText(cr.goal)), cr.x - 23, cr.base - top, 46, top + 12);
@@ -1514,6 +1516,7 @@
     // 4) a floating pier rock that carries the elbow nearest the mine
     const el = pts.length >= 3 ? pts[pts.length - 2] : null;
     const lamps = [];
+    let gem = null;
     if (el) {
       const [ex, ey] = el, rx0 = ex - 1, ry0 = ey + 24;
       R(g, ex - 4, ey + 6, 8, ry0 - ey - 4, GRANITE.base); R(g, ex - 4, ey + 6, 2, ry0 - ey - 4, GRANITE.light); R(g, ex + 2, ey + 6, 2, ry0 - ey - 4, GRANITE.dark);
@@ -1533,6 +1536,7 @@
       }
       R(g, rx0 - 8, ry0 - 1, 17, 1, OUT);
       R(g, rx0 + 3, ry0 + 5, 2, 4, GOLD.base); D(g, rx0 + 3, ry0 + 5, GOLD.hi); D(g, rx0 + 4, ry0 + 8, GOLD.dark);
+      gem = [rx0 + 3, ry0 + 5];
       for (const [hx, len] of [[rx0 - 5, 6], [rx0 + 1, 9], [rx0 + 6, 4]]) for (let k = 0; k < len; k++) D(g, hx + (k > len / 2 ? 1 : 0), ry0 + 12 + k - (hx > rx0 ? 4 : 0), k < len - 1 ? '#5a3a22' : '#3e2a1a');
     }
     // 5) lamp posts on the deck edge, midway along each span but the first
@@ -1547,23 +1551,90 @@
       R(g, lx - 2, ly - 12, 5, 1, IRON.dark);
       if (winter) R(g, lx - 2, ly - 18, 5, 1, P.snow);
     }
-    return { canvas: c, x0, y0, w: x1 - x0, h: y1 - y0, lamps: lamps.map(([lx, ly]) => [lx, ly - 14]) };
+    return {
+      canvas: c, x0, y0, w: x1 - x0, h: y1 - y0,
+      lamps: lamps.map(([lx, ly]) => [lx, ly - 14]),
+      glass: lamps.map(([lx, ly]) => [lx - 1 - x0, ly - 16 - y0]),   // canvas-local lamp glass (3x3)
+      gem,                                                            // pier-rock crystal (2x4), world px
+    };
   }
   let bridge = null, bridgeSeason = null;
   const uAt = (x) => clamp((BR.mx - x) / (BR.mx - BR.sx), 0, 1);
+  const nightAmt = () => 1 - clamp(S.time.light == null ? 1 : S.time.light, 0, 1);
+
+  /* Night tint for the span out in space. The atmosphere darkens each island through a mask
+   * cut to its static art (alpha > 96 in S.islandLayers), so the bridge pixels that rest on
+   * Clockspire or Copperhold are already darkened there, and everything over open space would
+   * stay day-bright. Tint a copy of the bridge with the same sky (multiply, then the veil)
+   * everywhere except over island art: no seam at the abutments and nothing darkened twice.
+   * Rebuilt only when the sky key, the season (bridge canvas) or the static art changes. */
+  const tint = { bridge: null, layers: null, isle: null, c: null, g: null, key: '' };
+  function islandPart(b) {
+    if (tint.isle && tint.bridge === b && tint.layers === S.islandLayers) return tint.isle;
+    const mask = new Uint8Array(b.w * b.h);
+    for (const L of S.islandLayers || []) {
+      const ix0 = Math.max(b.x0, L.x), iy0 = Math.max(b.y0, L.y);
+      const iw = Math.min(b.x0 + b.w, L.x + L.w) - ix0, ih = Math.min(b.y0 + b.h, L.y + L.h) - iy0;
+      if (iw <= 0 || ih <= 0) continue;
+      const [rc, rg] = mk(iw, ih);
+      rg.drawImage(L.canvas, ix0 - L.x, iy0 - L.y, iw, ih, 0, 0, iw, ih);
+      const d = rg.getImageData(0, 0, iw, ih).data;
+      for (let j = 0; j < ih; j++) for (let i = 0; i < iw; i++) {
+        if (d[(j * iw + i) * 4 + 3] > 96) mask[(iy0 - b.y0 + j) * b.w + (ix0 - b.x0 + i)] = 1;
+      }
+      rc.width = rc.height = 1;
+    }
+    // the bridge's own pixels where island art lies underneath
+    const [ic, ig] = mk(b.w, b.h);
+    const img = ig.createImageData(b.w, b.h), md = img.data;
+    for (let k = 0; k < mask.length; k++) if (mask[k]) md[k * 4 + 3] = 255;
+    ig.putImageData(img, 0, 0);
+    ig.globalCompositeOperation = 'source-in';
+    ig.drawImage(b.canvas, 0, 0);
+    ig.globalCompositeOperation = 'source-over';
+    tint.isle = ic; tint.layers = S.islandLayers;
+    return ic;
+  }
+  function bridgeArt(b) {
+    const sk = S.atmo && typeof S.atmo.sky === 'function' ? S.atmo.sky() : null;
+    if (!sk || (sk.mul === '#ffffff' && !(sk.la > 0.002))) return b.canvas;
+    const lit = nightAmt() >= 0.25;                       // same switch as the lamp glow at 700
+    const key = sk.key + (lit ? '|lit' : '');
+    if (tint.c && tint.key === key && tint.bridge === b && tint.layers === S.islandLayers) return tint.c;
+    if (tint.bridge !== b) tint.isle = null;
+    const isle = islandPart(b);
+    tint.bridge = b;
+    if (!tint.c || tint.c.width !== b.w || tint.c.height !== b.h) [tint.c, tint.g] = mk(b.w, b.h);
+    const g = tint.g;
+    g.globalAlpha = 1;
+    g.globalCompositeOperation = 'copy'; g.drawImage(b.canvas, 0, 0);
+    g.globalCompositeOperation = 'multiply'; g.fillStyle = sk.mul; g.fillRect(0, 0, b.w, b.h);
+    g.globalCompositeOperation = 'destination-in'; g.drawImage(b.canvas, 0, 0);
+    if (sk.la > 0.002) { g.globalCompositeOperation = 'source-atop'; g.fillStyle = C.rgba(sk.lift, Math.min(0.85, sk.la).toFixed(3)); g.fillRect(0, 0, b.w, b.h); }
+    // over island art: the untinted bridge (the island darkness at 600 covers it)
+    g.globalCompositeOperation = 'destination-out'; g.drawImage(isle, 0, 0);
+    g.globalCompositeOperation = 'source-over'; g.drawImage(isle, 0, 0);
+    if (lit) {
+      // lamp glass and the pier-rock crystal give off light, so they keep their own colours
+      for (const [gx, gy] of b.glass) { R(g, gx, gy, 3, 3, LAMP.glass); D(g, gx, gy, LAMP.hot); }
+      if (b.gem) { const gx = b.gem[0] - b.x0, gy = b.gem[1] - b.y0; R(g, gx, gy, 2, 4, GOLD.base); D(g, gx, gy, GOLD.hi); D(g, gx + 1, gy + 3, GOLD.dark); }
+    }
+    tint.key = key;
+    return tint.c;
+  }
   if (BR) S.registerDynamic(200, (ctx) => {
     const s = season();
     if (!bridge || bridgeSeason !== s) { bridge = buildBridge(s); bridgeSeason = s; }
-    const b = bridge;
+    const b = bridge, art = bridgeArt(b);
     // each 1-px column follows the bob interpolated between the two islands, so the bridge stays attached to both
     for (let i = 0; i < b.w; i++) {
       const x = b.x0 + i;
       const off = S.bobBetween(ISL, 'square', uAt(x));
-      ctx.drawImage(b.canvas, i, 0, 1, b.h, x, b.y0 + off, 1, b.h);
+      ctx.drawImage(art, i, 0, 1, b.h, x, b.y0 + off, 1, b.h);
     }
   });
   if (BR) S.registerDynamic(700, (ctx, t) => {
-    const night = 1 - clamp(S.time.light == null ? 1 : S.time.light, 0, 1);
+    const night = nightAmt();
     if (!bridge || night < 0.25) return;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
@@ -1571,6 +1642,11 @@
     for (const [lx, ly] of bridge.lamps) {
       ctx.globalAlpha = 0.55 * night * (RM ? 1 : 0.9 + 0.1 * Math.sin(t * 8 + lx));
       ctx.drawImage(spr, lx - 10, ly - 10 + S.bobBetween(ISL, 'square', uAt(lx)));
+    }
+    if (bridge.gem) {
+      const [gx, gy] = bridge.gem, gs = glowSprite(GEMS.gold.glow, 6);
+      ctx.globalAlpha = 0.4 * night;
+      ctx.drawImage(gs, gx + 1 - 6, gy + 2 - 6 + S.bobBetween(ISL, 'square', uAt(gx)));
     }
     ctx.restore();
   });

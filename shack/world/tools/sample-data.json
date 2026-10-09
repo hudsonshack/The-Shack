@@ -8,19 +8,9 @@
  },
  "cycles": [
   {
-   "name": "dawn",
-   "local_time": "05:45",
-   "focus": "morning brief, today's deadlines and study blocks"
-  },
-  {
-   "name": "after-school",
-   "local_time": "15:45",
-   "focus": "new assignments, social posts, Shopify orders"
-  },
-  {
-   "name": "night",
-   "local_time": "20:45",
-   "focus": "spending review, tomorrow's plan, outreach drafts"
+   "name": "daily",
+   "local_time": "11:00",
+   "focus": "once a day: brief, deadlines, money, posts, store, recaps"
   }
  ],
  "autonomy": {

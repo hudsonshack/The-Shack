@@ -108,6 +108,28 @@
       const i = y * bw + x, n = top[i - 1] + top[i + 1] + top[i - bw] + top[i + bw];
       if (top[i] && n < 2) top[i] = 0; else if (!top[i] && n >= 3) top[i] = 1;
     }
+    // Keep only the main landmass: flood-fill (4-connected) from this island's nav
+    // nodes and landmarks and drop every top pixel the fill never reaches, so the
+    // noisy mask can't leave crumbs of rim and cliff floating off the edge in space.
+    {
+      const seen = new Uint8Array(N), stack = [];
+      const seed = (tx, ty) => {
+        const x = tx * T - ox + (T >> 1), y = ty * T - oy + (T >> 1), i = y * bw + x;
+        if (x >= 0 && y >= 0 && x < bw && y < bh && top[i] && !seen[i]) { seen[i] = 1; stack.push(i); }
+      };
+      for (const k in S.nav.nodes) if (S.nav.island[k] === id) seed(S.nav.nodes[k][0], S.nav.nodes[k][1]);
+      for (const k in S.landmarks) { const L = S.landmarks[k]; if (L.island === id) seed(L.x, L.y); }
+      if (stack.length) {
+        while (stack.length) {
+          const i = stack.pop(), x = i % bw;
+          if (x > 0 && top[i - 1] && !seen[i - 1]) { seen[i - 1] = 1; stack.push(i - 1); }
+          if (x < bw - 1 && top[i + 1] && !seen[i + 1]) { seen[i + 1] = 1; stack.push(i + 1); }
+          if (i >= bw && top[i - bw] && !seen[i - bw]) { seen[i - bw] = 1; stack.push(i - bw); }
+          if (i + bw < N && top[i + bw] && !seen[i + bw]) { seen[i + bw] = 1; stack.push(i + bw); }
+        }
+        for (let i = 0; i < N; i++) if (top[i] && !seen[i]) top[i] = 0;
+      }
+    }
     // Manhattan distance from the edge, inside the top (capped).
     const din = new Uint8Array(N);
     for (let i = 0; i < N; i++) din[i] = top[i] ? 60 : 0;

@@ -24,7 +24,9 @@
  * Data (social-ops metrics only, nothing invented):
  *   billboard     cycles through real metrics: scheduled_posts_7d (one tile per
  *                 queued post, coloured by client), store_ads videos planned /
- *                 posted, link clicks. A test card "standby" when empty.
+ *                 posted (one film frame each), link clicks (one dot each).
+ *                 No digits in the canvas: the hotspot label carries the
+ *                 numbers. A test card "standby" when empty.
  *   fireworks     launch rate from scheduled_posts_7d (none when 0), plus a
  *                 burst of up to 12 during the cycle ceremony's council beat.
  *                 Peony, ring, willow, crackle and heart bursts. Other modules
@@ -259,7 +261,7 @@
   const TWR = { cx: HUT.x + 22, base: HUT.y + 4, top: HUT.y - 56 };   // lattice tower on the hut roof
   const BEACON = { x: TWR.cx, y: TWR.top - 10 };
   const ANG = { x: 932, y: 98, w: 84, h: 64 };               // Angie's cafe stall
-  const TABLE = { x: 898, y: 142 };
+  const TABLE = { x: 934, y: 166 };                          // sidewalk table in front of Angie's (clear of the mast, the lamp and the mural)
   const AFRAME = { x: 1006, y: 168 };
   const FID = { x: 1074, y: 178, w: 80, h: 56 };             // Fidgetly promo stall
   const TRIPOD = { x: 1088, y: 250 };
@@ -747,6 +749,44 @@
   /* ---- the blimp mooring mast: a tall neon-trimmed lattice with a docking ring ---- */
   const MAST_FOOT = MAST.base - 9, MAST_HEADB = MAST.top + 11;
   const mastHW = (y) => Math.round(3 + (y - MAST_HEADB) / (MAST_FOOT - MAST_HEADB) * 4.5);
+  /* The mast's glows (lit at 700), cached once and shaped like what they light, never boxes:
+   * the docking ring's neon halo uses the signs' halo recipe traced from the oval the lit tube
+   * follows, a dithered oval bloom spreads from it into space after dark, and a violet column
+   * follows the lattice's taper with a dithered fringe. */
+  const HOOP = { rx: 3, ry: 7 };   // the lit tube's oval, one px inside the ring's rim (rx 4, ry 8)
+  ICONS.hoop = (function () {
+    const rows = [];
+    for (let y = 0; y <= HOOP.ry * 2; y++) rows.push(new Array(HOOP.rx * 2 + 1).fill('.'));
+    for (let a = 0; a < 48; a++) { const an = a / 48 * Math.PI * 2; rows[Math.round(Math.sin(an) * HOOP.ry) + HOOP.ry][Math.round(Math.cos(an) * HOOP.rx) + HOOP.rx] = '#'; }
+    return mask(rows.map((r) => r.join('')));
+  })();
+  let dockBloomC = null, mastGlowC = null;
+  const MAST_GLOW_HW = 12;
+  function dockBloom() {
+    if (dockBloomC) return dockBloomC;
+    const RX = 9, RY = 13, [c, g] = mk(RX * 2 + 1, RY * 2 + 1);
+    for (let y = -RY; y <= RY; y++) for (let x = -RX; x <= RX; x++) {
+      const e = Math.sqrt((x * x) / (RX * RX) + (y * y) / (RY * RY));
+      // flat in the middle (the halo already lights the tube), dithered toward the rim
+      const a = e < 0.72 ? 0.3 : e < 1 && bayer(x + RX, y + RY) < (1 - e) / 0.28 * 0.6 ? 0.18 : 0;
+      if (a) { g.globalAlpha = a; D(g, x + RX, y + RY, P.neonPink); }
+    }
+    g.globalAlpha = 1;
+    return (dockBloomC = c);
+  }
+  function mastGlow() {
+    if (mastGlowC) return mastGlowC;
+    const h = MAST_FOOT - MAST_HEADB, [c, g] = mk(MAST_GLOW_HW * 2 + 1, h);
+    g.fillStyle = P.neonViolet;
+    for (let j = 0; j < h; j++) {
+      const w = mastHW(MAST_HEADB + j) + 1, end = Math.min(1, (j + 1) / 6, (h - j) / 4);
+      for (let i = -w - 2; i <= w + 2; i++) {
+        const fringe = Math.abs(i) > w ? (Math.abs(i) - w) / 3 : 0;
+        if (bayer(i + MAST_GLOW_HW, j) < end * (1 - fringe)) g.fillRect(i + MAST_GLOW_HW, j, 1, 1);
+      }
+    }
+    return (mastGlowC = c);
+  }
   function drawMast(ctx) {
     const { x, base, top } = MAST, winter = winterNow();
     const foot = MAST_FOOT, headB = MAST_HEADB;
@@ -1345,13 +1385,22 @@
   /* ============================================================ HOTSPOTS */
   const hot = (key, label, x, y, w, h) => S.addHotspot({ id: 'landmark:' + key, kind: 'landmark', landmark: key, biome: ID, island: ID, agent: AGENT, label, x, y, w, h, priority: 1 });
   const hTower = hot('broadcastTower', 'Broadcast Tower', HUT.x - 6, TWR.top - 12, HUT.w + 12, HUT.y + HUT.h - TWR.top + 14);
-  const hAng = hot('angiesStall', "Angie's stall", TABLE.x - 2, ANG.y - 4, ANG.x + ANG.w - TABLE.x + 4, ANG.h + 10);
+  // Angie's covers the stall, its sidewalk table and the A-frame, and starts east of the mast so the
+  // two landmarks never overlap (equal priorities would hand the overlap to whichever registered first).
+  const ANG_X0 = Math.max(MAST.x + 12, Math.min(ANG.x, TABLE.x) - 2), ANG_X1 = Math.max(ANG.x + ANG.w, TABLE.x + 20, AFRAME.x + 10) + 2;
+  const ANG_Y1 = Math.max(ANG.y + ANG.h, TABLE.y + 18, AFRAME.y + 15) + 3;
+  const hAng = hot('angiesStall', "Angie's stall", ANG_X0, ANG.y - 4, ANG_X1 - ANG_X0, ANG_Y1 - (ANG.y - 4));
   const hFid = hot('fidgetStall', 'Fidgetly promo stall', FID.x - 2, FID.y - 4, FID.w + 18, TRIPOD.y + 10 - FID.y + 4);
   const hBB = hot('billboard', 'Billboard', BB.x, BB.y, BB.w, BB.h);
   const hMast = hot('blimpMast', 'Blimp mast', DOCK.x - 6, MAST.top - 6, MAST.x + 12 - DOCK.x + 6, MAST.base - MAST.top + 8);
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   function updateLabels() {
-    hBB.label = F.posts ? `Billboard · ${plural(F.posts, 'post')} queued this week` : F.planned ? `Billboard · ${plural(F.planned, 'video')} planned` : 'Billboard · standby, nothing queued yet';
+    // the screen shows these as tiles, frames and dots (no digits in the canvas), so the label carries every number
+    const bb = [];
+    if (F.posts) bb.push(`${plural(F.posts, 'post')} queued this week`);
+    if (F.planned || F.posted) bb.push(`${plural(F.planned, 'video')} planned`);
+    if (F.clicks) bb.push(`${plural(F.clicks, 'link click')} in 7 days`);
+    hBB.label = bb.length ? 'Billboard · ' + bb.join(' · ') : 'Billboard · standby, nothing queued yet';
     hTower.label = F.posts ? `Broadcast Tower · ${plural(F.posts, 'post')} going out in 7 days` : 'Broadcast Tower · quiet, no posts scheduled';
     hAng.label = F.angiePosts ? `Angie's stall · ${plural(F.angiePosts, 'post')} in the next 7 days` : "Angie's stall · no posts queued yet";
     const vids = F.planned || F.posted ? ` · ${plural(F.planned, 'video')} planned, ${F.posted} posted` : '';
@@ -1364,19 +1413,11 @@
   /** Launch a firework from Neon Hollow on demand (e.g. when a post goes out). */
   S.market.firework = (big) => { if (S.t != null) launch(!!big); };
 
-  /* ============================================================ BILLBOARD SCREEN */
-  const DIG = ['111101101101111', '010110010010111', '111001111100111', '111001111001111', '101101111001001', '111100111001111', '111100111101111', '111001001010010', '111101111101111', '111101111001111'];
-  function drawNum(g, n, x, y, s, col, shadow) {
-    const str = String(Math.min(99, Math.max(0, n | 0)));
-    for (let k = 0; k < str.length; k++) {
-      const bits = DIG[+str[k]], ox = x + k * (3 * s + s);
-      for (let j = 0; j < 5; j++) for (let i = 0; i < 3; i++) if (bits[j * 3 + i] === '1') {
-        if (shadow) R(g, ox + i * s + 1, y + j * s + 1, s, s, shadow);
-        R(g, ox + i * s, y + j * s, s, s, col);
-      }
-    }
-    return str.length * 4 * s - s;
-  }
+  /* ============================================================ BILLBOARD SCREEN
+   * No digits in the canvas (text lives in the DOM): every count is drawn as
+   * that many things (post tiles, film frames, click dots) and the hotspot
+   * label and panel carry the exact numbers.
+   */
   const [scr, sg] = mk(SCR.w, SCR.h);
   let scrStamp = -1;
   function modes() {
@@ -1408,7 +1449,11 @@
       for (let y = 2; y < H; y += 4) for (let x = 2 + (y & 4 ? 2 : 0); x < W; x += 4) D(g, x, y, '#2c2468');
       R(g, 4, 3, 11, 9, '#f4f1fb'); R(g, 4, 3, 11, 3, '#ff4f6e'); D(g, 6, 2, '#c8c4dc'); D(g, 12, 2, '#c8c4dc');
       for (let j = 0; j < 2; j++) for (let i = 0; i < 4; i++) D(g, 5 + i * 3, 7 + j * 3, (i + j * 4) < 7 ? '#5a4a9a' : '#c8c4dc');
-      drawNum(g, F.posts, 4, 14, 2, '#ffffff', '#3a2a8a');
+      // a stack of queued post cards under the calendar
+      R(g, 9, 14, 8, 7, '#1a1440'); R(g, 10, 15, 6, 5, '#7262b8'); R(g, 10, 15, 6, 1, '#9484d4');
+      R(g, 7, 16, 8, 7, '#1a1440'); R(g, 8, 17, 6, 5, '#a294e4'); R(g, 8, 17, 6, 1, '#c8bef4');
+      R(g, 5, 18, 8, 7, '#1a1440'); R(g, 6, 19, 6, 5, '#f4f1fb');
+      R(g, 7, 20, 4, 2, '#ff6fb5'); D(g, 10, 20, '#ffe45c'); R(g, 7, 23, 3, 1, '#c8c4dc');
       R(g, 22, 3, 1, 21, '#4a3aa0');
       const colours = [];
       for (const c of F.clients) for (let k = 0; k < c.n; k++) colours.push(c.col);
@@ -1437,7 +1482,15 @@
     } else if (mode === 'videos') {
       gradient(g, '#4a1250', '#140820');
       R(g, 4, 3, 11, 9, '#ff4fa3'); R(g, 4, 3, 11, 1, '#ff9ac8'); R(g, 7, 5, 1, 5, '#ffffff'); R(g, 8, 6, 1, 3, '#ffffff'); D(g, 9, 7, '#ffffff'); R(g, 4, 11, 11, 1, '#a02a6a');
-      drawNum(g, F.planned, 4, 14, 2, '#ffffff', '#6a1a5a');
+      // a clapperboard under the play badge; its stick claps now and then
+      const open = !rm && mt % 1.6 < 0.9;
+      R(g, 3, 18, 13, 8, '#1a0a1a'); R(g, 4, 19, 11, 6, '#3a2238'); R(g, 4, 19, 11, 1, '#5a3a58');
+      R(g, 6, 21, 7, 1, '#8a6a88'); R(g, 6, 23, 5, 1, '#8a6a88');
+      for (let i = 0; i < 11; i++) {
+        const lift = open ? Math.round(i * 0.3) : 0;
+        D(g, 4 + i, 14 - lift, '#1a0a1a');
+        for (let j = 0; j < 3; j++) D(g, 4 + i, 15 + j - lift, (i + j) % 4 < 2 ? '#f4f0fa' : '#1a0a1a');
+      }
       R(g, 22, 3, 1, 21, '#8a2a7a');
       R(g, 25, 3, 60, 19, '#120e18');
       const off = rm ? 0 : Math.floor(t * 6) % 4;
@@ -1462,8 +1515,18 @@
       g.globalAlpha = 1;
       const cur = ['1.....', '11....', '1#1...', '1##1..', '1###1.', '1####1', '1##111', '11.1..', '...1..'];
       cur.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] !== '.') D(g, 8 + i, 7 + j, row[i] === '1' ? '#0a1a20' : '#ffffff'); });
-      const w = drawNum(g, F.clicks, 24, 8, 3, '#ffffff', '#0a3a3a');
-      R(g, 24, 8 + 16, w, 1, '#3ef0ff');
+      R(g, 22, 3, 1, 21, '#1a6a6a');
+      // one dot per link click in the last 7 days, ticking in like a tally; '+' in the last cell when they overflow
+      const CC = 20, cap = CC * 7, n = Math.min(cap, F.clicks), gap = Math.min(0.05, 5 / Math.max(1, n));
+      const y0 = 3 + Math.floor((7 - Math.ceil(n / CC)) * 3 / 2);   // the block sits centred beside the cursor
+      for (let k = 0; k < n; k++) {
+        const appear = rm ? 0 : 0.2 + k * gap;
+        if (mt < appear) continue;
+        const x = 25 + (k % CC) * 3, y = y0 + Math.floor(k / CC) * 3;
+        if (k === cap - 1 && F.clicks > cap) { R(g, x + 1, y, 1, 3, '#ffffff'); R(g, x, y + 1, 3, 1, '#ffffff'); continue; }
+        const fresh = !rm && mt - appear < 0.12;
+        R(g, x, y, 2, 2, fresh ? '#ffffff' : '#3ef0ff'); D(g, x + 1, y + 1, fresh ? '#ffffff' : '#1fa8b8');
+      }
     }
     if (!rm && list.length > 1 && mt < 0.25) for (let k = 0; k < 140; k++) D(g, (S.hash(k, Math.floor(t * 30), 732) * W) | 0, (S.hash(k, Math.floor(t * 30), 733) * H) | 0, k & 1 ? '#ffffff' : '#5a5a7a');
     g.globalAlpha = 0.16; for (let y = 1; y < H; y += 2) R(g, 0, y, W, 1, '#000000'); g.globalAlpha = 1;
@@ -1874,17 +1937,23 @@
         D(ctx, x + Math.round(Math.sin(y * 0.35) * (mastHW(y) - 1)), y, near ? '#ffffff' : (y >> 3) % 2 ? P.neonPink : '#ff8ad0');
       }
       ctx.globalAlpha = 1;
-      const rx = 4, ry = 8, ringPulse = rm ? 1 : 0.75 + 0.25 * Math.sin(t * 3);
+      const ringPulse = rm ? 1 : 0.75 + 0.25 * Math.sin(t * 3);
+      // halo first (hugging the oval, like the signs), then a soft dithered bloom after dark
+      ctx.globalCompositeOperation = 'lighter';
+      const hs = neonSprites('hoop', P.neonPink);
+      ctx.globalAlpha = (0.2 + 0.6 * dark) * ringPulse;
+      ctx.drawImage(hs.halo, DOCK.x - HOOP.rx - hs.pad, DOCK.y - HOOP.ry - hs.pad);
+      if (dark > 0.15) {
+        const bl = dockBloom();
+        ctx.globalAlpha = 0.4 * dark * ringPulse;
+        ctx.drawImage(bl, DOCK.x - (bl.width >> 1), DOCK.y - (bl.height >> 1));
+        ctx.globalAlpha = 0.18 * dark; ctx.drawImage(mastGlow(), x - MAST_GLOW_HW, MAST_HEADB);
+      }
+      ctx.globalCompositeOperation = 'source-over';
       for (let a = 0; a < 48; a++) {
         const an = a / 48 * Math.PI * 2, c = Math.cos(an), s = Math.sin(an);
         ctx.globalAlpha = ringPulse * (c > 0.2 ? 0.55 : 1);
-        D(ctx, DOCK.x + c * (rx - 1), DOCK.y + s * (ry - 1), a % 6 === 0 ? '#ffffff' : P.neonPink);
-      }
-      if (dark > 0.15) {
-        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.25 * dark * ringPulse;
-        R(ctx, DOCK.x - 6, DOCK.y - 10, 13, 21, P.neonPink);
-        ctx.globalAlpha = 0.18 * dark; R(ctx, x - 5, MAST_HEADB, 11, MAST_FOOT - MAST_HEADB, P.neonViolet);
-        ctx.globalCompositeOperation = 'source-over';
+        D(ctx, DOCK.x + c * HOOP.rx, DOCK.y + s * HOOP.ry, a % 6 === 0 ? '#ffffff' : P.neonPink);
       }
       ctx.globalAlpha = 1;
       mastBeaconLit = rm ? true : (t + 0.7) % 2.2 < 0.5;

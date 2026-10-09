@@ -1105,7 +1105,7 @@
   const PL = {
     // Mayor Tock (Clockspire)
     tower: place('TOWER', [[640, 312]], 'down'),
-    quest: place('QUEST', [[580, 376]], 'up'),
+    quest: place('QUEST', [[576, 388]], 'up'),    // a step back from the board: the tag stays below its '!'
     mail: place('MAIL', [[700, 378]], 'up'),
     plaza: place('SQ', [[640, 392]], 'down'),
     chronicle: place('CHRON', [[726, 448], [726, 474]], 'left'),
@@ -1139,18 +1139,18 @@
     // over the Quest Board or the clock-tower door: Tock on the compass medallion with Hudson
     // and Lumi (short names) flanking him well clear of the board; Twirl, Quill and Grit in a
     // staggered row south of the fountain, facing him across the water.
-    cTock: place('SQ', [[644, 396]], 'down'),
+    cTock: place('SQ', [[650, 396]], 'down'),   // tag clears the board's right post (x 603) at z >= 1
     cHudson: place('QUEST', [[512, 384], [512, 398]], 'right'),
-    cLumi: place('MAIL', [[742, 384], [742, 398]], 'left'),
+    cLumi: place('MAIL', [[748, 384], [748, 398]], 'left'),
     cTwirl: place('QUEST', [[544, 384], [544, 468], [562, 468]], 'up'),
-    cQuill: place('CHRON', [[726, 448], [726, 488], [654, 488]], 'up'),
+    cQuill: place('CHRON', [[726, 448], [726, 488], [658, 488]], 'up'),   // just east of the fountain's runoff channel
     cGrit: place('CHRON', [[726, 448], [726, 468], [750, 468]], 'up'),
     // Hudson's wander
     h1: place('QUEST', [[536, 384], [536, 336]], 'down'),   // tag ends left of the board's '!' marker
     h2: place('SQ', [[640, 352]], 'down'),
     h3: place('MAIL', [[752, 384], [752, 336]], 'down'),
     h4: place('SQ', [[600, 392]], 'right'),
-    h5: place('QUEST', [[570, 378]], 'up'),
+    h5: place('QUEST', [[566, 386]], 'up'),
     h6: place('D_SW', [[536, 472]], 'left'),
     // islanders
     bun1: place('BLIMP', [[944, 224]], 'down'),
@@ -1309,7 +1309,7 @@
       const top = tasks.slice().sort((a, b) => (a.priority || 9) - (b.priority || 9))[0];
       if (top && top.title) out.push({ text: 'Next: ' + top.title, tone: 'info', max: 2 });
     } else out.push({ text: 'No quests for me right now', tone: 'quiet' });
-    out.push(() => (S.time.isPayday ? { text: 'Friday: payday!', tone: 'info' } : null));
+    out.push(() => (S.time.isPayday && paidToday() ? { text: 'Friday: payday!', tone: 'info' } : null));
     return out;
   }
   /** Split a line into bubble-sized chunks (one line each, ~24 chars). */
@@ -1900,7 +1900,7 @@
       V.cargo = d > 0 ? AGENT_ITEM[V.owner] : null;   // no data, no parcel: just an empty run
       V.go('hub');
     }
-    if (S.time.isPayday && t >= sched.payday) {
+    if (S.time.isPayday && paidToday() && t >= sched.payday) {
       sched.payday = t + (RM ? 220 : 140) * rand(0.8, 1.2);
       const h = HOURS();
       if (h > 6.5 && h < 21.5 && !CER.active) startPayday();
@@ -2031,6 +2031,13 @@
   /* ================================================================ Friday payday sky-cart */
   const pay = S.addEntity({ x: 0, y: 1e5, island: null, hidden: true, state: 'off', k: 0, px: 0, py: 0, facing: -1, update: null, draw: null });
   const PAY_FROM = [1350, 548], PAY_HOVER = [1104, 690], PAY_TO = [1356, 610], VAULT_DOOR = [1098, 642];
+  /** True only when Ledger-Fi recorded a paycheck dated today (New York). */
+  function paidToday() {
+    const lp = (S.metrics('ledger-fi') || {}).last_paycheck, p = S.time.ny || {};
+    if (!lp || !lp.date || !p.year) return false;
+    const iso = p.year + '-' + String(p.month).padStart(2, '0') + '-' + String(p.day).padStart(2, '0');
+    return String(lp.date).slice(0, 10) === iso;
+  }
   function startPayday() { if (pay.state !== 'off') return; pay.state = 'in'; pay.k = 0; pay.hidden = false; pay.coins = 0; }
   pay.update = (dt) => {
     if (pay.state === 'off') { pay.hidden = true; return; }
@@ -2154,7 +2161,9 @@
         planTo(v, pick(v.work));
         v.onArrive = (vv) => { vv.wait = rand(vv.dwell[0], vv.dwell[1]); };
       }
-      if (!CER.endSaid) { CER.endSaid = true; say(tock, { text: 'Reports in. Back to work!', tone: 'info' }, clock); }
+      // only claim reports when someone really had one to hand over
+      const any = [quill, grit, lumi, twirl].some((v) => hasReport(v.agent));
+      if (!CER.endSaid) { CER.endSaid = true; say(tock, { text: any ? 'Reports in. Back to work!' : 'All heard. Back to work!', tone: any ? 'info' : 'quiet' }, clock); }
     }
   }
   function faceTo(v, x, y) {
@@ -2209,7 +2218,7 @@
     v.queue = parts.map((p, i) => ({ text: p, tone: line.tone, at: t + i * 2.7 }));
     v.bubbleUntil = t + parts.length * 2.7 + 0.6;
   }
-  const bubbleDy = (v) => v.tagDy + (v.tagOff ? Math.round(v.tagOff) : 0) + rideLift(v) + Math.round(23 / Math.max(0.5, S.cam ? S.cam.z : 1));
+  const bubbleDy = (v) => v.tagDy + (v.tagOff ? Math.round(v.tagOff) : 0) + rideLift(v) + Math.round(23 / Math.max(0.5, S.cam ? S.cam.z : 1)) + (v.bubRaise ? Math.round(v.bubRaise) : 0);
   function flushSpeech(t) {
     for (const v of villagers) {
       if (!v.queue.length) continue;
@@ -2343,44 +2352,110 @@
     if (T.L.anchor !== v) { T.L.anchor = v; T.L.setText(v.name); T.off = 0; }
     return v;
   }
+  const TAG_HYST = 6;   // feet-y lead (native px) a tag needs before it may swap below its neighbour
+  // The Quest Board's gold '!' (15-clockspire, dynamic 800: a 7x10 marker over the board's top
+  // edge at x 579-586, y 310-319, bobbing -1..+2) is the page's main call to action while "you"
+  // tasks are open: the tag or bubble of anyone standing still beside the board lifts clear of it.
+  const QUEST_MARK = openHumanTasks().length ? { x: 582.5, w: 9, y: 322, h: 13 } : null;
+  const overlaps = (a, b) => Math.abs(a.x - b.x) < (a.w + b.w) / 2 && a.y > b.y - b.h && a.y - a.h < b.y;
+  /** Stack tags (bottom edge y, height h): each one that overlaps a tag before it in the list, or
+   *  the quest marker while its owner stands still, moves up just above it. */
+  function settle(live, qm) {
+    for (let pass = 0; pass < 4; pass++) {
+      let moved = false;
+      for (let i = 0; i < live.length; i++) {
+        const a = live[i];
+        if (qm && a.still && overlaps(a, qm)) { a.y = qm.y - qm.h; moved = true; }
+        for (let j = 0; j < i; j++) { const b = live[j]; if (overlaps(a, b)) { a.y = b.y - b.h; moved = true; } }
+      }
+      if (!moved) break;
+    }
+  }
   function updateTags() {
     const z = Math.max(0.3, S.cam ? S.cam.z : 1), live = [];
     for (const T of tags) {
       const v = T.v, a = tagAnchor(T), door = a !== v;
       if (T.off == null) T.off = 0;
-      if (!door && v.hidden) { T.off = 0; T.L.dy = baseDy(v); continue; }
+      if (!door && v.hidden) { T.off = 0; T.rank = null; T.L.dy = baseDy(v); continue; }
       const dy = door ? DOOR_DY : baseDy(v);
-      // widths are estimated from the text (12-13 px UI font) so this never forces a DOM layout
-      let wpx = (v.name.length + (door ? 9 : 0)) * 7 + 14, hpx = 21;
-      // a speech bubble rides just above its speaker's tag: treat tag + bubble as one block
-      if (!door) for (const B of liveBubbles) if (B.v === v && B.b && B.b.el && B.b.el.isConnected) {
-        wpx = Math.max(wpx, Math.min(222, B.text.length * 7 + 18)); hpx = 21 + 30;
-      }
-      const y = a.y + S.bob(a.island) - dy;
-      // sort key: where the tag is drawn now (last frame's offset), so a tag already on top of
-      // a stack stays on top while its owner walks past; tags never slide through each other
-      live.push({ T, a, dy, x: a.x, y, key: y - T.off, w: (wpx + 4) / z, h: hpx / z });
+      // widths are estimated from the text (13 px bold Atkinson Hyperlegible: ~6 px a character
+      // plus padding and border, fitted to the measured tags) so this never forces a DOM layout;
+      // tags are 21.25 px tall on screen
+      const wpx = (v.name.length + (door ? 9 : 0)) * 6 + 26;
+      const base = a.y + S.bob(a.island) - dy;   // the tag's bottom edge before stacking
+      live.push({ T, v, a, dy, x: a.x, base, y: base, w: (wpx + 4) / z, h: 22 / z, still: !door && !v.plan && v.island === 'square' });
     }
-    live.sort((p, q) => q.key - p.key || (p.T.rank || 0) - (q.T.rank || 0));
-    live.forEach((it, i) => { it.T.rank = i; });
-    for (let pass = 0; pass < 4; pass++) {
-      let moved = false;
+    const qm = QUEST_MARK && Object.assign({}, QUEST_MARK, { y: QUEST_MARK.y + S.bob('square') });
+    // Stacking order (lowest tag first; it keeps its place). Start from last frame's order and
+    // only let a tag move ahead of its neighbour when its owner stands clearly lower (by more
+    // than TAG_HYST). Two people at about the same height never flip-flop, so their tags don't
+    // slide through each other, and a tag that was pushed up drops back as soon as its owner is
+    // clearly below the others (the order follows the feet, not the drawn position).
+    live.sort((p, q) => (p.T.rank == null ? 99 : p.T.rank) - (q.T.rank == null ? 99 : q.T.rank) || q.base - p.base);
+    for (let pass = 0; pass < live.length; pass++) {
+      let swapped = false;
       for (let i = 1; i < live.length; i++) {
-        const a = live[i];
-        for (let j = 0; j < i; j++) {
-          const b = live[j];
-          if (Math.abs(a.x - b.x) < (a.w + b.w) / 2 && a.y > b.y - b.h && a.y - a.h < b.y) { a.y = b.y - b.h; moved = true; }
-        }
+        if (live[i].base > live[i - 1].base + TAG_HYST) { const t0 = live[i]; live[i] = live[i - 1]; live[i - 1] = t0; swapped = true; }
       }
-      if (!moved) break;
+      if (!swapped) break;
     }
+    live.forEach((it, i) => { it.T.rank = i; });
+    settle(live, qm);
+    // ease each tag toward its stacked spot, but never let the drawn tags overlap mid-ease: a
+    // tag that would slide into (or through) a lower one is lifted clear at once
     for (const it of live) {
-      const T = it.T, v = T.v, want = it.a.y + S.bob(it.a.island) - it.dy - it.y;
+      const T = it.T, want = it.base - it.y;
       T.off += (want - T.off) * (RM ? 1 : 0.35);
       if (Math.abs(want - T.off) < 0.3) T.off = want;
+      it.y = it.base - T.off;
+    }
+    settle(live, qm);
+    for (const it of live) {
+      const T = it.T, v = T.v;
+      T.off = it.base - it.y;
       v.tagOff = it.a === v ? T.off : 0;
       T.L.dy = it.dy + Math.round(T.off);
     }
+    placeBubbles(live, z, qm);
+  }
+  /* A speech bubble sits just above its speaker's tag. Where that spot would cover another
+   * tag or bubble (people standing close, as at the council) the bubble floats up past it,
+   * instead of shoving the neighbours' tags up into a tower over the Quest Board. */
+  function placeBubbles(live, z, qm) {
+    const sp = [];
+    // name tags are hidden when zoomed far out (core: z < 0.75), so there is nothing to clear
+    if (z >= 0.75) for (const B of liveBubbles) {
+      if (!B.b || !B.b.el || !B.b.el.isConnected) continue;
+      const it = live.find((q) => q.v === B.v && q.a === B.v);
+      if (!it) continue;
+      const w = (Math.min(222, B.text.length * 7 + 18) + 4) / z;
+      if (it.bw == null) sp.push(it);
+      it.bw = Math.max(it.bw || 0, w);
+    }
+    sp.sort((p, q) => q.y - p.y);
+    const bh = 30 / z, tail = 6 / z, gap = Math.round(23 / Math.max(0.5, z)), placed = [];
+    for (const it of sp) {
+      const home = it.y - gap;   // bubble box bottom when nothing is in the way
+      const obst = qm && it.still ? live.concat([qm]) : live;
+      let bottom = home;
+      for (let pass = 0; pass < 6; pass++) {
+        let moved = false;
+        for (const o of obst) {
+          if (o === it || Math.abs(o.x - it.x) >= (o.w + it.bw) / 2) continue;
+          if (bottom + tail > o.y - o.h && bottom - bh < o.y) { bottom = o.y - o.h - tail; moved = true; }
+        }
+        for (const o of placed) {
+          if (Math.abs(o.x - it.x) >= (o.w + it.bw) / 2) continue;
+          if (bottom + tail > o.top && bottom - bh < o.bottom + tail) { bottom = o.top - tail; moved = true; }
+        }
+        if (!moved) break;
+      }
+      placed.push({ x: it.x, w: it.bw, top: bottom - bh, bottom });
+      // rise at once (never cover a tag), settle back down gently
+      const v = it.v, want = home - bottom;
+      v.bubRaise = v.bubRaise == null || RM ? want : Math.max(want, v.bubRaise + (want - v.bubRaise) * 0.35);
+    }
+    for (const v of villagers) if (v.bubRaise != null && !sp.some((it) => it.v === v)) v.bubRaise = null;
   }
   S.villagers = { list: villagers, byId, vehicles: VEH, parcels };
 
