@@ -23,6 +23,8 @@
  *                         rain cloud (warn) or storm cloud (critical) with rain
  *                         that keeps falling past the edge into space, lightning
  *                         flashes on that island only, summer-night fireflies.
+ *                         Clouds hang off every villager work spot and thin to
+ *                         see-through while anyone walks under one.
  *
  * Space keeps its own day and night (the space module). Nothing here darkens
  * space except the faint night tint.
@@ -657,7 +659,7 @@
    * head), or the kid's kite flies into it, the cloud thins to see-through and
    * firms up again once they have moved on. Tested against the cloud's real
    * per-column outline; a handful of entities, so it costs next to nothing. */
-  const SEE_DIM = 0.55;   // how much of the cloud's opacity goes while someone is under it
+  const SEE_DIM = 0.6;    // how much of the cloud's opacity goes while someone is under it
   function coversBox(c, x0, x1, y0, y1) {
     const spr = c.cur, i0 = Math.max(0, Math.floor(x0 - c.x)), i1 = Math.min(spr.w - 1, Math.ceil(x1 - c.x));
     if (i0 > i1 || y1 < c.y || y0 > c.y + spr.h) return false;
