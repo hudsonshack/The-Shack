@@ -21,7 +21,8 @@
  *   40 tiny rock islets drifting very slowly across space
  *   50 shooting stars every 6 to 15 s (rarer with reduced motion, none by day)
  *   60 letterbox join: world edges that face a visible letterbox fade (dithered)
- *      to exactly S.spaceColor, so any aspect ratio joins without a seam
+ *      to S.spaceColor as it shows on screen, so any aspect ratio joins without
+ *      a seam (nothing is drawn when no letterbox shows)
  *
  * Also sets S.spaceColor to the average tone of the world's outer band as lit
  * right now (night sky + day wash + twilight, weighted toward the letterbox
@@ -278,7 +279,7 @@
     return c;
   }
 
-  const FAR_ISLETS = [[476, 150, 7, 0.62], [826, 52, 6, 0.66], [30, 414, 9, 0.55], [1238, 446, 8, 0.58], [452, 640, 7, 0.6], [1180, 20, 6, 0.68], [820, 780, 6, 0.65], [12, 760, 8, 0.6]];
+  const FAR_ISLETS = [[476, 150, 7, 0.62], [826, 52, 6, 0.66], [50, 436, 9, 0.55], [1238, 446, 8, 0.58], [452, 640, 7, 0.6], [1180, 20, 6, 0.68], [820, 780, 6, 0.65], [12, 760, 8, 0.6]];
 
   /* ======================================================= RINGED PLANET */
   /* Under Clockspire's underside tip (about native 613) and above the control
@@ -581,7 +582,7 @@
     const f = lrA + tbA > 0 ? Math.round((tbA / (lrA + tbA)) * 20) / 20 : 0;
     // the colour steps with these quantised inputs; it isn't recomputed every frame
     const dq = Math.round(sky.day * 40), tq = Math.round(sky.twi * 40), nq = Math.round(nightTintK() * 40);
-    const key = (((edgeGen * 2 + (sky.kind === 'dawn' ? 1 : 0)) * 21 + f * 20) * 41 + nq) * 1681 + tq * 41 + dq; // all small ints: one number
+    const key = (((edgeGen * 2 + (sky.kind === 'dawn' ? 1 : 0)) * 21 + Math.round(f * 20)) * 41 + nq) * 1681 + tq * 41 + dq; // all small ints: one number
     if (key === lastEdgeKey) return;
     lastEdgeKey = key;
     const tone = mixRgb(bandTone('lr', dq / 40, tq / 40, sky.kind), bandTone('tb', dq / 40, tq / 40, sky.kind), f);
@@ -749,8 +750,9 @@
    * letterbox on a zoomed-out phone) the core fills the screen with
    * S.spaceColor. Space fades to that colour (its untinted tone; see
    * nightTintK) over the last F px of each such edge with an ordered-dither
-   * alpha ramp, so the join has no seam at any aspect ratio. Drawn after every space layer (stars, moon, islets, shooting
-   * stars fade with it) and before the islands, which stay crisp on top.
+   * alpha ramp, so the join has no seam at any aspect ratio. Drawn after every
+   * space layer (stars, moon, islets and shooting stars fade with it) and
+   * before the islands, which stay crisp on top.
    * F is about 40 screen px, capped so it never reaches the moon or the planet.
    * Cost: up to four pattern fills of a few thousand px; tiles rebuild only
    * when the colour or F steps.

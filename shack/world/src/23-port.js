@@ -21,6 +21,11 @@
  *   dyn 400     sky-birds, signal flag (status), rotor/propeller wind {island}
  *   dyn 700     windows, lanterns, beacon lamp and beam at night      {island}
  *
+ * Night: the atmosphere's darkness is cut to the island's static silhouette,
+ * so everything above that reaches out over space (pier decks, crane jib,
+ * cargo ships, the waterfall and its spray, the signal mast, birds) takes the
+ * same sky tint here (S.atmo.sky()), masked to the pixels off the silhouette.
+ *
  * Data (never invented):
  *   ships     = metrics('hustle-engine').shopify.orders_7d: one crate on deck per
  *               order (5 per ship, up to 3 ships). With no orders (or no data) a
@@ -1735,10 +1740,10 @@
       const K = getCache(curSeason).ships[0], e = shipEnts[0];
       const bx = idle.x + K.perch.x, by = idle.y + e.bob + K.perch.y;
       const blink = !RM && Math.floor(t * 0.7) % 6 === 0;
-      const q = (hex) => nc(bx, by, hex);
-      spr(ctx, ['.ww..', 'wwwwo', '.bb..'], bx, by, { w: q('#f6f6f2'), o: q('#f2a03a'), b: q('#5aa0d8') });
-      D(ctx, bx + 3, by, q(blink ? '#f6f6f2' : '#1d1a24'));
-      R(ctx, bx, by - 1, 1, 1, q(OUT));
+      const qb = (hex) => nc(bx, by, hex);
+      spr(ctx, ['.ww..', 'wwwwo', '.bb..'], bx, by, { w: qb('#f6f6f2'), o: qb('#f2a03a'), b: qb('#5aa0d8') });
+      D(ctx, bx + 3, by, qb(blink ? '#f6f6f2' : '#1d1a24'));
+      R(ctx, bx, by - 1, 1, 1, qb(OUT));
     }
     // signal mast at the main pier head: calm pennant / storm flags by status (out over space)
     const px = SIGNAL.x, py = SIGNAL.y;
