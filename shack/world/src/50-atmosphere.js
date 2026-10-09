@@ -606,12 +606,16 @@
    * (critical) both keep at least ~12 px clear of them through their drift.
    *   Lantern Peak      the south lawn below the bell pavilion and scroll board
    *   Neon Hollow       the south strip below the blimp walkway
-   *   Spindrift Harbor  over the river east of the kid's kite meadow
+   *   Spindrift Harbor  rain: over the river between the kid's kite and the
+   *                     lighthouse; storm (too wide for that gap): the cargo
+   *                     yard by the crane, south of Twirl's yellow stall
    *   Copperhold        the open yard between the cottage and the crystals
    * Anyone who still walks under a cloud is revealed by seeThrough(). */
-  const SPOTS = { monastery: [11, 15.75], market: [61.3, 16.1], port: [20.5, 30.5], mine: [65, 35.4] };
+  const SPOTS = { monastery: [11, 15.75], market: [61.3, 16.1], port: [19.875, 30.625], mine: [65, 35.4] };
+  /** Storm-only spots where the big storm cloud needs more room (glides there with w.storm). */
+  const SPOTS_STORM = { port: [23.25, 40.125] };
   /** Where a storm's smaller second cloud sits relative to the main one (px), kept off buildings and work spots. */
-  const SIDE = { monastery: [-60, -6], market: [-56, -2], port: [46, -14] };
+  const SIDE = { monastery: [-60, -6], market: [-56, -2], port: [-56, 12] };
   function wxFor(id) {
     if (WX[id]) return WX[id];
     const seed = 7 + S.ISLANDS.indexOf(id) * 31;
@@ -620,8 +624,9 @@
     const so = SIDE[id] || [50, -16];
     const side = { spr: null, sprS: cloudSprite(seed + 3, 76, 36, 'storm'), ph: main.ph + 1.7, dx: so[0], dy: so[1], see: 0 };
     const spot = SPOTS[id] ? { tx: SPOTS[id][0], ty: SPOTS[id][1] } : cloudSpot(id, crit ? 9 : 6, crit ? 4 : 3);
+    const spotS = SPOTS_STORM[id] ? { tx: SPOTS_STORM[id][0], ty: SPOTS_STORM[id][1] } : spot;
     return (WX[id] = {
-      id, seed, level: 'ok', spot,
+      id, seed, level: 'ok', spot, spotS,
       shade: 0, mist: 0, rain: 0, storm: 0,
       shadeC: null, shadeKey: '', mistC: null, mistKey: '',
       clouds: [side, main],   // drawn back to front
@@ -633,7 +638,8 @@
   /** Where each of an island's clouds hangs this frame (world px, before bob). */
   function placeClouds(w, t) {
     const stormy = w.storm > 0.5;
-    const cx0 = w.spot.tx * TILE, cy0 = w.spot.ty * TILE;
+    const u = clamp01(w.storm);
+    const cx0 = Math.round(lerp(w.spot.tx, w.spotS.tx, u) * TILE), cy0 = Math.round(lerp(w.spot.ty, w.spotS.ty, u) * TILE);
     for (const c of w.clouds) {
       const spr = stormy ? c.sprS : c.spr;
       c.cur = spr;
