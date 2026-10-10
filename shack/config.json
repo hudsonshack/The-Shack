@@ -7,19 +7,9 @@
   "state_branch": "ops/state",
   "cycles": [
     {
-      "name": "dawn",
-      "local_time": "05:45",
-      "focus": "morning brief, today's deadlines and study blocks"
-    },
-    {
-      "name": "after-school",
-      "local_time": "15:45",
-      "focus": "new assignments, social posts, Shopify orders"
-    },
-    {
-      "name": "night",
-      "local_time": "20:45",
-      "focus": "spending review, tomorrow's plan, outreach drafts"
+      "name": "daily",
+      "local_time": "11:00",
+      "focus": "once a day: morning brief, deadlines and study blocks, new assignments, money, Angie's posts, store pulse, recaps"
     }
   ],
   "priority_weights": {
@@ -153,7 +143,7 @@
         "prospecting"
       ],
       "outreach_channel": "instagram-facebook-dm-drafts",
-      "report_cadence": "weekly (Sunday night cycle)",
+      "report_cadence": "weekly (Sunday cycle)",
       "character": "Lumi",
       "biome": "market",
       "look": "a night-market creator with a glowing jacket and a camera",
@@ -227,7 +217,7 @@
       "biome": "port",
       "look": "a harbor merchant captain who is never without a fidget spinner",
       "mode": "maintenance",
-      "maintenance": "Fidgetly is on hold. Night cycle only: store pulse (orders, unfulfilled orders, stock problems). No research loops, no ad prep, no DMs."
+      "maintenance": "Fidgetly is on hold. Each daily cycle: store pulse (orders, unfulfilled orders, stock problems). No research loops, no ad prep, no DMs."
     }
   },
   "player": {
@@ -312,8 +302,8 @@
   "notifications": {
     "channel": "push",
     "morning_brief": {
-      "cycle": "dawn",
-      "about": "~6:00 AM, at the end of the dawn cycle"
+      "cycle": "daily",
+      "about": "~11:00 AM, at the end of the daily cycle"
     },
     "urgent": [
       "deadline within 24 hours",
@@ -324,14 +314,21 @@
     ]
   },
   "recaps": {
-    "daily": "night cycle",
-    "weekly": "Sunday night cycle",
-    "monthly": "night cycle on the last day of the month",
+    "daily": "every daily cycle (covers the last 24 hours)",
+    "weekly": "Sunday cycle (covers the last 7 days)",
+    "monthly": "first cycle of each month (covers the previous month)",
     "style": "Mayor Tock's chronicle + stats",
     "keep": {
       "daily": 30,
       "weekly": 12,
       "monthly": 12
     }
+  },
+  "email_accounts": {
+    "connected": "thehudsonshack@gmail.com",
+    "forwarded_in": [
+      "buzzbanditt@gmail.com (personal; forwards all new mail to thehudsonshack, M&T Bank alerts arrive this way)"
+    ],
+    "rule": "Mail addressed to buzzbanditt@gmail.com is Hudson's own mail. Read it only for the agents' jobs; never reply or send from it without approval."
   }
 }

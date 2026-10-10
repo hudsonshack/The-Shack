@@ -15,7 +15,7 @@ Fidgetly is on hold (`config.json → agents.hustle-engine.mode`). While `mode` 
 
 ## Each cycle
 1. **Store pulse.** Orders and revenue for the last 7 days, conversion rate if available, and SKUs at or below 5 units in stock. Write them to `metrics.shopify`. Low stock is a `warn` alert. An unfulfilled order older than 48 hours is `critical`.
-2. **Arbitrage research loop** (`after-school` cycle only, at most 3 ideas):
+2. **Arbitrage research loop** (once a day, only when not in maintenance mode, at most 3 ideas):
    - Pick fidget products (and close relatives: desk toys, stress toys, sensory toys) that fit the store's catalog. Compare supplier or wholesale cost with current retail prices on 2+ marketplaces.
    - Margin after fees and shipping, as `margin_pct`. Keep ideas at ≥ 30%.
    - Write `outbox/research/<YYYY-MM-DD>.md` with sources (links) and math, and put `{title, margin_pct, file}` in `metrics.opportunities`.

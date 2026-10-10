@@ -1,9 +1,9 @@
 # One-time setup (about 10 minutes)
 
-After these steps, everything runs by itself three times a day.
+After these steps, everything runs by itself once a day at 11 AM.
 
 ## 1. Give the Routine its repo and connectors
-The hub runs as a Claude Routine named **The Shack: Director cycle** (05:45, 15:45 and 20:45 New York time). A Routine created from a chat can't carry connectors, so add them once:
+The hub runs as a Claude Routine named **The Shack Operations** (once a day at 11:00 AM New York time). A Routine created from a chat can't carry connectors, so add them once:
 
 1. Open claude.ai → **Code** → **Routines** (or the Routines list in the Claude app) → **The Shack: Director cycle** → edit.
 2. Add the repository `hudsonshack/The-Shack`.
@@ -25,19 +25,19 @@ Your school blocks Claude from opening Google Classroom, but Classroom emails yo
    - **Create filter** → check **Forward it to:** your personal Gmail → **Create filter**.
 4. In Classroom (school account) → ⚙️ **Settings** → make sure email notifications are **on** for new work, due-date reminders and returned work.
 
-Check: in the world, click the Highland Monastery. Its Classroom feed reads `connected` after the next cycle.
+Check: in the world, click Lantern Peak. Its Classroom feed reads `connected` after the next cycle.
 
 ## 3. Turn on M&T Bank alerts (Ledger-Fi), whenever you're ready
 Your paycheck already direct-deposits every Friday. These alerts let Grit Copperpot see it, along with every purchase, as emails. You don't need to download CSVs or share bank passwords. Ask Claude to walk you through it live if you'd rather.
 
 1. M&T mobile app → **Menu** → **Alerts** (or in online banking: **Profile & Settings → Alerts**).
-2. Turn on, with delivery by **email** to your personal Gmail:
+2. Turn on, with delivery by **email**. M&T emails buzzbanditt@gmail.com, which forwards everything to thehudsonshack@gmail.com (set up 9 Oct 2026):
    - Debit card / purchase alert with an amount of **$0.01** or more (so every purchase sends one)
    - Deposit alert (paychecks and tip deposits)
    - Withdrawal / transfer alert
    - Low balance alert (pick an amount, for example $50)
 
-Check: in the world, click Copperpot Mine. Its bank feed reads `connected` after the next cycle.
+Check: in the world, click Copperhold. Its bank feed reads `connected` after the next cycle.
 
 ## 4. Optional: git hooks on your MacBook
 Only needed if you also edit this repo on your Mac. Install Git (`xcode-select --install`) if you haven't.
@@ -68,5 +68,5 @@ Hermes is a free AI model from Nous Research. The agents hand it bulk drafting (
 Until this is done, the agents do everything with Claude, as they do now.
 
 ## 7. Phone notifications
-The Routine already has push notifications on. Make sure notifications are allowed for the Claude app on your phone, so you get the morning brief (about 6:00 AM) and urgent alerts.
+The Routine already has push notifications on. Make sure notifications are allowed for the Claude app on your phone, so you get the morning brief (about 11:00 AM) and urgent alerts.
 

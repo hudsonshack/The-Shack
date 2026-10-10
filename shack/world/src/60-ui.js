@@ -19,7 +19,11 @@
 
   const NY = 'America/New_York';
   const D = () => S.data || {};
-  const arr = (v) => (Array.isArray(v) ? v : []);
+  /* State files are written by LLM agents, so lists can hold stray nulls or wrong types:
+   * arr() drops null entries, objs() keeps only records, strs() only non-empty strings. */
+  const arr = (v) => (Array.isArray(v) ? v.filter((x) => x != null) : []);
+  const objs = (v) => arr(v).filter((x) => typeof x === 'object' && !Array.isArray(x));
+  const strs = (v) => arr(v).filter((x) => typeof x === 'string' && x.trim());
   const num = (v) => (typeof v === 'number' && isFinite(v) ? v : null);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -450,7 +454,10 @@
   const fmtWhen = new Intl.DateTimeFormat('en-US', { timeZone: NY, weekday: 'short', hour: 'numeric', minute: '2-digit' });
   const fmtDateTZ = new Intl.DateTimeFormat('en-US', { timeZone: NY, month: 'short', day: 'numeric' });
   const fmtUTCDay = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' });
+  const fmtUTCDayY = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
   const fmtUTCMonth = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' });
+  const fmtUTCShort = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+  const fmtUTCWeekday = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long' });
   const WD = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
   function clockParts(d) {
     const s = fmtClock.format(d); // "2:47 AM"
@@ -477,7 +484,10 @@
   function dayLabel(s) {
     const p = parseDate(s);
     if (!p) return '';
-    return p.dateOnly ? fmtUTCDay.format(new Date(Date.UTC(p.y, p.m - 1, p.d, 12))) : fmtWhen.format(p.date);
+    if (!p.dateOnly) return fmtWhen.format(p.date);
+    // Dates in another year (a savings deadline years out) carry the year, so "Aug 1" can't read as next August.
+    const ny = S.time.ny || S.nyParts(S.now());
+    return (p.y !== ny.year ? fmtUTCDayY : fmtUTCDay).format(new Date(Date.UTC(p.y, p.m - 1, p.d, 12)));
   }
   function dueChip(s) {
     const n = daysUntil(s);
@@ -487,11 +497,23 @@
     const small = n < 0 ? 'LATE' : n === 0 ? 'TODAY' : n === 1 ? 'TMRW' : WD[(new Date(nyToday() + n * 864e5)).getUTCDay()];
     return `<span class="when ${cls}">${big}<b>${small}</b></span>`;
   }
-  function rel(s) {
+  /** Relative time ("3h ago", "in 2d"). opts.past: the event already happened (a last run, an alert,
+   * a commit), so a timestamp slightly ahead of this device's clock reads "just now", and one far
+   * ahead shows its date instead of a nonsense "in 5h". */
+  function rel(s, opts) {
     const p = parseDate(s);
     if (!p) return '';
-    if (p.dateOnly) { const n = daysUntil(s); return n === 0 ? 'today' : n === -1 ? 'yesterday' : n === 1 ? 'tomorrow' : n < 0 ? `${-n}d ago` : `in ${n}d`; }
+    const pastOnly = !!(opts && opts.past);
+    if (p.dateOnly) {
+      const n = daysUntil(s);
+      if (pastOnly && n > 0) return fmtUTCShort.format(new Date(Date.UTC(p.y, p.m - 1, p.d, 12)));
+      return n === 0 ? 'today' : n === -1 ? 'yesterday' : n === 1 ? 'tomorrow' : n < 0 ? `${-n}d ago` : `in ${n}d`;
+    }
     const ms = p.date.getTime() - S.now().getTime(), a = Math.abs(ms), past = ms < 0;
+    if (pastOnly && ms > 0) {
+      if (ms < 10 * 60000) return 'just now';
+      return daysUntil(s) === 0 ? 'today' : fmtDateTZ.format(p.date);
+    }
     const m = Math.round(a / 60000);
     let t;
     if (m < 1) return 'just now';
@@ -537,17 +559,19 @@
   const metricsOf = (agent) => S.metrics(agent) || {};
   const alertsFor = (agent) => {
     const th = threadOf(agent), label = th && th.label;
-    return arr(D().alerts).filter((a) => a.agent === agent || (label && a.agent === label) || (AGENT_INFO[agent] && a.agent === AGENT_INFO[agent].label));
+    return objs(D().alerts).filter((a) => a.agent === agent || (label && a.agent === label) || (AGENT_INFO[agent] && a.agent === AGENT_INFO[agent].label));
   };
-  const tasksFor = (agent) => arr(D().tasks).filter((t) => t.agent === agent);
-  const youTasks = () => arr(D().tasks).filter((t) => t.autonomy === 'human').slice().sort((a, b) => (a.priority || 9) - (b.priority || 9));
-  const goalFor = (agent) => arr(D().goals).find((g) => g.agent === agent);
-  const savingsGoal = (name) => arr(metricsOf('ledger-fi').savings).find((s) => s.name === name) || arr(D().savings_goals).find((s) => s.name === name) || null;
+  const tasksFor = (agent) => objs(D().tasks).filter((t) => t.agent === agent);
+  const youTasks = () => objs(D().tasks).filter((t) => t.autonomy === 'human').sort((a, b) => (a.priority || 9) - (b.priority || 9));
+  const goalFor = (agent) => objs(D().goals).find((g) => g.agent === agent);
+  /** Savings goals: the ledger's live numbers, else the configured goals. */
+  const savingsList = () => (objs(metricsOf('ledger-fi').savings).length ? objs(metricsOf('ledger-fi').savings) : objs(D().savings_goals));
+  const savingsGoal = (name) => objs(metricsOf('ledger-fi').savings).find((s) => s.name === name) || objs(D().savings_goals).find((s) => s.name === name) || null;
 
   /* ====================================================== shared fragments */
   function alertsSection(list, title = 'Alerts') {
     if (!list.length) return '';
-    return sec(title, `<ul class="rows">${list.map((a) => `<li class="row" style="--g:auto 1fr auto">${icon(a.level === 'critical' ? 'alertCrit' : 'alert', 1)}<span class="t wrap">${esc(a.msg)}</span><span class="d">${esc(rel(a.at))}</span></li>`).join('')}</ul>`, { n: list.length });
+    return sec(title, `<ul class="rows">${list.map((a) => `<li class="row" style="--g:auto 1fr auto">${icon(a.level === 'critical' ? 'alertCrit' : 'alert', 1)}<span class="t wrap">${esc(a.msg || 'Alert')}</span><span class="d">${esc(rel(a.at, { past: true }))}</span></li>`).join('')}</ul>`, { n: list.length });
   }
   function taskRows(list, opts = {}) {
     return `<ul class="rows">${list.map((t) => {
@@ -566,7 +590,7 @@
   }
   function threadHeader(agent) {
     const th = threadOf(agent) || {};
-    const lr = th.last_run ? rel(th.last_run) : 'never';
+    const lr = th.last_run ? rel(th.last_run, { past: true }) : 'never';
     const tl = [
       { k: 'Pending', v: esc(th.pending ?? 0), tone: th.pending ? 'accent' : 'mute' },
       { k: 'Blocked', v: esc(th.blocked ?? 0), tone: th.blocked ? 'crit' : 'mute' },
@@ -577,14 +601,14 @@
     return tiles(tl, 4) + `<p class="summary">${esc(summary)}<small>${esc(th.label || AGENT_INFO[agent].label)} \u00b7 ${esc(th.domain || '')}${th.weight != null ? ` \u00b7 weight ${esc(th.weight)}` : ''}</small></p>`;
   }
   function bubblesLine(agent) {
-    const b = arr((metricsOf(agent).world || {}).bubbles);
+    const b = strs((metricsOf(agent).world || {}).bubbles);
     if (!b.length) return '';
     return sec('Overheard in town', `<div class="chips">${b.map((x) => `<span class="quote">\u201c${esc(x)}\u201d</span>`).join('')}</div>`);
   }
 
   /* ========================================================= domain blocks */
   function deadlinesBlock(m, limit) {
-    const list = arr(m.deadlines).slice().sort((a, b) => String(a.due).localeCompare(String(b.due)));
+    const list = objs(m.deadlines).sort((a, b) => String(a.due).localeCompare(String(b.due)));
     const shown = limit ? list.slice(0, limit) : list;
     const body = shown.length
       ? `<ul class="rows">${shown.map((d) => `<li class="row" style="--g:44px 1fr auto">${dueChip(d.due)}<span><span class="t" style="display:block">${esc(d.title)}</span><span class="d">${esc(d.course || '')} \u00b7 ${esc(dayLabel(d.due))}</span></span><span class="tag">${esc(d.type || 'task')}</span></li>`).join('')}</ul>`
@@ -592,14 +616,14 @@
     return sec('Deadlines', body, { n: list.length, icon: 'pin' });
   }
   function studyBlock(m) {
-    const list = arr(m.study_blocks).slice().sort((a, b) => String(a.start).localeCompare(String(b.start)));
+    const list = objs(m.study_blocks).sort((a, b) => String(a.start).localeCompare(String(b.start)));
     const body = list.length
       ? `<ul class="rows">${list.map((b) => { const p = parseDate(b.start); const live = p && !p.dateOnly && p.date < S.now(); return `<li class="row${live ? ' hl' : ''}" style="--g:92px 1fr auto"><span class="num" style="text-align:left;font-size:17px">${esc(dayLabel(b.start))}</span><span class="t">${esc(b.title)}</span><span class="d">${esc(rel(b.start))}</span></li>`; }).join('')}</ul>`
       : emptyBox('No study blocks placed on the calendar yet.');
     return sec('Study blocks', body, { n: list.length });
   }
   function prepBlock(m) {
-    const list = arr(m.prep_sets);
+    const list = objs(m.prep_sets);
     const body = list.length
       ? `<ul class="rows">${list.map((s) => `<li class="row" style="--g:1fr auto"><span><span class="t" style="display:block">${esc(s.title)}</span>${s.file ? `<span class="d">${esc(String(s.file).split('/').pop())}</span>` : ''}</span><span class="num">${esc(s.cards ?? '?')}<span class="d"> cards</span></span></li>`).join('')}</ul>`
       : emptyBox('No Quizlet sets written yet. Abbot Quill writes one before each quiz or test.');
@@ -609,16 +633,25 @@
     const p = /^(\d{4})-(\d{2})$/.exec(m || '');
     return p ? fmtUTCMonth.format(new Date(Date.UTC(+p[1], +p[2] - 1, 15))) : 'This month';
   }
+  /** True once Grit has real bank numbers: the feed is connected or a month has been tallied. */
+  const moneyTracked = (m) => m.bank_feed === 'connected' || !!m.month;
   function moneyTiles(m) {
+    if (!moneyTracked(m)) {
+      // The ledger's 0s are placeholders until the bank alerts are read: show unknowns, not $0.
+      return tiles(['Income', 'Spent', 'Net', 'Paychecks'].map((k) => ({ k, v: '\u2014', tone: 'mute' })), 4)
+        + `<p class="note">Not tracked yet. These fill in once the bank alert emails reach Grit and a cycle has read them.</p>`;
+    }
     const inc = num(m.month_income), sp = num(m.month_spend);
     const net = inc != null && sp != null ? inc - sp : null;
     return tiles([
       { k: 'Income', v: esc(moneyShort(inc)), tone: inc ? 'ok' : 'mute' },
       { k: 'Spent', v: esc(moneyShort(sp)), tone: sp ? '' : 'mute' },
       { k: 'Net', v: esc(net == null ? '\u2014' : (net > 0 ? '+' : '') + moneyShort(net)), tone: net == null || (!inc && !sp) ? 'mute' : net >= 0 ? 'accent' : 'crit' },
-      { k: 'Paychecks', v: esc(m.paychecks_month ?? 0), tone: m.paychecks_month ? '' : 'mute', s: 'this month' },
+      { k: 'Paychecks', v: esc(num(m.paychecks_month) ?? 0), tone: m.paychecks_month ? '' : 'mute', s: 'this month' },
     ], 4);
   }
+  /** The month's money section with the bank-feed pill, used everywhere the tiles appear. */
+  const moneySection = (m) => sec(monthLabel(m.month), `<div class="chips">${feedPill(m.bank_feed)}</div>` + moneyTiles(m));
   function paydayBlock(m) {
     const pd = D().payday || {};
     const lp = m.last_paycheck;
@@ -626,12 +659,12 @@
     const p = S.time.ny || {};
     const daysTo = ((5 - (p.dow ?? 0)) + 7) % 7;
     let html = `<div class="kvline"><span>Paid <b>every ${esc(pd.weekday || 'Friday')}</b></span><span>${esc(pd.method || 'direct deposit')}</span><span>${today ? '<b style="color:var(--ok)">Payday is today</b>' : `next in <b>${daysTo}d</b>`}</span></div>`;
-    if (lp && num(lp.amount) != null) html += `<ul class="rows"><li class="row" style="--g:auto 1fr auto">${icon('coin', 2)}<span><span class="t" style="display:block">Last paycheck</span><span class="d">${esc(dayLabel(lp.date))} \u00b7 ${esc(rel(lp.date))}</span></span><span class="num" style="color:var(--ok)">+${esc(money(lp.amount))}</span></li></ul>`;
+    if (lp && num(lp.amount) != null) html += `<ul class="rows"><li class="row" style="--g:auto 1fr auto">${icon('coin', 2)}<span><span class="t" style="display:block">Last paycheck</span><span class="d">${esc(dayLabel(lp.date))} \u00b7 ${esc(rel(lp.date, { past: true }))}</span></span><span class="num" style="color:var(--ok)">+${esc(money(lp.amount))}</span></li></ul>`;
     else html += emptyBox(m.bank_feed === 'connected' ? 'No paycheck seen yet this month.' : 'No paycheck data yet: the bank alert emails are not connected, so deposits can\u2019t be seen. Your Friday direct deposit still lands either way.', 'coin');
     return sec('Payday', html, { icon: 'coin' });
   }
   function categoriesBlock(m) {
-    const list = arr(m.categories);
+    const list = objs(m.categories);
     const p = S.time.ny || {};
     const monthFrac = p.day ? p.day / new Date(Date.UTC(p.year, p.month, 0)).getUTCDate() : null;
     const body = list.length
@@ -659,23 +692,23 @@
     return `<li class="row" style="--g:1fr auto"><span class="t">${esc(s.name)}</span><span class="num">${esc(money(c, 0))}</span><span class="full"${col ? ` style="--bc:${col}"` : ''}>${bar(r, t ? '' : 'mute', true)}</span><span class="d full">${esc(sub)}</span></li>`;
   }
   function savingsBlock(m) {
-    const list = arr(m.savings).length ? arr(m.savings) : arr(D().savings_goals);
+    const list = objs(m.savings).length ? objs(m.savings) : objs(D().savings_goals);
     const body = list.length ? `<ul class="rows">${list.map(savingsRow).join('')}</ul>` : emptyBox('No savings goals configured.');
     const anyNoTarget = list.some((s) => !num(s.target));
     return sec('Savings goals', body + (anyNoTarget ? `<p class="note">Set a target on the quest board (or tell Claude) and the savings crystals in ${esc(PLACE.mine)} start to grow.</p>` : ''), { n: list.length });
   }
   function anomaliesBlock(m) {
-    const list = arr(m.anomalies);
-    if (!list.length) return sec('Odd charges', emptyBox('Nothing odd spotted.', 'ok'));
+    const list = objs(m.anomalies);
+    if (!list.length) return sec('Odd charges', m.bank_feed === 'connected' ? emptyBox('Nothing odd spotted.', 'ok') : emptyBox('No bank data yet, so odd charges can\u2019t be checked.'));
     return sec('Odd charges', `<ul class="rows">${list.map((a) => `<li class="row" style="--g:auto 1fr auto">${icon('alert', 1)}<span><span class="t" style="display:block">${esc(a.merchant)}</span><span class="d">${esc(a.rule || '')}${a.date ? ' \u00b7 ' + esc(dayLabel(a.date)) : ''}</span></span><span class="num">${esc(money(a.amount))}</span></li>`).join('')}</ul>`, { n: list.length });
   }
   const NETS = { tiktok: 'TT', instagram: 'IG', youtube: 'YT', facebook: 'FB' };
   function clientsBlock(m) {
-    const list = arr(m.clients).length ? arr(m.clients) : [];
-    const cfg = arr(D().clients);
+    const list = objs(m.clients);
+    const cfg = objs(D().clients);
     let body;
     if (list.length) {
-      body = `<ul class="rows">${list.map((c) => `<li class="row" style="--g:1fr auto auto"><span><span class="t" style="display:block">${esc(c.name)}</span><span class="chips" style="margin-top:3px">${arr(c.networks).map((n) => `<span class="net ${esc(n)}">${esc(NETS[n] || n)}</span>`).join('')}</span></span><span class="d" style="text-align:right">${num(c.retainer) != null ? esc(money(c.retainer, 0)) + '/mo' : 'retainer \u2014'}</span><span class="num">${esc(c.posts_next_7d ?? 0)}<span class="d"> posts</span></span></li>`).join('')}</ul>`;
+      body = `<ul class="rows">${list.map((c) => `<li class="row" style="--g:1fr auto auto"><span><span class="t" style="display:block">${esc(c.name)}</span><span class="chips" style="margin-top:3px">${strs(c.networks).map((n) => `<span class="net ${esc(n)}">${esc(NETS[n] || n)}</span>`).join('')}</span></span><span class="d" style="text-align:right">${num(c.retainer) != null ? esc(money(c.retainer, 0)) + '/mo' : 'retainer \u2014'}</span><span class="num">${esc(c.posts_next_7d ?? 0)}<span class="d"> posts</span></span></li>`).join('')}</ul>`;
     } else if (cfg.length) {
       body = `<ul class="rows">${cfg.map((c) => `<li class="row" style="--g:1fr auto"><span><span class="t" style="display:block">${esc(c.name)}</span><span class="d">${esc(c.location || c.note || c.type || '')}</span></span><span class="tag">${num(c.retainer) != null ? esc(money(c.retainer, 0)) + '/mo' : 'no posts yet'}</span></li>`).join('')}</ul><p class="note">Post counts show up after Lumi\u2019s first cycle reads Metricool.</p>`;
     } else body = emptyBox('No clients tracked yet.');
@@ -685,7 +718,7 @@
     const a = m.store_ads;
     if (!a) {
       const ads = (D().store || {}).ads || {};
-      return sec('Fidget store ads', emptyBox(`No ad or short-form numbers yet.${arr(ads.platforms).length ? ' Planned for ' + arr(ads.platforms).join(', ') + '.' : ''}`));
+      return sec('Fidget store ads', emptyBox(`No ad or short-form numbers yet.${strs(ads.platforms).length ? ' Planned for ' + strs(ads.platforms).join(', ') + '.' : ''}`));
     }
     return sec('Fidget store ads', tiles([
       { k: 'Planned', v: esc(a.videos_planned ?? 0), tone: 'accent' },
@@ -694,10 +727,10 @@
     ], 3) + (a.top_video ? `<p class="note"><b>Top video:</b> ${esc(a.top_video)}</p>` : ''));
   }
   function prospectsBlock(m) {
-    const list = arr(m.prospects);
+    const list = objs(m.prospects);
     const body = list.length
       ? `<ul class="rows">${list.map((p) => `<li class="row" style="--g:1fr auto"><span class="t">${esc(p.name)}</span>${pill(p.status || 'new', p.status === 'signed' ? 'ok' : p.status === 'drafted' ? 'info' : 'mute')}</li>`).join('')}</ul><p class="note">Outreach DMs are drafted only. You send them yourself.</p>`
-      : emptyBox('No prospects yet. Lumi drafts outreach to local businesses during night cycles.');
+      : emptyBox('No prospects yet. Lumi drafts outreach to local businesses during the daily cycle.');
     return sec('Prospects', body, { n: list.length });
   }
   function shopTiles(m) {
@@ -706,19 +739,21 @@
     return tiles([
       { k: 'Orders 7d', v: esc(known ? sh.orders_7d : '\u2014'), tone: known ? 'accent' : 'mute' },
       { k: 'Revenue 7d', v: esc(moneyShort(sh.revenue_7d)), tone: num(sh.revenue_7d) != null ? 'ok' : 'mute' },
-      { k: 'Low stock', v: esc(arr(sh.low_stock).length), tone: arr(sh.low_stock).length ? 'crit' : 'mute' },
+      // with no Shopify numbers, an empty low-stock list means "unknown", not "none low"
+      { k: 'Low stock', v: esc(arr(sh.low_stock).length || (known ? 0 : '\u2014')), tone: arr(sh.low_stock).length ? 'crit' : 'mute' },
       { k: 'DM drafts', v: esc(m.dm_drafts ?? 0), tone: m.dm_drafts ? '' : 'mute' },
     ], 4) + (known ? '' : `<p class="note">Shopify numbers appear once the Shopify connector is attached to the Director Routine.</p>`);
   }
   function lowStockBlock(m) {
     const list = arr((m.shopify || {}).low_stock);
+    const known = num((m.shopify || {}).orders_7d) != null;
     const body = list.length
       ? `<ul class="rows">${list.map((x) => `<li class="row" style="--g:auto 1fr">${'<span class="tag red">low</span>'}<span class="t">${esc(typeof x === 'string' ? x : x.name || JSON.stringify(x))}</span></li>`).join('')}</ul>`
-      : (num((m.shopify || {}).orders_7d) != null ? emptyBox('Every crate is stocked.', 'ok') : emptyBox('Stock levels unknown until Shopify is connected.'));
-    return sec('Low stock', body, { n: list.length });
+      : (known ? emptyBox('Every crate is stocked.', 'ok') : emptyBox('Stock levels unknown until Shopify is connected.'));
+    return sec('Low stock', body, { n: (list.length || known) ? list.length : null });
   }
   function oppsBlock(m) {
-    const list = arr(m.opportunities);
+    const list = objs(m.opportunities);
     const body = list.length
       ? `<ul class="rows">${list.map((o) => `<li class="row" style="--g:1fr auto"><span class="t">${esc(o.title)}</span><span class="num">${num(o.margin_pct) != null ? esc(o.margin_pct) + '%' : '\u2014'}<span class="d"> margin</span></span>${num(o.margin_pct) != null ? `<span class="full">${bar(o.margin_pct / 100, o.margin_pct >= 40 ? 'ok' : '', false)}</span>` : ''}</li>`).join('')}</ul>`
       : emptyBox('No arbitrage ideas researched yet.');
@@ -726,29 +761,29 @@
   }
   function storeProjectBlock() {
     const st = D().store || {};
-    const pr = arr(st.projects);
+    const pr = objs(st.projects);
     if (!pr.length) return '';
-    return sec('The store', pr.map((p) => `<div class="kvline"><span><b>${esc(p.name)}</b></span><span>${esc(p.status || '')}</span></div>${arr(p.kpis).length ? `<div class="chips">${arr(p.kpis).map((k) => `<span class="tag">${esc(k)}</span>`).join('')}</div>` : ''}`).join(''));
+    return sec('The store', pr.map((p) => `<div class="kvline"><span><b>${esc(p.name)}</b></span><span>${esc(p.status || '')}</span></div>${strs(p.kpis).length ? `<div class="chips">${strs(p.kpis).map((k) => `<span class="tag">${esc(k)}</span>`).join('')}</div>` : ''}`).join(''));
   }
   function cyclesBlock() {
-    const cyc = arr(D().cycles);
+    const cyc = objs(D().cycles);
     if (!cyc.length) return sec('Cycle schedule', emptyBox('No cycle schedule configured.'));
     const next = S.cycle.next && S.cycle.next.name;
     return sec('Cycle schedule', `<ul class="rows">${cyc.map((c) => `<li class="row${c.name === next ? ' hl' : ''}" style="--g:58px 1fr auto"><span class="num" style="text-align:left">${esc(c.local_time)}</span><span><span class="t" style="display:block;text-transform:capitalize">${esc(c.name)}</span><span class="d">${esc(c.focus || '')}</span></span>${c.name === next ? `<span class="pill brass plain" data-live="countdown">${esc(countdownText())}</span>` : ''}</li>`).join('')}</ul>`, { icon: 'bell' });
   }
   function runsBlock(limit = 6) {
-    const runs = arr(D().runs).slice(0, limit);
+    const runs = objs(D().runs).slice(0, limit);
     const body = runs.length
       ? `<ul class="rows">${runs.map((r) => `<li class="row" style="--g:1fr auto auto"><span><span class="t" style="display:block;text-transform:capitalize">${esc(r.cycle)}</span><span class="d">${esc(dayLabel(r.started))}${r.notes ? ' \u00b7 ' + esc(r.notes) : ''}</span></span><span class="num">${esc(r.tasks_run ?? 0)}<span class="d"> tasks</span></span>${pill(r.result || '?', r.result === 'ok' ? 'ok' : r.result === 'partial' ? 'warn' : r.result === 'failed' ? 'crit' : 'mute')}</li>`).join('')}</ul>`
       : emptyBox('No cycles have run yet. The first one rings the bell at the next scheduled time.', 'bell');
-    return sec('Recent runs', body, { n: arr(D().runs).length });
+    return sec('Recent runs', body, { n: objs(D().runs).length });
   }
   function commitsBlock(limit = 8) {
-    const list = arr(D().commits).slice(0, limit);
+    const all = objs(D().commits), list = all.slice(0, limit);
     const body = list.length
-      ? `<ul class="rows">${list.map((c) => `<li class="row" style="--g:auto 1fr auto"><span class="tag">${esc(String(c.sha || '').slice(0, 7))}</span><span class="t">${esc(c.subject)}</span><span class="d">${esc(rel(c.at))}</span></li>`).join('')}</ul>`
+      ? `<ul class="rows">${list.map((c) => `<li class="row" style="--g:auto 1fr auto"><span class="tag">${esc(String(c.sha || '').slice(0, 7))}</span><span class="t wrap">${esc(c.subject || '(no subject)')}</span><span class="d">${esc(rel(c.at, { past: true }))}</span></li>`).join('')}</ul>`
       : emptyBox('No letters at the mail post yet.');
-    return sec('Recent commits', body, { n: arr(D().commits).length });
+    return sec('Recent commits', body, { n: all.length });
   }
 
   /* ============================================================ panel bodies */
@@ -761,7 +796,7 @@
   BODY['ledger-fi'] = () => {
     const m = metricsOf('ledger-fi');
     return [threadHeader('ledger-fi'), alertsSection(alertsFor('ledger-fi')),
-      sec(monthLabel(m.month), `<div class="chips">${feedPill(m.bank_feed)}</div>` + moneyTiles(m)),
+      moneySection(m),
       paydayBlock(m), categoriesBlock(m), savingsBlock(m), anomaliesBlock(m), tasksSection('ledger-fi'), bubblesLine('ledger-fi')];
   };
   BODY['social-ops'] = () => {
@@ -770,8 +805,8 @@
       sec('This week', tiles([
         { k: 'Posts 7d', v: esc(m.scheduled_posts_7d ?? 0), tone: m.scheduled_posts_7d ? 'accent' : 'mute', s: 'scheduled' },
         { k: 'Drafts', v: esc(m.drafts_pending ?? 0), tone: m.drafts_pending ? '' : 'mute', s: 'to review' },
-        { k: 'Clients', v: esc(arr(m.clients).length || arr(D().clients).length) },
-        { k: 'Prospects', v: esc(arr(m.prospects).length), tone: arr(m.prospects).length ? '' : 'mute' },
+        { k: 'Clients', v: esc(objs(m.clients).length || objs(D().clients).length) },
+        { k: 'Prospects', v: esc(objs(m.prospects).length), tone: objs(m.prospects).length ? '' : 'mute' },
       ], 4)),
       clientsBlock(m), storeAdsBlock(m), prospectsBlock(m), tasksSection('social-ops'), bubblesLine('social-ops')];
   };
@@ -784,9 +819,10 @@
     const rows = S.BIOMES.map((b) => {
       const ag = S.agentForBiome(b), th = threadOf(ag) || {}, inf = AGENT_INFO[ag];
       const lvl = (S.status[b] || {}).level || 'idle';
-      return `<li class="row click" data-act="biome" data-arg="${b}" style="--g:34px 1fr auto;--c:${THEME[b].color}" title="Open ${esc(THEME[b].name)}"><img class="mini-portrait" src="${portraitURL(whoFor(ag), b)}" alt=""><span><span class="t" style="display:block"><b>${esc(inf.name)}</b> <span class="d">· ${esc(THEME[b].name)}</span></span><span class="d" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(th.summary || 'Waiting for the first cycle.')}</span></span><span style="display:grid;justify-items:end;gap:4px">${phasePill(th.phase)}<span class="d tnum" title="pending · blocked · done">${esc(th.pending ?? 0)} · ${esc(th.blocked ?? 0)} · ${esc(th.done ?? 0)} ${icon(WEATHER[lvl].icon, 2)}</span></span></li>`;
+      const summary = th.summary || 'Waiting for the first cycle.';
+      return `<li class="row click" data-act="biome" data-arg="${b}" style="--g:34px 1fr auto;--c:${THEME[b].color}" title="Open ${esc(THEME[b].name)}"><img class="mini-portrait" src="${portraitURL(whoFor(ag), b)}" alt=""><span style="min-width:0"><span class="t wrap" style="display:block"><b>${esc(inf.name)}</b> <span class="d" style="white-space:nowrap">· ${esc(THEME[b].name)}</span></span><span class="d" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere" title="${esc(summary)}">${esc(summary)}</span></span><span style="display:grid;justify-items:end;gap:4px">${phasePill(th.phase)}<span class="d tnum" title="pending · blocked · done">${esc(th.pending ?? 0)} · ${esc(th.blocked ?? 0)} · ${esc(th.done ?? 0)} ${icon(WEATHER[lvl].icon, 2)}</span></span></li>`;
     }).join('');
-    const al = arr(D().alerts);
+    const al = objs(D().alerts);
     const au = D().autonomy || {};
     const auKeys = Object.keys(au).filter((k) => k !== 'profile');
     const yt = youTasks(), ytDone = yt.filter((t) => checks[t.id] && checks[t.id].done).length;
@@ -811,16 +847,23 @@
   /** Hermes is the free drafting model; S.data.hermes = {enabled, model, available, reason, checked, use_for}. */
   function hermesState() {
     const h = D().hermes;
-    if (!h || typeof h !== 'object') return { on: false, text: 'Hermes off · needs key', tip: 'No Hermes status in the data yet.' };
+    const unchecked = { on: false, text: 'Hermes · not checked yet', tip: 'Hermes has not been checked yet. The next cycle checks it.' };
+    if (!h || typeof h !== 'object') return unchecked;
     if (h.enabled === false) return { on: false, text: 'Hermes off', tip: 'Hermes is switched off in config.json.' };
-    if (h.available === true) return { on: true, text: `Hermes online · ${shortModel(h.model)}`, tip: `Hermes is online (${h.model || 'auto'})${h.checked ? ', checked ' + rel(h.checked) : ''}.` };
-    return { on: false, text: 'Hermes off · needs key', tip: h.reason ? String(h.reason) : 'Hermes has not been checked yet. The next cycle checks it.' };
+    const when = h.checked ? ', checked ' + rel(h.checked, { past: true }) : '';
+    if (h.available === true) return { on: true, text: `Hermes online · ${shortModel(h.model)}`, tip: `Hermes is online (${h.model || 'auto'})${when}.` };
+    // Only a real check result can say it's off; "needs key" only when that check blamed the API key.
+    if (h.available === false) {
+      const why = typeof h.reason === 'string' ? h.reason.trim().replace(/[.!]+$/, '') : '';
+      return { on: false, text: /api[ _-]?key|OPENROUTER/i.test(why) ? 'Hermes off · needs key' : 'Hermes off', tip: `${why || 'The last check found Hermes unavailable'}${when}.` };
+    }
+    return unchecked;
   }
   const HERMES_LINE = 'Hermes is a free AI model that drafts bulk work, and Claude checks it. Turn it on in SETUP step 6.';
   function hermesBlock() {
     const h = D().hermes || {}, st = hermesState();
-    const uses = arr(h.use_for);
-    return sec('Hermes, the drafting helper', `<div class="chips">${pill(st.text, st.on ? 'ok' : 'mute')}</div><p class="note">${esc(HERMES_LINE)}</p>${!st.on && h.reason ? `<p class="note"><b>Why it’s off:</b> ${esc(h.reason)}</p>` : ''}${uses.length ? `<div class="chips">${uses.map((u) => `<span class="tag">${esc(u)}</span>`).join('')}</div>` : ''}`, { icon: 'wing' });
+    const uses = strs(h.use_for);
+    return sec('Hermes, the drafting helper', `<div class="chips">${pill(st.text, st.on ? 'ok' : 'mute')}</div><p class="note">${esc(HERMES_LINE)}</p>${h.available === false && typeof h.reason === 'string' && h.reason ? `<p class="note"><b>Why it’s off:</b> ${esc(h.reason)}</p>` : ''}${uses.length ? `<div class="chips">${uses.map((u) => `<span class="tag">${esc(u)}</span>`).join('')}</div>` : ''}`, { icon: 'wing' });
   }
 
   /* ================================================================ weather */
@@ -848,14 +891,6 @@
     if (c.ceremony) return c.ceremony.name === 'manual' ? 'replaying' : 'in progress';
     if (!c.next) return 'no schedule';
     return dur(c.next.at.getTime() - S.now().getTime());
-  }
-  /** "8:45 PM" for a cycle's "20:45" local time. */
-  function cycleClock(name) {
-    const c = arr(D().cycles).find((x) => x.name === name);
-    const m = c && /^(\d{1,2}):(\d{2})/.exec(c.local_time || '');
-    if (!m) return null;
-    const h = +m[1];
-    return `${((h + 11) % 12) + 1}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
   }
 
   /* =============================================================== DOM refs */
@@ -899,12 +934,27 @@
     panel.addEventListener('click', onAction);
     panel.addEventListener('submit', onSubmit);
     panel.addEventListener('change', onChange);
+    for (const type of ['mousedown', 'mouseup', 'click', 'dblclick', 'contextmenu']) window.addEventListener(type, ghostGuard, true);
+    window.addEventListener('pointerdown', (e) => { if (ghostUntil && overUi(e.target)) ghostUntil = 0; }, true);
     lastHud = {};
     hudUpdate();
     measureHud();
     window.addEventListener('resize', measureHud);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureHud, () => {});
   }
+  /* Touch "ghost" taps: the core opens a panel on pointerup, and the browser's follow-up mouse and
+   * click events for that same tap then land on whatever the new sheet put under the finger (a row
+   * that opens another island, the close button, a checkbox). For a moment after a canvas open,
+   * drop mouse/click events on the panel and HUD unless a fresh pointerdown landed there first. */
+  let ghostUntil = 0;
+  const overUi = (t) => !!(t && t.closest && t.closest('#panel, #hud'));
+  function ghostGuard(e) {
+    if (!ghostUntil) return;
+    if (performance.now() > ghostUntil) { ghostUntil = 0; return; }
+    if (!overUi(e.target)) return;
+    e.preventDefault(); e.stopPropagation();
+  }
+
   /** On narrow desktops the drawer starts below the status card. */
   let hudH = 0;
   function measureHud() {
@@ -946,7 +996,7 @@
       } else { setHTML('hud-cyc-k', 'Next cycle'); setText('hud-cyc-v', 'none set'); }
     }
     // alerts (with the weather over the islands as its icon)
-    const al = arr(D().alerts);
+    const al = objs(D().alerts);
     const lvl = al.some((a) => a.level === 'critical') ? 'critical' : al.length ? 'warn' : 'zero';
     const wx = townWeather();
     const ab = $('hud-alerts');
@@ -956,7 +1006,8 @@
         lastHud.alerts = key;
         ab.className = 'hud-chip ' + lvl;
         ab.innerHTML = `${icon(wx.icon, 2)}<span><b>${al.length}</b> ${al.length === 1 ? 'alert' : 'alerts'}</span>`;
-        ab.title = (al.length ? al.map((a) => `${a.agent}: ${a.msg}`).join('\n') : 'No alerts') + `\n\nWeather: ${wx.word}\n${wx.tip}`;
+        const lines = al.filter((a) => a.msg).map((a) => (a.agent ? a.agent + ': ' : '') + a.msg);
+        ab.title = (lines.length ? lines.join('\n') : al.length ? plural(al.length, 'alert') : 'No alerts') + `\n\nWeather: ${wx.word}\n${wx.tip}`;
         ab.setAttribute('aria-label', `${al.length} ${al.length === 1 ? 'alert' : 'alerts'}. ${wx.word}. Open Mayor Tock’s overview.`);
       }
     }
@@ -1079,12 +1130,44 @@
     const z = clamp(Math.min(f.w / ((r.w + 4) * T), f.h / ((bottom - top + 1) * T)), Math.min(1, S.cam.fitZ), 4);
     glideTo((r.x + r.w / 2) * T, ((top + bottom) / 2 + 0.5) * T, z);
   }
-  /** If a world point is hidden under the drawer or the HUD (or off screen), glide it into the free area. */
+  /** Screen rect of a UI element (relative to the canvas), or null when it isn't showing. */
+  function uiRect(el) {
+    if (!el || el.hidden || el.offsetParent === null || getComputedStyle(el).visibility === 'hidden') return null;
+    const r = el.getBoundingClientRect(), c = S.canvas.getBoundingClientRect();
+    return { l: r.left - c.left, t: r.top - c.top, r: r.right - c.left, b: r.bottom - c.top };
+  }
+  /** True if screen point (sx, sy) is on screen and at least m px clear of the drawer, the status
+   * card and the dock. Only their real boxes count: the status card covers the middle of the top
+   * edge, not the whole strip under it. */
+  function inClear(sx, sy, m) {
+    const vw = S.canvas.clientWidth, vh = S.canvas.clientHeight;
+    if (sx < m || sy < m || sx > vw - m || sy > vh - m) return false;
+    const covers = [uiRect(panel), hud && uiRect(hud.querySelector('.hud-top')), hud && uiRect(hud.querySelector('.hud-dock'))];
+    return !covers.some((r) => r && sx > r.l - m && sx < r.r + m && sy > r.t - m && sy < r.b + m);
+  }
+  /** If a world point is hidden under the drawer or the HUD (or off screen), glide the smallest
+   * distance that brings it into the free area, zooming in only as far as the camera clamp needs
+   * (and never past about 2.5x): it may end up off-centre, which beats a jump to 4x. */
   function revealPoint(wx, wy) {
-    if (!S.cam || typeof S.worldToScreen !== 'function') return;
-    const f = freeRect(), p = S.worldToScreen(wx, wy), m = 40;
-    if (p.x >= f.x + m && p.x <= f.x + f.w - m && p.y >= f.y + m && p.y <= f.y + f.h - m) return;
-    glideTo(wx, wy, S.cam.z);
+    if (!S.cam || typeof S.worldToScreen !== 'function' || typeof S.panTo !== 'function' || !S.canvas) return;
+    const m = 28, p = S.worldToScreen(wx, wy);
+    if (inClear(p.x, p.y, m)) return;
+    const vw = S.canvas.clientWidth, vh = S.canvas.clientHeight, f = freeRect();
+    const z0 = S.cam.z, zMax = Math.max(z0, Math.min(S.cam.maxZ || 4, 2.5));
+    // mirror the core's camera clamp so we know where a pan really ends up
+    const camAt = (c, z, view, size) => { const h = view / z / 2; return h * 2 >= size ? size / 2 : clamp(c, h, size - h); };
+    const ix = Math.min(f.w / 2, Math.max(m + 8, f.w * 0.2)), iy = Math.min(f.h / 2, Math.max(m + 8, f.h * 0.2));
+    let best = null;
+    for (let z = z0, i = 0; i < 16; i++) {
+      const sx = (wx - S.cam.x) * z + vw / 2, sy = (wy - S.cam.y) * z + vh / 2;
+      const tx = clamp(sx, f.x + ix, f.x + f.w - ix), ty = clamp(sy, f.y + iy, f.y + f.h - iy);
+      const cx = camAt(wx - (tx - vw / 2) / z, z, vw, S.W), cy = camAt(wy - (ty - vh / 2) / z, z, vh, S.H);
+      best = { cx, cy, z };
+      if (inClear((wx - cx) * z + vw / 2, (wy - cy) * z + vh / 2, m) || z >= zMax) break;
+      z = Math.min(zMax, z * 1.12);
+    }
+    S.cam.follow = null;
+    S.panTo(best.cx, best.cy, best.z);
   }
 
   function openBiome(biome) {
@@ -1139,14 +1222,17 @@
     const inf = AGENT_INFO[agent], th = threadOf(agent) || {}, biome = inf.biome;
     current = { kind: 'villager', key: agent };
     const m = metricsOf(agent);
-    const bub = arr((m.world || {}).bubbles);
+    const bub = strs((m.world || {}).bubbles);
     const al = alertsFor(agent);
     const ceremony = S.cycle && S.cycle.ceremony;
     const tr = transportOf(biome);
-    let doing = 'Going about the day on ' + THEME[biome].name + '.';
-    if (ceremony) doing = 'At the Clockspire fountain for the cycle ceremony.';
-    else if (S.time.isNight && S.time.ny && (S.time.ny.hour >= 23 || S.time.ny.hour < 5)) doing = 'Asleep. Zzz.';
-    else if (agent === 'hub') doing = 'Minding the clock tower and the quest board.';
+    // What they're doing right now comes from the villager on screen (its own sleep schedule), not a guess from the clock.
+    const vv = S.villagers && S.villagers.byId && S.villagers.byId[agent];
+    let doing = agent === 'hub' ? 'Minding the clock tower and the quest board.' : `Out and about on ${THEME[biome].name}.`;
+    if (ceremony) doing = `At the ${PLACE.square} fountain for the cycle ceremony.`;
+    else if (vv && vv.sleeping) doing = 'Asleep. Zzz.';
+    else if (vv && vv.riding && tr) doing = `On the ${tr.short}, travelling between ${THEME[biome].name} and ${PLACE.square}.`;
+    else if (vv && agent !== 'hub' && vv.island === 'square') doing = `Visiting ${PLACE.square}.`;
     show(biome, head({ who: whoFor(agent), theme: biome, kicker: `${agent === 'hub' ? 'Director' : th.label || inf.label} · ${THEME[biome].name}`, title: inf.name, sub: inf.role }) +
       `<!--NAV--><div class="panel-body">
         <div class="chips">${phasePill(th.phase || (agent === 'hub' ? 'idle' : 'uninit'))}<span class="pill plain mute">${esc(doing)}</span>${tr ? `<span class="pill plain mute">commutes by ${esc(tr.short)}</span>` : ''}</div>
@@ -1163,11 +1249,11 @@
     const m = metricsOf(agent);
     if (agent === 'hub') return cyclesBlock();
     if (agent === 'academic-core') return deadlinesBlock(m, 3);
-    if (agent === 'ledger-fi') return sec(monthLabel(m.month), moneyTiles(m));
+    if (agent === 'ledger-fi') return moneySection(m);
     if (agent === 'social-ops') return sec('This week', tiles([
       { k: 'Posts 7d', v: esc(m.scheduled_posts_7d ?? 0), tone: m.scheduled_posts_7d ? 'accent' : 'mute' },
       { k: 'Drafts', v: esc(m.drafts_pending ?? 0), tone: m.drafts_pending ? '' : 'mute' },
-      { k: 'Prospects', v: esc(arr(m.prospects).length), tone: arr(m.prospects).length ? '' : 'mute' }], 3));
+      { k: 'Prospects', v: esc(objs(m.prospects).length), tone: objs(m.prospects).length ? '' : 'mute' }], 3));
     if (agent === 'hustle-engine') return sec('Shopify', shopTiles(m));
     return '';
   }
@@ -1186,10 +1272,10 @@
   const LM = {};
   LM.temple = () => { const m = metricsOf('academic-core'); return { who: 'academic-core', sub: 'Glowing scrolls on the board are your upcoming deadlines.', body: [deadlinesBlock(m), prepBlock(m)] }; };
   LM.studyGarden = () => { const m = metricsOf('academic-core'); return { who: 'academic-core', sub: 'Raked sand, bonsai and the week’s study blocks.', body: [studyBlock(m), prepBlock(m)] }; };
-  LM.mineEntrance = () => { const m = metricsOf('ledger-fi'); return { who: 'ledger-fi', sub: 'Where spending gets dug through, category by category.', body: [sec(monthLabel(m.month), moneyTiles(m)), categoriesBlock(m), anomaliesBlock(m)] }; };
+  LM.mineEntrance = () => { const m = metricsOf('ledger-fi'); return { who: 'ledger-fi', sub: 'Where spending gets dug through, category by category.', body: [moneySection(m), categoriesBlock(m), anomaliesBlock(m)] }; };
   LM.vault = () => {
     const m = metricsOf('ledger-fi');
-    return { who: 'ledger-fi', sub: 'Coin piles grow with this month’s income.', body: [sec(monthLabel(m.month), `<div class="chips">${feedPill(m.bank_feed)}</div>` + moneyTiles(m)), paydayBlock(m), savingsBlock(m)] };
+    return { who: 'ledger-fi', sub: 'Coin piles grow with this month’s income.', body: [moneySection(m), paydayBlock(m), savingsBlock(m)] };
   };
   /** A savings crystal: goal, current, target and % with a crystal-coloured bar. */
   function crystalLandmark(name, color, sub) {
@@ -1211,7 +1297,7 @@
     const body = [card];
     if (pace) body.push(`<p class="note">${esc(pace)}</p>`);
     if (!t) body.push(`<div class="empty">${icon('crystal', 2)}<span>No target yet, so the crystal stays a small seed. <b>Set a target on the quest board</b> (for example “Set the ${esc(name)} target to $___ by ___”) and it starts to grow.</span></div><div class="btnrow"><button class="btn primary" data-act="quest" data-arg="Set the ${esc(name)} savings target to $">${icon('board', 2)} Set a target on the quest board</button></div>`);
-    body.push(sec('All savings goals', `<ul class="rows">${(arr(metricsOf('ledger-fi').savings).length ? arr(metricsOf('ledger-fi').savings) : arr(D().savings_goals)).map((g) => savingsRow(g).replace('<li class="row"', `<li class="row${g.name === name ? ' hl' : ''}"`)).join('')}</ul>`));
+    body.push(sec('All savings goals', `<ul class="rows">${savingsList().map((g) => savingsRow(g).replace('<li class="row"', `<li class="row${g.name === name ? ' hl' : ''}"`)).join('')}</ul>`));
     return { who: 'ledger-fi', sub, body };
   }
   LM.crystalInvest = () => crystalLandmark('Invest', CRYSTAL_COL.Invest, 'A gold crystal that grows with the Invest goal.');
@@ -1221,7 +1307,7 @@
     `<div class="btnrow"><button class="btn primary" data-act="replay">${icon('bell', 2)} Ring the bell (replay cycle)</button></div>`, cyclesBlock(), runsBlock(8)] });
   LM.mailPost = () => ({ who: 'hub', sub: 'Every change to the system arrives here as a letter.', body: [commitsBlock(10)] });
   LM.fountain = () => {
-    const goals = arr(D().goals);
+    const goals = objs(D().goals);
     return { who: 'hub', sub: 'Everyone gathers here at each cycle to hand in their reports.', body: [
       `<p class="summary">${S.cycle.next ? `Next gathering: <b>${esc(S.cycle.next.name)}</b> in <span data-live="countdown">${esc(countdownText())}</span>.` : 'No cycles scheduled.'}<small>Coins in the fountain are your goals.</small></p>`,
       sec('Wishes (goals)', goals.length ? `<ul class="rows">${goals.map((g) => { const ag = g.agent, b = AGENT_INFO[ag] ? AGENT_INFO[ag].biome : 'square'; return `<li class="row click" data-act="biome" data-arg="${b}" style="--g:auto 1fr auto"><span class="tag">${esc(g.id)}</span><span class="t wrap">${esc(g.title)}</span><span class="d">${esc(AGENT_INFO[ag] ? AGENT_INFO[ag].name : '')}</span></li>`; }).join('')}</ul>` : emptyBox('No goals set.'), { n: goals.length }),
@@ -1230,20 +1316,23 @@
   };
   LM.broadcastTower = () => {
     const m = metricsOf('social-ops');
-    const nets = {};
-    for (const c of arr(m.clients)) for (const n of arr(c.networks)) nets[n] = (nets[n] || 0) + 1;
+    const nets = {}, read = objs(m.clients);
+    for (const c of read) for (const n of strs(c.networks)) nets[n] = (nets[n] || 0) + 1;
+    const nn = Object.keys(nets).length, th = threadOf('social-ops') || {};
+    // Networks come from Lumi's Metricool read; until then the count is unknown, not zero.
     return { who: 'social-ops', sub: 'Every scheduled post goes out from here (as a firework).', body: [
-      tiles([{ k: 'Posts 7d', v: esc(m.scheduled_posts_7d ?? 0), tone: m.scheduled_posts_7d ? 'accent' : 'mute' }, { k: 'Drafts', v: esc(m.drafts_pending ?? 0), tone: m.drafts_pending ? '' : 'mute' }, { k: 'Networks', v: esc(Object.keys(nets).length), tone: Object.keys(nets).length ? '' : 'mute' }], 3),
-      Object.keys(nets).length ? sec('On air', `<div class="chips">${Object.keys(nets).map((n) => `<span class="net ${esc(n)}">${esc(n)}</span>`).join('')}</div>`) : emptyBox('Off air. Nothing scheduled yet.'),
+      tiles([{ k: 'Posts 7d', v: esc(m.scheduled_posts_7d ?? 0), tone: m.scheduled_posts_7d ? 'accent' : 'mute' }, { k: 'Drafts', v: esc(m.drafts_pending ?? 0), tone: m.drafts_pending ? '' : 'mute' }, { k: 'Networks', v: esc(read.length ? nn : '\u2014'), tone: nn ? '' : 'mute' }], 3),
+      nn ? sec('On air', `<div class="chips">${Object.keys(nets).map((n) => `<span class="net ${esc(n)}">${esc(n)}</span>`).join('')}</div>`)
+        : emptyBox(!read.length && !th.last_run ? 'No post data yet. Lumi reads Metricool on her first cycle.' : 'Off air. Nothing scheduled yet.'),
       clientsBlock(m)] };
   };
-  function clientBy(re) { return arr(metricsOf('social-ops').clients).find((c) => re.test(c.name || '')) || arr(D().clients).find((c) => re.test(c.name || '')) || null; }
+  function clientBy(re) { return objs(metricsOf('social-ops').clients).find((c) => re.test(c.name || '')) || objs(D().clients).find((c) => re.test(c.name || '')) || null; }
   LM.angiesStall = () => {
     const c = clientBy(/angie/i);
-    const t5 = arr(D().tasks).find((t) => /angie/i.test(t.title || '') && t.autonomy === 'human');
+    const t5 = objs(D().tasks).find((t) => /angie/i.test(t.title || '') && t.autonomy === 'human');
     const body = c ? [
-      tiles([{ k: 'Posts 7d', v: esc(c.posts_next_7d ?? 0), tone: c.posts_next_7d ? 'accent' : 'mute' }, { k: 'Retainer', v: esc(num(c.retainer) != null ? money(c.retainer, 0) : '—'), tone: num(c.retainer) != null ? 'ok' : 'mute', s: 'per month' }, { k: 'Networks', v: esc(arr(c.networks).length || '—'), tone: arr(c.networks).length ? '' : 'mute' }], 3),
-      arr(c.networks).length ? `<div class="chips">${arr(c.networks).map((n) => `<span class="net ${esc(n)}">${esc(n)}</span>`).join('')}</div>` : '',
+      tiles([{ k: 'Posts 7d', v: esc(c.posts_next_7d ?? 0), tone: c.posts_next_7d ? 'accent' : 'mute' }, { k: 'Retainer', v: esc(num(c.retainer) != null ? money(c.retainer, 0) : '—'), tone: num(c.retainer) != null ? 'ok' : 'mute', s: 'per month' }, { k: 'Networks', v: esc(strs(c.networks).length || '—'), tone: strs(c.networks).length ? '' : 'mute' }], 3),
+      strs(c.networks).length ? `<div class="chips">${strs(c.networks).map((n) => `<span class="net ${esc(n)}">${esc(n)}</span>`).join('')}</div>` : '',
     ] : [emptyBox("Angie's isn't in the client list yet.")];
     if (t5) body.push(sec('To do', taskRows([t5])));
     return { who: 'social-ops', sub: "Lumi's stall for Angie's, your social media client. Busier when more posts are queued.", body };
@@ -1254,7 +1343,7 @@
     return { who: 'social-ops', sub: 'Promo stall for Fidgetly, your fidget store: TikTok, Reels and Shorts.', body: [
       `<div class="chips">${live ? pill('ads running', 'ok') : pill('on hold', 'mute')}</div>`,
       storeAdsBlock(m),
-      c && arr(c.networks).length ? sec('Channels', `<div class="chips">${arr(c.networks).map((n) => `<span class="net ${esc(n)}">${esc(n)}</span>`).join('')}</div><p class="note">${esc(c.posts_next_7d ?? 0)} posts planned for the next 7 days.</p>`) : ''] };
+      c && strs(c.networks).length ? sec('Channels', `<div class="chips">${strs(c.networks).map((n) => `<span class="net ${esc(n)}">${esc(n)}</span>`).join('')}</div><p class="note">${esc(c.posts_next_7d ?? 0)} posts planned for the next 7 days.</p>`) : ''] };
   };
   LM.billboard = () => {
     const m = metricsOf('social-ops'), a = m.store_ads || {};
@@ -1279,15 +1368,16 @@
     const w = metricsOf(agent).world || {};
     const del = num(w.deliveries) || 0;
     const last = th.last_run;
-    const cargo = arr(w.bubbles);
+    const cargo = strs(w.bubbles);
+    const ago = last ? rel(last, { past: true }) : '';
     const lead = last
-      ? `${inf.name}’s last delivery reached ${PLACE.square} ${rel(last)} (${dayLabel(last)}).`
+      ? `${inf.name}’s last delivery reached ${PLACE.square} ${/^[A-Z]/.test(ago) ? 'on ' + ago : ago} (${dayLabel(last)}).`
       : `No deliveries yet. ${inf.name} makes the first run after the first cycle.`;
     return sec('Delivery run', `<div class="route">${icon(tr.icon, 2)}<b>${esc(PLACE[biome])}</b><span class="arrow" aria-hidden="true"></span><b>${esc(PLACE.square)}</b></div>
       <p class="summary">${esc(lead)}<small>Travels by ${esc(tr.name)}.</small></p>
       ${tiles([
         { k: 'Parcels', v: esc(del), tone: del ? 'accent' : 'mute', s: 'this cycle' },
-        { k: 'Last delivery', v: esc(last ? rel(last) : 'never'), sm: true, tone: last ? '' : 'mute' },
+        { k: 'Last delivery', v: esc(last ? ago : 'never'), sm: true, tone: last ? '' : 'mute' },
         { k: 'Status', v: esc((PHASE[th.phase] || [th.phase || 'not started'])[0]), sm: true, tone: th.phase && th.phase !== 'uninit' ? '' : 'mute' },
       ], 3)}
       ${cargo.length ? `<div class="chips">${cargo.map((x) => `<span class="quote">“${esc(x)}”</span>`).join('')}</div>` : ''}`, { icon: tr.icon });
@@ -1306,11 +1396,15 @@
   LM.dock = LM.skyDock; // old name
 
   function openLandmark(key, h) {
-    if (key === 'questBoard') return openQuestBoard();
-    if (key === 'chronicle') return openChronicle();
     const lm = S.landmarks[key] || { island: (h && (h.island || h.biome)) || 'square', label: (h && h.label) || key, x: 40, y: 23 };
-    const fn = LM[key];
     const region = lm.island || lm.region || (h && h.biome) || 'square';
+    // Keep what was actually clicked in view: a landmark can have several hotspots (the temple's scroll board).
+    const hr = h && (typeof h.rect === 'function' ? h.rect() : h);
+    const hit = hr && num(hr.x) != null && num(hr.y) != null && num(hr.w) != null && num(hr.h) != null;
+    const fx = hit ? hr.x + hr.w / 2 : (lm.x + 0.5) * S.TILE, fy = hit ? hr.y + hr.h / 2 : (lm.y + 0.5) * S.TILE + S.bob(region);
+    if (key === 'questBoard') { openQuestBoard(null, fy); revealPoint(fx, fy); return; }
+    if (key === 'chronicle') { openChronicle(null, fy); revealPoint(fx, fy); return; }
+    const fn = LM[key];
     const theme = THEME[region] ? region : 'square';
     const info = fn ? fn() : { who: whoFor((h && h.agent) || THEME[theme].agent || 'hub'), sub: '', body: [emptyBox('A quiet corner of the islands.')] };
     current = { kind: 'landmark', key };
@@ -1319,8 +1413,8 @@
     const goto = navB && navB !== 'square' ? `<div class="btnrow"><button class="btn" data-act="biome" data-arg="${navB}">${icon('fit', 2)} ${esc(AGENT_INFO[ownerAgent].name)}’s full report</button></div>` : '';
     const title = String(lm.label || key).replace(/\s*\(.*\)$/, '');
     show(theme, head({ who: info.who || 'folk', theme, kicker: `${THEME[theme].name}${ownerAgent ? ' · ' + AGENT_INFO[ownerAgent].name : ''}`, title, sub: info.sub }) +
-      `<!--NAV--><div class="panel-body">${info.body.join('')}${goto}</div>`, sideFor(lm.x), navB || theme, (lm.y + 0.5) * S.TILE);
-    revealPoint((lm.x + 0.5) * S.TILE, (lm.y + 0.5) * S.TILE + S.bob(region));
+      `<!--NAV--><div class="panel-body">${info.body.join('')}${goto}</div>`, sideFor(fx / S.TILE), navB || theme, fy);
+    revealPoint(fx, fy);
   }
 
   /* ============================================================ Chronicle
@@ -1372,7 +1466,7 @@
   }
   function chronEntry(e) {
     const pl = periodLabel(e.period);
-    const hl = arr(e.highlights), nu = arr(e.needs_you);
+    const hl = strs(e.highlights), nu = strs(e.needs_you);
     return `<article class="chron">
       <h3 class="chron-h">${esc(pl.title)}${pl.tag ? `<small>${esc(pl.tag)}</small>` : ''}</h3>
       ${e.chronicle ? `<p class="chron-lead">${esc(e.chronicle)}<cite>Mayor Tock, ${esc(PLACE.square)}</cite></p>` : `<p class="note">No chronicle text for this entry.</p>`}
@@ -1381,16 +1475,53 @@
       ${e.stats ? sec('By the numbers', statsTable(e.stats)) : ''}
     </article>`;
   }
+  /** Cycle times of day from the config, earliest first: [{h, m}]. */
+  function cycleTimes() {
+    return objs(D().cycles).map((c) => /^(\d{1,2}):(\d{2})/.exec(String(c.local_time || ''))).filter(Boolean)
+      .map((x) => ({ h: +x[1], m: +x[2] })).filter((c) => c.h < 24 && c.m < 60).sort((a, b) => a.h * 60 + a.m - (b.h * 60 + b.m));
+  }
+  const clock12 = (c) => `${((c.h + 11) % 12) + 1}:${String(c.m).padStart(2, '0')} ${c.h < 12 ? 'AM' : 'PM'}`;
+  /** The next cycle (New York time) on a day matching ok(dow, dayOfMonth), within ~6 weeks:
+   * {c, days, date, running}. A cycle that began less than 45 minutes ago counts as still running. */
+  function nextCycleOn(ok) {
+    const list = cycleTimes();
+    if (!list.length) return null;
+    const p = S.time.ny || S.nyParts(S.now()), nowMin = p.hour * 60 + p.minute, base = Date.UTC(p.year, p.month - 1, p.day);
+    for (let d = 0; d <= 42; d++) {
+      const date = new Date(base + d * 864e5);
+      if (!ok(date.getUTCDay(), date.getUTCDate())) continue;
+      for (const c of list) {
+        const at = c.h * 60 + c.m;
+        if (d > 0 || at > nowMin) return { c, days: d, date, running: false };
+        if (nowMin - at < 45) return { c, days: 0, date, running: true };
+      }
+    }
+    return null;
+  }
+  /** "today’s 11:00 AM cycle", "tomorrow’s …", "Sunday’s …", "the … cycle on Nov 1". */
+  function cyclePhrase(n) {
+    const t = clock12(n.c);
+    if (n.days === 0) return `${n.c.h >= 17 ? 'tonight' : 'today'}’s ${t} cycle`;
+    if (n.days === 1) return `tomorrow’s ${t} cycle`;
+    if (n.days < 7) return `${fmtUTCWeekday.format(n.date)}’s ${t} cycle`;
+    if (n.days === 7) return `next ${fmtUTCWeekday.format(n.date)}’s ${t} cycle`;
+    return `the ${t} cycle on ${fmtUTCShort.format(n.date)}`;
+  }
+  /** Honest "when does the first entry appear" line, from the real schedule and clock. */
   function chronEmpty(tab) {
-    const at = cycleClock('night') || '8:45 PM';
-    if (tab === 'weekly') return `The first weekly entry appears after Sunday’s ${at} cycle.`;
-    if (tab === 'monthly') return `The first monthly entry appears after the ${at} cycle on the last day of the month.`;
-    return `The first daily entry appears after tonight’s ${at} cycle.`;
+    const what = tab === 'weekly' ? 'weekly' : tab === 'monthly' ? 'monthly' : 'daily';
+    // daily: every cycle writes one; weekly: Sunday's cycle; monthly: the first cycle of the month
+    const n = nextCycleOn(what === 'weekly' ? (dow) => dow === 0 : what === 'monthly' ? (dow, dom) => dom === 1 : () => true);
+    if (!n) return `No cycle schedule is set, so no ${what} entries yet.`;
+    if (n.running) return `The first ${what} entry appears when ${cyclePhrase(n)} finishes.`;
+    return `The first ${what} entry appears after ${cyclePhrase(n)}.`;
   }
   function chronicleList(tab) {
     return arr((D().recaps || {})[tab]).filter((e) => e && typeof e === 'object').slice().sort((a, b) => String(b.period || '').localeCompare(String(a.period || '')));
   }
-  function openChronicle(tab) {
+  /** wy: world y of the lectern when opened from the map (picks the phone sheet's edge); switching tabs keeps the edge. */
+  function openChronicle(tab, wy) {
+    if (wy == null && current && current.kind === 'chronicle' && panel && !panel.hidden && panel.classList.contains('top')) wy = S.H;
     if (tab && CHRON_TABS.some(([k]) => k === tab)) chronTab = tab;
     current = { kind: 'chronicle', key: chronTab };
     const list = chronicleList(chronTab);
@@ -1401,7 +1532,7 @@
     const body = list.length ? list.slice(0, 31).map(chronEntry).join('') : emptyBox(chronEmpty(chronTab), 'scroll');
     const lm = S.landmarks.chronicle || { x: 43 };
     show('square', head({ who: 'hub', theme: 'square', kicker: `${PLACE.square} · Mayor Tock`, title: 'The Chronicle', sub: 'Mayor Tock’s recaps of what every island actually did.' }) +
-      `${tabs}<div class="panel-body" role="tabpanel">${body}</div>`, sideFor(lm.x), null);
+      `${tabs}<div class="panel-body" role="tabpanel">${body}</div>`, sideFor(lm.x), null, wy);
   }
   /** One-paragraph teaser of the newest daily entry, for Mayor Tock's overview. */
   function chronicleTeaser() {
@@ -1449,7 +1580,7 @@
     return 'Read-only preview: posting quests and ticking tasks work when this page is opened on claude.ai.';
   }
 
-  function openQuestBoard(prefill) {
+  function openQuestBoard(prefill, wy) {
     current = { kind: 'quest', key: 'questBoard' };
     const live = dbState === 'ready' && canWrite;
     show('square', head({ who: 'hub', theme: 'square', kicker: `${PLACE.square} \u00b7 Mayor Tock`, title: 'Quest Board', sub: 'Pin a request. Mayor Tock sends it to the right island and replies at the next cycle.' }) +
@@ -1465,7 +1596,7 @@
         </form>
         <section class="sec"><h3 class="sec-h"><span>Quests</span><span class="n" id="qcount"></span></h3><div id="qlist"></div></section>
         <section class="sec"><h3 class="sec-h"><span>Your tasks</span><span class="n" id="tcount"></span></h3><div id="tprog"></div><div id="tlist" class="rows"></div></section>
-      </div>`, 'right', 'square');
+      </div>`, 'right', 'square', wy);
     renderQuests(); renderChecks();
     const ta = $('qtext');
     if (prefill && typeof prefill === 'string' && ta && !ta.disabled) { ta.value = prefill; ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
@@ -1491,7 +1622,7 @@
     box.innerHTML = `<div class="rows" style="gap:4px">${quests.map((q) => {
       const st = QSTATUS[q.status] || [q.status || 'new', 'mute'];
       const b = THEME[q.biome] ? q.biome : null;
-      return `<article class="quest" style="--qc:${b ? THEME[b].color : 'var(--brass)'}"><div class="qh">${pill(st[0], st[1])}<span class="tag">${esc(b ? NAV_SHORT[b] : 'auto')}</span>${q.task_id ? `<span class="tag">${esc(q.task_id)}</span>` : ''}<span class="when-rel">${esc(rel(q.created))}</span></div><div class="qt">${esc(q.text)}</div>${q.reply ? `<div class="letter"><b>Mayor Tock replies</b>${esc(q.reply)}</div>` : (q.status === 'new' || !q.status ? '<div class="note">Mayor Tock reads this at the next cycle.</div>' : '')}</article>`;
+      return `<article class="quest" style="--qc:${b ? THEME[b].color : 'var(--brass)'}"><div class="qh">${pill(st[0], st[1])}<span class="tag">${esc(b ? NAV_SHORT[b] : 'auto')}</span>${q.task_id ? `<span class="tag">${esc(q.task_id)}</span>` : ''}<span class="when-rel">${esc(rel(q.created, { past: true }))}</span></div><div class="qt">${esc(q.text)}</div>${q.reply ? `<div class="letter"><b>Mayor Tock replies</b>${esc(q.reply)}</div>` : (q.status === 'new' || !q.status ? '<div class="note">Mayor Tock reads this at the next cycle.</div>' : '')}</article>`;
     }).join('')}</div>`;
   }
   function renderChecks() {
@@ -1629,6 +1760,7 @@
   /* ================================================================ open() */
   function open(h) {
     if (!h) return;
+    ghostUntil = performance.now() + 450; // the core calls this on pointerup: swallow that tap's ghost click
     try {
       if (h.kind === 'landmark' && h.landmark) return openLandmark(h.landmark, h);
       if (h.kind === 'villager') return openVillager(h);
@@ -1647,9 +1779,22 @@
 
   S.ui = { open, hudUpdate, close, questBoard: openQuestBoard, chronicle: openChronicle, island: openBiome, landmark: openLandmark, toast: showToast };
 
+  /** The core places the hover tooltip right of / below the cursor; flip it when that would overflow the view. */
+  function keepTooltipOnScreen(e) {
+    const tip = document.getElementById('tooltip');
+    if (!tip || tip.hidden || e.buttons) return; // the core only moves it on a plain hover
+    const vw = S.canvas.clientWidth, vh = S.canvas.clientHeight, w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = e.offsetX + 14, y = e.offsetY + 12;
+    if (x + w <= vw - 4 && y + h <= vh - 4) return;
+    if (x + w > vw - 4) x = Math.max(4, e.offsetX - 10 - w);
+    if (y + h > vh - 4) y = Math.max(4, e.offsetY - 8 - h);
+    tip.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+  }
+
   S.on('boot', () => {
     buildHud();
     window.addEventListener('keydown', onKey);
+    if (S.canvas) S.canvas.addEventListener('pointermove', keepTooltipOnScreen);
     initDb();
   });
   S.on('ceremony:start', () => { lastHud = Object.assign({}, lastHud, { 'hud-cyc-k': null }); });
