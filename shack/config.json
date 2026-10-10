@@ -1,0 +1,334 @@
+{
+  "version": 1,
+  "system": "The Shack",
+  "timezone": "America/New_York",
+  "wake_time": "06:30",
+  "home_area": "Cold Spring, NY",
+  "state_branch": "ops/state",
+  "cycles": [
+    {
+      "name": "daily",
+      "local_time": "11:00",
+      "focus": "once a day: morning brief, deadlines and study blocks, new assignments, money, Angie's posts, store pulse, recaps"
+    }
+  ],
+  "priority_weights": {
+    "academic-core": 40,
+    "social-ops": 35,
+    "ledger-fi": 20,
+    "hustle-engine": 5
+  },
+  "autonomy": {
+    "profile": "aggressive",
+    "read": "auto",
+    "draft": "auto",
+    "write-repo": "auto",
+    "calendar-write": "auto",
+    "social-schedule": "auto",
+    "dm-send": "never",
+    "external-send": "ask",
+    "spend": "never"
+  },
+  "alerts": {
+    "channels": [
+      "dashboard"
+    ]
+  },
+  "agents": {
+    "academic-core": {
+      "label": "Academic-Core",
+      "domain": "School",
+      "connectors": [
+        "Gmail",
+        "Google Calendar",
+        "Google Drive"
+      ],
+      "sources": {
+        "classroom": "Google Classroom notification emails auto-forwarded from the school account to personal Gmail",
+        "gmail_query": "(classroom.google.com OR \"Google Classroom\") newer_than:14d"
+      },
+      "level": "high school",
+      "study_calendar": "primary",
+      "spaced_repetition_days": [
+        1,
+        3,
+        7,
+        14,
+        30
+      ],
+      "max_block_minutes": 45,
+      "no_study_before": "15:30",
+      "no_study_after": "22:00",
+      "prep_formats": [
+        "quizlet-flashcards",
+        "quizlet-practice-test"
+      ],
+      "character": "Abbot Quill",
+      "biome": "monastery",
+      "look": "a calm monk scholar with a lantern and a scroll satchel"
+    },
+    "ledger-fi": {
+      "label": "Ledger-Fi",
+      "domain": "Finances",
+      "connectors": [
+        "Gmail"
+      ],
+      "sources": {
+        "bank": "M&T Bank checking, transaction and deposit alert emails",
+        "gmail_query": "(from:mtb.com OR \"M&T\") (alert OR purchase OR deposit OR transaction) newer_than:3d"
+      },
+      "income": [
+        {
+          "name": "Hudson House Inn (busboy)",
+          "type": "paycheck, direct deposit every Friday, plus cash tips"
+        },
+        {
+          "name": "Social media management",
+          "type": "client retainers"
+        }
+      ],
+      "budget_framework": "custom",
+      "categories": [
+        "Food & drink",
+        "Gas & transport",
+        "Car insurance",
+        "Shopping",
+        "Subscriptions",
+        "Entertainment",
+        "Hustle expenses",
+        "Other"
+      ],
+      "savings_goals": [
+        {
+          "name": "Invest",
+          "target": null,
+          "deadline": null
+        },
+        {
+          "name": "Car insurance",
+          "target": null,
+          "deadline": null
+        },
+        {
+          "name": "Apartment fund",
+          "target": null,
+          "deadline": null
+        }
+      ],
+      "anomaly_rules": {
+        "category_median_multiple": 2.0,
+        "new_merchant_over": 25,
+        "duplicate_window_hours": 72,
+        "category_budget_pct_before_day_20": 80,
+        "flag_subscription_price_increase": true
+      },
+      "character": "Grit Copperpot",
+      "biome": "mine",
+      "look": "a stout dwarf miner with a braided beard, pickaxe and ledger",
+      "payday": {
+        "weekday": "Friday",
+        "method": "direct deposit to M&T checking"
+      }
+    },
+    "social-ops": {
+      "label": "Social-Ops",
+      "domain": "Social media clients",
+      "connectors": [
+        "Metricool"
+      ],
+      "tasks": [
+        "draft-and-schedule-posts",
+        "analytics-reports",
+        "client-invoicing",
+        "prospecting"
+      ],
+      "outreach_channel": "instagram-facebook-dm-drafts",
+      "report_cadence": "weekly (Sunday cycle)",
+      "character": "Lumi",
+      "biome": "market",
+      "look": "a night-market creator with a glowing jacket and a camera",
+      "clients": [
+        {
+          "name": "Angie's",
+          "location": "Cold Spring, NY",
+          "type": "client",
+          "retainer": null,
+          "status": "free trial (sample package)",
+          "owner": "he",
+          "accounts": [
+            "Instagram",
+            "TikTok",
+            "Facebook"
+          ],
+          "trial": "Shoot on Thursday 2026-10-08; deliver a finished sample package. See agents/social-ops/ANGIES_TRIAL.md",
+          "drive": {
+            "raw": "135ES_1QnMHb6aOjy9dECt3H4fTubD3Jz",
+            "finished": "1vEAQUTHR-L5PeIcie_kZGFGNz65ZpZkc"
+          },
+          "auto_edit": "on: new files in the Raw folder are edited into a finished package on the next cycle",
+          "autopost": {
+            "enabled": true,
+            "owner_approved": false,
+            "note": "Lumi schedules finished posts automatically only after Hudson confirms the owner approved (quest board or chat)."
+          }
+        },
+        {
+          "name": "Fidgetly (own Shopify store)",
+          "type": "in-house",
+          "note": "store is set up but has no advertising yet"
+        }
+      ],
+      "store_ads": {
+        "platforms": [
+          "TikTok",
+          "Instagram Reels",
+          "YouTube Shorts"
+        ],
+        "goal": "first ads and organic short-form content for the fidget store",
+        "status": "paused"
+      },
+      "focus": "Angie's first. Fidgetly promotion is paused until Hudson decides to restart it."
+    },
+    "hustle-engine": {
+      "label": "Hustle-Engine",
+      "domain": "Side hustles",
+      "connectors": [
+        "Shopify"
+      ],
+      "projects": [
+        {
+          "name": "Fidgetly (Shopify)",
+          "sells": "fidget toys",
+          "status": "site live, no ads yet",
+          "kpis": [
+            "orders/week",
+            "revenue/week",
+            "conversion rate",
+            "low-stock SKUs"
+          ],
+          "domain": "fidgetlystore.myshopify.com"
+        }
+      ],
+      "research_loops": [
+        "product and price arbitrage for the Shopify catalog"
+      ],
+      "outreach_channel": "instagram-facebook-dm-drafts",
+      "character": "Cap'n Twirl",
+      "biome": "port",
+      "look": "a harbor merchant captain who is never without a fidget spinner",
+      "mode": "maintenance",
+      "maintenance": "Fidgetly is on hold. Each daily cycle: store pulse (orders, unfulfilled orders, stock problems). No research loops, no ad prep, no DMs."
+    }
+  },
+  "player": {
+    "name": "Hudson"
+  },
+  "world": {
+    "artifact_url": "https://claude.ai/artifact/EF5JTPV7CQnZa2jJZ6aFnH",
+    "sound": "off by default, chiptune + sfx toggle",
+    "quest_board": true,
+    "style": "floating islands in starry space",
+    "islands": {
+      "square": {
+        "name": "Clockspire",
+        "agent": "hub",
+        "character": "Mayor Tock",
+        "transport": null,
+        "theme": "cobblestone town square, clock tower, fountain, quest board, mail post, the Chronicle lectern, four docks"
+      },
+      "monastery": {
+        "name": "Lantern Peak",
+        "agent": "academic-core",
+        "character": "Abbot Quill",
+        "transport": "paper kites and gliders",
+        "theme": "cliffside temple, stone stairs, lanterns, study garden, scroll board"
+      },
+      "market": {
+        "name": "Neon Hollow",
+        "agent": "social-ops",
+        "character": "Lumi",
+        "transport": "neon blimp",
+        "theme": "night market, Angie's stall, Fidgetly promo stall, billboard, broadcast tower, fireworks"
+      },
+      "port": {
+        "name": "Spindrift Harbor",
+        "agent": "hustle-engine",
+        "character": "Cap'n Twirl",
+        "transport": "sky-ship",
+        "theme": "sky-ship docks, crates of fidgets, bazaar stalls, a river that pours off the island edge"
+      },
+      "mine": {
+        "name": "Copperhold",
+        "agent": "ledger-fi",
+        "character": "Grit Copperpot",
+        "transport": "minecart on a sky-rail",
+        "theme": "dwarven gold mine, vault, three savings crystals (Invest gold, Car insurance blue, Apartment violet)"
+      }
+    },
+    "real_places": "none in the world (fictional look); real data still drives everything",
+    "ui": {
+      "font": "clean (Atkinson Hyperlegible) with pixel titles",
+      "character_scale": 1.5,
+      "name_tags": "always on",
+      "movement": "bounce + footstep dust"
+    },
+    "space": {
+      "background": "starry space",
+      "extras": [
+        "shooting stars",
+        "ringed planet",
+        "moon in the real phase"
+      ],
+      "islands": [
+        "gentle bobbing",
+        "waterfalls off edges",
+        "hanging roots and crystals"
+      ]
+    }
+  },
+  "hermes": {
+    "enabled": true,
+    "provider": "openrouter",
+    "model": "auto",
+    "key_env": "OPENROUTER_API_KEY",
+    "use_for": [
+      "Quizlet flashcard drafts",
+      "caption and hashtag variations",
+      "DM and email first drafts",
+      "video hook ideas"
+    ],
+    "rule": "Hermes drafts, Claude reviews and decides. Never send Hermes private data (bank details, grades, client contacts)."
+  },
+  "notifications": {
+    "channel": "push",
+    "morning_brief": {
+      "cycle": "daily",
+      "about": "~11:00 AM, at the end of the daily cycle"
+    },
+    "urgent": [
+      "deadline within 24 hours",
+      "critical spending alert",
+      "client problem",
+      "unfulfilled order over 48 hours",
+      "cycle failure"
+    ]
+  },
+  "recaps": {
+    "daily": "every daily cycle (covers the last 24 hours)",
+    "weekly": "Sunday cycle (covers the last 7 days)",
+    "monthly": "first cycle of each month (covers the previous month)",
+    "style": "Mayor Tock's chronicle + stats",
+    "keep": {
+      "daily": 30,
+      "weekly": 12,
+      "monthly": 12
+    }
+  },
+  "email_accounts": {
+    "connected": "thehudsonshack@gmail.com",
+    "forwarded_in": [
+      "buzzbanditt@gmail.com (personal; forwards all new mail to thehudsonshack, M&T Bank alerts arrive this way)"
+    ],
+    "rule": "Mail addressed to buzzbanditt@gmail.com is Hudson's own mail. Read it only for the agents' jobs; never reply or send from it without approval."
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "agent": "ledger-fi",
+  "phase": "uninit",
+  "last_run": null,
+  "next_run": null,
+  "summary": "Waiting for first cycle.",
+  "alerts": [],
+  "metrics": {
+    "month": null,
+    "month_income": 0,
+    "month_spend": 0,
+    "categories": [],
+    "savings": [
+      {
+        "name": "Invest",
+        "current": 0,
+        "target": null,
+        "deadline": null
+      },
+      {
+        "name": "Car insurance",
+        "current": 0,
+        "target": null,
+        "deadline": null
+      },
+      {
+        "name": "Apartment fund",
+        "current": 0,
+        "target": null,
+        "deadline": null
+      }
+    ],
+    "anomalies": [],
+    "bank_feed": "not connected",
+    "world": {
+      "bubbles": [],
+      "deliveries": 0,
+      "growth": 0
+    }
+  }
+}

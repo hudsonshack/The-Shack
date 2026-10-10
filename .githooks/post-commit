@@ -1,0 +1,11 @@
+#!/bin/sh
+# The Shack: push state commits automatically.
+# Only on the state branch. Set SHACK_AUTOPUSH=0 to turn it off for one commit.
+[ "${SHACK_AUTOPUSH:-1}" = "0" ] && exit 0
+ROOT=$(git rev-parse --show-toplevel) || exit 0
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+STATE_BRANCH=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['state_branch'])" "$ROOT/shack/config.json" 2>/dev/null || echo "ops/state")
+[ "$BRANCH" = "$STATE_BRANCH" ] || exit 0
+mkdir -p "$ROOT/shack/private"
+( git push -q -u origin "$BRANCH" >>"$ROOT/shack/private/autopush.log" 2>&1 & )
+echo "post-commit: pushing $BRANCH in the background (log: shack/private/autopush.log)"
