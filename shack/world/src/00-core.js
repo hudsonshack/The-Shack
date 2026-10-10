@@ -553,7 +553,7 @@
   /* --------------------------------------------------------------- camera
    * cam.x/cam.y: world px at the centre of the view. cam.z: screen px per native px.
    */
-  const cam = (S.cam = { x: W / 2, y: H / 2, z: 1, minZ: 0.5, maxZ: 5, fitZ: 1, follow: null });
+  const cam = (S.cam = { x: W / 2, y: H / 2, z: 1, minZ: 0.5, maxZ: 5, fitZ: 1, follow: null, pad: 0 }); // pad: world px the view may run past the edge
   let viewW = 0, viewH = 0, dpr = 1;
   function resize() {
     dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -567,9 +567,9 @@
   }
   function clampCam() {
     cam.z = Math.max(cam.minZ, Math.min(cam.maxZ, cam.z));
-    const hw = viewW / cam.z / 2, hh = viewH / cam.z / 2;
-    cam.x = hw * 2 >= W ? W / 2 : Math.max(hw, Math.min(W - hw, cam.x));
-    cam.y = hh * 2 >= H ? H / 2 : Math.max(hh, Math.min(H - hh, cam.y));
+    const hw = viewW / cam.z / 2, hh = viewH / cam.z / 2, p = Math.max(0, cam.pad || 0);
+    cam.x = hw * 2 >= W + 2 * p ? W / 2 : Math.max(hw - p, Math.min(W - hw + p, cam.x));
+    cam.y = hh * 2 >= H + 2 * p ? H / 2 : Math.max(hh - p, Math.min(H - hh + p, cam.y));
   }
   S.screenToWorld = (sx, sy) => ({ x: cam.x + (sx - viewW / 2) / cam.z, y: cam.y + (sy - viewH / 2) / cam.z });
   S.worldToScreen = (wx, wy) => ({ x: (wx - cam.x) * cam.z + viewW / 2, y: (wy - cam.y) * cam.z + viewH / 2 });
