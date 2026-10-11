@@ -867,7 +867,7 @@
     if (fa > 0.01 && !geo(w.id).noArt) {
       const g = geo(w.id);
       ctx.globalCompositeOperation = 'screen';
-      ctx.globalAlpha = fa * (0.24 + 0.2 * sky.n);
+      ctx.globalAlpha = fa * (0.11 + 0.09 * sky.n); // a soft flicker, not a white-out
       ctx.drawImage(g.flashC, g.box.x, g.box.y);
       ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = 1;
@@ -892,7 +892,7 @@
       const op = 1 - SEE_DIM * (c.see || 0);   // see-through while a villager is under it
       ctx.globalAlpha = Math.min(1, c.k * 1.15) * op;
       ctx.drawImage(tinted(c.cur, sky), c.x, c.y);
-      if (fa > 0.01 && c === w.clouds[1]) { ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = fa * 0.55 * op; ctx.drawImage(flashSprite(c.cur), c.x, c.y); ctx.globalCompositeOperation = 'source-over'; }
+      if (fa > 0.01 && c === w.clouds[1]) { ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = fa * 0.35 * op; ctx.drawImage(flashSprite(c.cur), c.x, c.y); ctx.globalCompositeOperation = 'source-over'; }
     }
     ctx.globalAlpha = 1;
   }

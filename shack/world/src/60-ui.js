@@ -1114,7 +1114,10 @@
     if (!S.cam || typeof S.panTo !== 'function' || !S.canvas) return;
     const f = freeRect(), vw = S.canvas.clientWidth, vh = S.canvas.clientHeight;
     const dx = vw / 2 - (f.x + f.w / 2), dy = vh / 2 - (f.y + f.h / 2);
-    const need = (d, c, size, view) => (d > 0 ? (view / 2 + d) / Math.max(1, size - c) : d < 0 ? (view / 2 - d) / Math.max(1, c) : 0);
+    // On a phone a sheet covers half the screen: let the view run past the world edge (into
+    // open space) instead of zooming in hard to keep the island in the uncovered half.
+    const pad = S.cam.pad = isPhone() && panel && !panel.hidden ? 240 : 0;
+    const need = (d, c, size, view) => (d > 0 ? (view / 2 + d) / Math.max(1, size + pad - c) : d < 0 ? (view / 2 - d) / Math.max(1, c + pad) : 0);
     z = clamp(Math.max(z, need(dx, wx, S.W, vw), need(dy, wy, S.H, vh)), S.cam.minZ || 0.3, Math.min(4, S.cam.maxZ || 4));
     S.cam.follow = null;
     S.panTo(wx + dx / z, wy + dy / z, z);
@@ -1698,6 +1701,7 @@
     if (!panel) return;
     panel.hidden = true; panel.innerHTML = ''; current = null;
     setDrawerSide(null);
+    if (S.cam && S.cam.pad) { S.cam.pad = 0; if (S.panTo) S.panTo(S.cam.x, S.cam.y, S.cam.z); } // ease back inside the world
     if (following && S.cam && S.cam.follow === following) S.cam.follow = null;
     following = null; clearTimeout(followTimer);
   }
