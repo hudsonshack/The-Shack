@@ -37,7 +37,7 @@ The Routine prompt already checked out `ops/state`. If validation fails at this 
 
 Note the cycle name: pick the entry in `config.json → cycles` whose `local_time` is closest to the current time in `America/New_York`.
 
-Check Hermes once: `python3 scripts/hermes.py status`, and write the result to `state/hermes.json` as `{"available": ..., "model": ..., "reason": ..., "checked": "<ISO time>"}`. Tell each spoke in its work order whether Hermes is available.
+Check Hermes once: `python3 scripts/hermes.py status`, and write the result to `state/hermes.json` as `{"available": ..., "model": ..., "reason": ..., "checked": "<ISO time>"}` (rewrite `checked` every cycle, even when nothing changed). Tell each spoke in its work order whether Hermes is available.
 
 ### 1. Quest board intake
 The world page has a quest board where the user posts requests and checks off their own tasks. They live in the page's database (the `db` capability of the artifact at `config.json → world.artifact_url`). If the `ArtifactData` tool is available (load it with `ToolSearch` → `select:ArtifactData`):
@@ -71,6 +71,12 @@ Read `state/tasks.json` and every `agents/*/state.json`. For each spoke, write a
 - the priority weight; when a spoke's work is optional this cycle, scale effort by weight
 
 Add new tasks for new goals or follow-ups using the next free `T-####` id. Every task needs `verify.check`.
+
+**Keep Hudson's to-do list honest** (his open `human` tasks show in the Today panel every morning):
+- Re-check every open setup task against what actually works this cycle and close it with evidence when it's done (for example, connectors that are clearly attached because their tools answered).
+- Merge duplicates into one task (keep the lower id, close the other as `done` with `notes: "merged into T-####"`).
+- Every recap `needs_you` line must match an open `human` task. If it doesn't, add the task (for example "Upload Angie's shoot clips to the Raw folder in Google Drive", with a `link` to the folder).
+- Titles follow "Writing for Hudson" in `shack/agents/REPORT_FORMAT.md`: plain English, no IDs, file names or setup-step references. Rewrite old titles that break the rule.
 
 ### 3. VERIFY (before execution)
 For each work order, confirm:
@@ -122,7 +128,7 @@ Recaps live in `state/recaps.json` (lists `daily`, `weekly`, `monthly`, newest f
  "highlights": ["<short real wins>"], "needs_you": ["<short asks>"]}
 ```
 - **Daily** (every cycle, `period` = today's date): what each spoke actually did in the last 24 hours, from the run log, task changes and spoke metrics. Use real numbers only. A quiet day gets a short, honest entry.
-- **Weekly** (Sunday's cycle, `period` like `2026-W41`): roll up the week's daily entries and show trends.
+- **Weekly** (Sunday's daily cycle, `period` like `2026-W41`): roll up the week's daily entries and show trends. If last week's entry is missing, backfill it.
 - **Monthly** (the first cycle of each month, `period` = the previous month, like `2026-10`): roll up that month's weeks, with progress on each goal (savings %, deadlines met, posts, orders).
 The world's Chronicle lectern on Clockspire shows these.
 
@@ -169,4 +175,4 @@ End with a compact cycle report and no filler:
 followed by any question that only the user can answer.
 
 ## Weekly
-On the `night` cycle every Sunday, also open a pull request from `ops/state` to `main` titled `ops: weekly state merge (<date>)` if none is open, so `main` keeps a clean history of state.
+On the daily cycle every Sunday, also open a pull request from `ops/state` to `main` titled `ops: weekly state merge (<date>)` if none is open, so `main` keeps a clean history of state.

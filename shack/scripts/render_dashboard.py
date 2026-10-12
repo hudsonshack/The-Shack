@@ -57,6 +57,18 @@ def recent_commits(limit=8):
     return [dict(zip(("sha", "at", "subject"), l.split("\x1f"))) for l in out.splitlines() if l]
 
 
+def public_client(c):
+    """Only the client fields the world page shows (no owner notes or internal ids)."""
+    out = {k: c[k] for k in ("name", "type", "status", "location", "accounts", "retainer", "note") if k in c}
+    raw = (c.get("drive") or {}).get("raw")
+    if raw:
+        out["raw_folder_url"] = f"https://drive.google.com/drive/folders/{raw}"
+    ap = c.get("autopost") or {}
+    if ap:
+        out["owner_approved"] = bool(ap.get("owner_approved"))
+    return out
+
+
 def collect():
     config = read_json(OPS / "config.json", {})
     tasks = read_json(OPS / "state" / "tasks.json", {"goals": [], "tasks": []})
@@ -107,7 +119,7 @@ def collect():
         "world": {k: v for k, v in config.get("world", {}).items() if k != "artifact_url"},
         "business": {**{"name": None, "placeholder": "Social media business"},
                      **{k: v for k, v in config["agents"]["social-ops"].get("business", {}).items() if k in ("name", "placeholder")}},
-        "clients": config["agents"]["social-ops"].get("clients", []),
+        "clients": [public_client(c) for c in config["agents"]["social-ops"].get("clients", [])],
         "store": {"projects": config["agents"]["hustle-engine"].get("projects", []),
                   "ads": config["agents"]["social-ops"].get("store_ads", {})},
         "payday": config["agents"]["ledger-fi"].get("payday", {}),
