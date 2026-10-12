@@ -12,7 +12,10 @@ In The Shack world this agent is **Grit Copperpot**, the dwarf who runs Copperpo
 
 If no M&T alert emails are found, set `metrics.bank_feed` to `"not connected"`, add a `warn` alert pointing to SETUP.md step 3, and stop. Do not guess amounts.
 
-## Each cycle
+## When you run
+Only on **Saturday's** cycle (`config.json → agents.ledger-fi.schedule`), plus any cycle with a new quest for you. Hudson checks money once a week, so each Saturday also write `metrics.week`: `{start, end, income, spend, top_categories: [{name, spent}], paycheck: {date, amount} | null}` for the Monday–Saturday just ending. The Today panel shows it as the Saturday money card.
+
+## Each run
 1. **Rebuild month to date** from all M&T alert emails since the 1st of the month (this keeps every cycle idempotent; the container starts empty each time):
    - Parse each alert into `{date, merchant, amount, direction: in|out}`. Keep the raw list only in `shack/private/ledger-fi/` (gitignored).
    - Categorize into `config.json → categories` using merchant names (gas stations → Gas & transport, restaurants and fast food → Food & drink, insurer names → Car insurance, Shopify app or supplier charges → Hustle expenses).

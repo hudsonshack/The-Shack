@@ -8,8 +8,8 @@
   "cycles": [
     {
       "name": "daily",
-      "local_time": "11:00",
-      "focus": "once a day: morning brief, deadlines and study blocks, new assignments, money, Angie's posts, store pulse, recaps"
+      "local_time": "06:15",
+      "focus": "once a day before school: J.A.R.V.I.S.'s morning brief, calendar events from Gmail, deadlines and study blocks, the social media business, personal to-dos, store pulse, recaps; money only on Saturdays"
     }
   ],
   "priority_weights": {
@@ -128,6 +128,12 @@
       "payday": {
         "weekday": "Friday",
         "method": "direct deposit to M&T checking"
+      },
+      "schedule": {
+        "days": [
+          "Saturday"
+        ],
+        "note": "Hudson checks money once a week. Grit runs only on Saturday's cycle (plus any new quest for him); Today shows the money card only on Saturdays."
       }
     },
     "social-ops": {
@@ -226,7 +232,9 @@
     }
   },
   "player": {
-    "name": "Hudson"
+    "name": "Hudson",
+    "surname": "Shackelford",
+    "address": "Mr. Shackelford"
   },
   "world": {
     "artifact_url": "https://claude.ai/artifact/EF5JTPV7CQnZa2jJZ6aFnH",
@@ -237,7 +245,7 @@
       "square": {
         "name": "Clockspire",
         "agent": "hub",
-        "character": "Mayor Tock",
+        "character": "J.A.R.V.I.S.",
         "transport": null,
         "theme": "cobblestone town square, clock tower, fountain, quest board, mail post, the Chronicle lectern, four docks"
       },
@@ -308,7 +316,7 @@
     "channel": "push",
     "morning_brief": {
       "cycle": "daily",
-      "about": "~11:00 AM, at the end of the daily cycle"
+      "about": "~6:15 AM, at the end of the daily cycle, before school"
     },
     "urgent": [
       "deadline within 24 hours",
@@ -322,7 +330,7 @@
     "daily": "every daily cycle (covers the last 24 hours)",
     "weekly": "Sunday cycle (covers the last 7 days)",
     "monthly": "first cycle of each month (covers the previous month)",
-    "style": "Mayor Tock's chronicle + stats",
+    "style": "J.A.R.V.I.S.'s chronicle + stats",
     "keep": {
       "daily": 30,
       "weekly": 12,
