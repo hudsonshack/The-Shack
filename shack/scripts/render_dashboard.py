@@ -105,6 +105,8 @@ def collect():
         "player": config.get("player", {}),
         "home_area": config.get("home_area"),
         "world": {k: v for k, v in config.get("world", {}).items() if k != "artifact_url"},
+        "business": {**{"name": None, "placeholder": "Social media business"},
+                     **{k: v for k, v in config["agents"]["social-ops"].get("business", {}).items() if k in ("name", "placeholder")}},
         "clients": config["agents"]["social-ops"].get("clients", []),
         "store": {"projects": config["agents"]["hustle-engine"].get("projects", []),
                   "ads": config["agents"]["social-ops"].get("store_ads", {})},

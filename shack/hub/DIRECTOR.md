@@ -45,6 +45,7 @@ The world page has a quest board where the user posts requests and checks off th
   - `update` the quest: `{status: "accepted", task_id: "T-####", reply: "<one short line in Mayor Tock's voice saying who took it>", updated: <ISO time>}`.
   - A request the rules forbid (spending money, sending DMs) gets `{status: "declined", reply: "<why, one line>"}`.
 - A quest that says Angie's owner approved posting (or anything that clearly means the same) sets `config.json → agents.social-ops.clients[Angie's].autopost.owner_approved` to `true`. Reply confirming that Lumi will now schedule Angie's posts automatically.
+- A quest that names Hudson's social media business (for example "call my business Hollow Media") sets `config.json → agents.social-ops.business.name` to that name. Reply confirming the new name shows on Neon Hollow after this cycle. Until it is set, the world shows `business.placeholder` ("Social media business").
 - `list` the collection `checks`. Each document id is a task id the user ticked as done (`{done: true, at}`). Set that task's `phase` to `done` with `verify: {passed: true, evidence: "checked off by the user on the quest board"}`.
 - After step 5, for every quest whose task is now `done`, `update` it to `{status: "done", reply: "<one line on what was delivered and where>"}`.
 

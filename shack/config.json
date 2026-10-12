@@ -133,6 +133,11 @@
     "social-ops": {
       "label": "Social-Ops",
       "domain": "Social media clients",
+      "business": {
+        "name": null,
+        "placeholder": "Social media business",
+        "note": "Hudson's own social media business. Shown as the placeholder until he picks a name (quest board or chat); clients like Angie's sit under it."
+      },
       "connectors": [
         "Metricool"
       ],
@@ -248,7 +253,7 @@
         "agent": "social-ops",
         "character": "Lumi",
         "transport": "neon blimp",
-        "theme": "night market, Angie's stall, Fidgetly promo stall, billboard, broadcast tower, fireworks"
+        "theme": "night market, the social media business stall, Fidgetly promo stall, billboard, broadcast tower, fireworks"
       },
       "port": {
         "name": "Spindrift Harbor",
