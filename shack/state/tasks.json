@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-10-07T22:10:00-04:00",
+  "updated": "2026-10-12T15:16+00:00",
   "goals": [
     {
       "id": "G-01",
@@ -51,17 +51,18 @@
       "agent": "hub",
       "goal_ref": "G-00",
       "title": "Forward Google Classroom emails from school Gmail to personal Gmail (see SETUP.md step 2)",
-      "phase": "blocked",
+      "phase": "done",
       "priority": 1,
       "due": "2026-10-10",
       "autonomy": "human",
       "verify": {
         "check": "Academic-Core finds a forwarded Classroom email",
-        "passed": null
+        "passed": true,
+        "evidence": "1 Classroom thread found 2026-10-12 (Global History 10 P4 announcement)"
       },
       "created": "2026-10-08T00:00:00-04:00",
-      "updated": "2026-10-07T22:10:00-04:00",
-      "notes": "Cycle night: 0 Classroom threads (configured + broad query). Waiting on SETUP.md step 2."
+      "updated": "2026-10-12T15:16+00:00",
+      "notes": "Classroom feed live."
     },
     {
       "id": "T-0002",
