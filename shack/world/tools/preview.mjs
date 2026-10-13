@@ -18,6 +18,9 @@
 //   --eval JS             run JS in the page before the screenshot
 //   --width W --height H  viewport (default 1440x900)
 //   --only a.js,b.js      load only these modules (00-core.js is always included)
+//   --data FILE           use this JSON file as the page data (e.g. a dump of the latest ops/state)
+//   --dpr N               device pixel ratio (default 1; MacBooks are 2)
+//   --after JS            run JS after --click/--eval, then wait 600 ms (e.g. open a second panel)
 //
 // Each run assembles its own temporary page (same logic as render_dashboard.py's
 // build_world), so several previews can run at once without touching world.html.
@@ -47,7 +50,7 @@ function buildPage(data) {
   fs.writeFileSync(file, html);
   return file;
 }
-const realData = JSON.parse(execSync('python3 shack/scripts/render_dashboard.py --data-json', { cwd: repo }).toString());
+const realData = opt('data') ? JSON.parse(fs.readFileSync(String(opt('data')), 'utf8')) : JSON.parse(execSync('python3 shack/scripts/render_dashboard.py --data-json', { cwd: repo }).toString());
 
 let playwright;
 try { playwright = createRequire(import.meta.url)('playwright'); }
@@ -66,7 +69,7 @@ if (opt('ceremony', false)) debug.ceremony = true;
 const width = +opt('width', 1440), height = +opt('height', 900);
 const out = opt('out', path.join(repo, 'preview.png'));
 const browser = await playwright.chromium.launch();
-const page = await browser.newPage({ viewport: { width, height } });
+const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: +opt('dpr', 1) });
 const errors = [];
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.type() + ': ' + m.text()); });
@@ -76,6 +79,7 @@ await page.goto('file://' + pageFile);
 await page.waitForTimeout(+opt('wait', 2500));
 if (opt('click')) { const [x, y] = opt('click').split(',').map(Number); await page.mouse.click(x, y); await page.waitForTimeout(600); }
 if (opt('eval')) { await page.evaluate(opt('eval')); await page.waitForTimeout(600); }
+if (opt('after')) { await page.evaluate(opt('after')); await page.waitForTimeout(600); }
 await page.screenshot({ path: out });
 const fps = await page.evaluate(() => (window.SHACK ? window.SHACK.frame : -1));
 console.log(JSON.stringify({ out, frames: fps, errors: errors.filter((e) => !/fonts\.g/.test(e)) }, null, 1));
