@@ -2,6 +2,33 @@
   "version": 1,
   "daily": [
     {
+      "period": "2026-10-13",
+      "chronicle": "The bell rang at eleven and Lantern Peak was busy: three new Classroom scrolls and a reminder arrived overnight. Abbot Quill laid four study blocks on the calendar, two tonight and one tomorrow for the Geometry quiz on Thursday, and prepared a 34-card Quizlet set on angle relationships. The English vocab list was not in the mail, so that set waits on Hudson. Copperhold, Neon Hollow and the harbor stayed quiet: no M&T alerts, no Metricool networks, no footage from Angie's, and no orders at the docks.",
+      "stats": {
+        "school": {
+          "deadlines": 4,
+          "study_blocks": 4,
+          "prep_sets": 1
+        },
+        "store": {
+          "orders": 0
+        },
+        "system": {
+          "cycles": 1,
+          "skipped_spokes": 3,
+          "hermes_drafts": 0
+        }
+      },
+      "highlights": [
+        "4 study blocks created",
+        "Geometry quiz Thu Oct 15: 34-card set ready"
+      ],
+      "needs_you": [
+        "Send the English 10R vocab list",
+        "Human Geography pyramids due today"
+      ]
+    },
+    {
       "period": "2026-10-12",
       "chronicle": "The bell rang at eleven and, at long last, a scroll arrived at Lantern Peak: Abbot Quill's Classroom feed is lit. The first parchment is a room change, Global History in the middle school for the week. No deadlines or tests yet, so no study blocks were laid. Copperhold, Neon Hollow and the harbor stayed quiet: no M&T alerts, no networks in Metricool, no footage from Angie's, and no orders at the docks.",
       "stats": {

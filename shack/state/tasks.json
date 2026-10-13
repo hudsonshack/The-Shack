@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-10-12T15:16+00:00",
+  "updated": "2026-10-13T11:10-04:00",
   "goals": [
     {
       "id": "G-01",
@@ -199,6 +199,23 @@
       "created": "2026-10-07T22:10:00-04:00",
       "updated": "2026-10-07T22:10:00-04:00",
       "notes": "Relayed by hub from Hustle-Engine; blocked until T-0007 networks connected."
+    },
+    {
+      "id": "T-0011",
+      "agent": "academic-core",
+      "goal_ref": "G-01",
+      "title": "Get the English 10R vocab word list and build a Quizlet set (quiz after Oct 14 HW)",
+      "phase": "plan",
+      "priority": 2,
+      "due": "2026-10-14",
+      "autonomy": "human",
+      "verify": {
+        "check": "Vocab list supplied and set file exists in outbox/quizlet/",
+        "passed": null
+      },
+      "created": "2026-10-13T11:10-04:00",
+      "updated": "2026-10-13T11:10-04:00",
+      "notes": "List not in the Classroom email."
     }
   ]
 }

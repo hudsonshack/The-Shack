@@ -1,27 +1,101 @@
 {
   "agent": "academic-core",
   "phase": "idle",
-  "last_run": "2026-10-12T11:15-04:00",
+  "last_run": "2026-10-13T11:15-04:00",
   "next_run": null,
-  "summary": "Classroom feed live: 1 announcement (Global History 10 P4 moved to middle school), no deadlines or tests yet",
+  "summary": "4 new Classroom items: Geometry quiz Oct 15, English vocab HW Oct 14, Human Geo due today, Yearbook training today; 4 study blocks booked, Geometry set ready",
   "alerts": [
     {
+      "level": "warn",
+      "msg": "Geometry P7 quiz on Ch3 Lesson 1 is Thu Oct 15 (parallel/perpendicular/skew, angle relationships). Study blocks Oct 13 17:00 and Oct 14 16:00."
+    },
+    {
+      "level": "warn",
+      "msg": "Human Geography P3 '2.3 Population Pyramids' is due TODAY Oct 13. Work block 15:30-16:00."
+    },
+    {
+      "level": "warn",
+      "msg": "English 10R P2 'HW-Study for Vocab Quiz' due Oct 14, bring IR book. Vocab list not in the email, so no flashcards yet."
+    },
+    {
+      "level": "warn",
+      "msg": "Yearbook 'Yearbook Avenue Training Session' due/attend Oct 13 (new members must attend, Jostens rep)."
+    },
+    {
       "level": "info",
-      "msg": "Global History and Geography 10 (Period 4) meets in the middle school, same room as last time, for the week or until changed (Mr. Ogden, posted Oct 12)."
+      "msg": "Global History and Geography 10 (Period 4) meets in the middle school this week (Mr. Ogden, posted Oct 12)."
     }
   ],
   "metrics": {
-    "deadlines": [],
-    "study_blocks": [],
-    "prep_sets": [],
+    "deadlines": [
+      {
+        "course": "Human Geography P3",
+        "title": "2.3 Population Pyramids",
+        "due": "2026-10-13",
+        "type": "assignment",
+        "source_subject": "New assignment: \"2.3 Population Pyramids\""
+      },
+      {
+        "course": "Yearbook",
+        "title": "Yearbook Avenue Training Session",
+        "due": "2026-10-13",
+        "type": "assignment",
+        "source_subject": "Due tomorrow: \"Yearbook Avenue Training Session\""
+      },
+      {
+        "course": "English 10R P2",
+        "title": "HW-Study for Vocab Quiz (and bring your IR book)",
+        "due": "2026-10-14",
+        "type": "assignment",
+        "source_subject": "New assignment: \"HW-Study for Vocab Quiz\""
+      },
+      {
+        "course": "Geometry P7",
+        "title": "Quiz on Lesson 1 from Chapter 3",
+        "due": "2026-10-15",
+        "type": "quiz",
+        "source_subject": "New assignment: \"Quiz on Lesson 1 from Chapter 3\""
+      }
+    ],
+    "study_blocks": [
+      {
+        "title": "Human Geography: 2.3 Population Pyramids",
+        "start": "2026-10-13T15:30",
+        "end": "2026-10-13T16:00"
+      },
+      {
+        "title": "English 10R: Vocab quiz study",
+        "start": "2026-10-13T16:15",
+        "end": "2026-10-13T16:45"
+      },
+      {
+        "title": "Geometry: Ch3 L1 angle relationships review",
+        "start": "2026-10-13T17:00",
+        "end": "2026-10-13T17:45"
+      },
+      {
+        "title": "Geometry: Ch3 L1 final review",
+        "start": "2026-10-14T16:00",
+        "end": "2026-10-14T16:45"
+      }
+    ],
+    "prep_sets": [
+      {
+        "title": "Geometry Ch3 L1 angle relationships",
+        "cards": 34,
+        "file": "outbox/quizlet/2026-10-15-geometry-ch3-lesson1-angle-relationships.txt"
+      }
+    ],
     "classroom_feed": "connected",
     "world": {
       "bubbles": [
-        "Feed is lit!",
-        "Global: middle school"
+        "Quiz Thursday!",
+        "Pyramids due today",
+        "Vocab due tomorrow",
+        "4 blocks booked"
       ],
-      "deliveries": 1,
-      "growth": 1
+      "deliveries": 2,
+      "growth": 2
     }
   }
 }
