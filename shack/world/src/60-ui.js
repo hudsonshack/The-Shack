@@ -2021,13 +2021,14 @@
     const id = uidOf(it.key);
     const dueCls = it.dueDay == null ? '' : it.dueDay < todayKey() ? ' over' : it.dueDay === todayKey() ? ' today' : '';
     const meta = [];
+    // the due tag leads the meta row under the text, so the text gets the column's full width
+    if (it.dueDay != null) meta.push(`<span class="td-due${dueCls}">${esc(dueWord(it.dueDay))}</span>`);
     if (it.kind === 'agent') meta.push(who(it.agent));
     if (it.hint) meta.push(`<span class="note">${esc(it.hint)}</span>`);
     if (it.link) meta.push(extLink(it.link));
     return `<li class="td-item${it.done ? ' done' : ''}${live ? '' : ' ro'}${justAdded === it.key ? ' new' : ''}" data-key="${esc(it.key)}">`
       + `<input type="checkbox" class="td-cb" id="${id}" data-role="tick"${it.done ? ' checked' : ''}${live ? '' : ' disabled'}>`
       + `<label class="td-text" for="${id}">${esc(it.text)}</label>`
-      + `<span class="td-side">${it.dueDay != null ? `<span class="td-due${dueCls}">${esc(dueWord(it.dueDay))}</span>` : ''}</span>`
       + (it.kind === 'own' && live ? `<button class="td-del" type="button" data-role="del" aria-label="Delete “${esc(it.text)}”" title="Delete">${icon('del', 2)}</button>` : '<span></span>')
       + (meta.length ? `<div class="td-meta">${meta.join('')}</div>` : '')
       + (it.reply ? `<p class="td-reply">${icon('holo', 2)}<span>${esc(it.reply)}</span></p>` : '')

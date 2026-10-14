@@ -1,9 +1,9 @@
 # One-time setup (about 10 minutes)
 
-After these steps, everything runs by itself once a day at 11 AM.
+After these steps, everything runs by itself once a day at 6:15 AM.
 
 ## 1. Give the Routine its repo and connectors
-The hub runs as a Claude Routine named **The Shack Operations** (once a day at 11:00 AM New York time). A Routine created from a chat can't carry connectors, so add them once:
+The hub runs as a Claude Routine named **The Shack Operations** (once a day at 6:15 AM New York time, before school). A Routine created from a chat can't carry connectors, so add them once:
 
 1. Open claude.ai → **Code** → **Routines** (or the Routines list in the Claude app) → **The Shack: Director cycle** → edit.
 2. Add the repository `hudsonshack/The-Shack`.
@@ -68,5 +68,5 @@ Hermes is a free AI model from Nous Research. The agents hand it bulk drafting (
 Until this is done, the agents do everything with Claude, as they do now.
 
 ## 7. Phone notifications
-The Routine already has push notifications on. Make sure notifications are allowed for the Claude app on your phone, so you get the morning brief (about 11:00 AM) and urgent alerts.
+The Routine already has push notifications on. Make sure notifications are allowed for the Claude app on your phone, so you get the morning brief (about 6:15 AM) and urgent alerts.
 

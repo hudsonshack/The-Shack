@@ -10,13 +10,13 @@ Everything lives in this repo (`hudsonshack/The-Shack`). A new chat only needs t
 |---|---|
 | The world (the app) | https://claude.ai/artifact/EF5JTPV7CQnZa2jJZ6aFnH |
 | Progress doc | https://claude.ai/artifact/3YbwBMEfwMNnDD5PzGzv8K (Claude Docs project `149bdcf4-2b31-4896-b333-0a3becedd514`) |
-| Agent routine | "The Shack Operations", daily at 11:00 AM New York: https://claude.ai/code/routines/trig_019NHKog7ux3LF4JJ5azuktm |
+| Agent routine | "The Shack Operations", daily at 6:15 AM New York: https://claude.ai/code/routines/trig_019NHKog7ux3LF4JJ5azuktm |
 | Setup pull request | https://github.com/hudsonshack/The-Shack/pull/1 (branch `claude/autonomous-agent-team-setup-k424uv`) |
 | Text dashboard | `shack/dashboard/DASHBOARD.md` on the `ops/state` branch |
 
 ## How it runs
-- The routine reads `shack/hub/ROUTINE.md` → `shack/hub/DIRECTOR.md` once a day at 11 AM. It reads from `main` if `main` has `shack/hub/DIRECTOR.md`, otherwise from the setup branch. It writes state only to the `ops/state` branch, renders `shack/world/world.html` and republishes the world link.
-- Mayor Tock (hub) skips agents whose feeds are empty, so quiet days cost little.
+- The routine reads `shack/hub/ROUTINE.md` → `shack/hub/DIRECTOR.md` once a day at 6:15 AM. It reads from `main` if `main` has `shack/hub/DIRECTOR.md`, otherwise from the setup branch. It writes state only to the `ops/state` branch, renders `shack/world/world.html` and republishes the world link.
+- J.A.R.V.I.S. (hub, formerly Mayor Tock) skips agents whose feeds are empty, so quiet days cost little.
 - Agents: Abbot Quill (school, 40%), Lumi (Angie's social, 35%), Grit Copperpot (money, 20%), Cap'n Twirl (Fidgetly, maintenance mode, 5%).
 - Rules: agents never spend money or send DMs; emails to other people need Hudson's OK; private data stays in gitignored `shack/private/`; Hermes never gets bank details, grades or client contacts.
 - Republishing the world by hand: render from `origin/ops/state` merged with the latest code (`python3 shack/scripts/render_dashboard.py`), then publish `shack/world/world.html` to the world link without passing capabilities (that keeps the quest-board database). If the publish is refused because the routine published a newer version, carry its lines over and publish again.
@@ -41,6 +41,8 @@ Everything lives in this repo (`hudsonshack/The-Shack`). A new chat only needs t
 6. Optional: Classroom forwarding, Hermes key, and asking GitHub Support to detach the fork (removes "forked from Chi-K1ng/Chi-King-J.A.R.V.I.S").
 
 ## Build status
+- World v3 (Oct 14): docked **Today** column on the left (J.A.R.V.I.S.'s brief from `state/brief.json`, calendar from `state/calendar.json`, Hudson's own to-dos in the page db collection `todos` plus agent tasks, school, the social media business, money only on Saturdays), fixed camera (clicking an island zooms in; the status card hides while a panel is open), midnight blue-black space drawn at screen resolution, sharp-bilinear pixel scaling, J.A.R.V.I.S. hologram + holo-console on Clockspire, Neon Hollow stall = the social media business (`config.json → agents.social-ops.business.name`, placeholder "Social media business").
+- The routine's schedule has to be changed to 6:15 AM by Hudson in the Routines page (an agent can't edit a routine it didn't create).
 - World v2 (floating islands, readable UI, bigger animated characters, Chronicle, Hermes chip, quest board) is finished. All 49 review issues and the 3 follow-ups are fixed; zero console errors.
 - Preview: `node shack/world/tools/preview.mjs --out /tmp/w.png [--sample] [--time ...] [--width 400 --height 800]`.
 - Checks: `python3 shack/scripts/validate.py`.

@@ -1,6 +1,6 @@
 # The Shack
 
-A little pixel world where Hudson's AI agents live and work. A hub-and-spoke team of Claude agents runs school, money, social media clients and the fidget store once a day at 11 AM, and you can watch them do it.
+A little pixel world where Hudson's AI agents live and work. A hub-and-spoke team of Claude agents runs school, money, social media clients and the fidget store once a day at 6:15 AM, and you can watch them do it.
 
 **Open the world:** https://claude.ai/artifact/EF5JTPV7CQnZa2jJZ6aFnH (private to your Claude account) · text fallback: [`shack/dashboard/DASHBOARD.md`](shack/dashboard/DASHBOARD.md)
 
@@ -17,7 +17,7 @@ Five floating islands in starry space. Every island connects only to Clockspire,
      │ Abbot Quill│      │      │       │    Lumi    │
      ╰─────▽──────╯   ╭──┴──────┴──╮    ╰─────▽──────╯
           ▽ ▽         │ Clockspire │         ▽ ▽
-     ·                │ Mayor Tock │                ✦
+     ·                │ J.A.R.V.I.S.│                ✦
      ╭────────────╮   ╰──┬──────┬──╯    ╭────────────╮
      │ Spindrift  │~ship~╯      ╰=rail==│ Copperhold │
      │ Harbor     │                     │Grit · 💎💎💎│
@@ -27,7 +27,7 @@ Five floating islands in starry space. Every island connects only to Clockspire,
 
 | Island | Character | Agent | What it does | Never does |
 |---|---|---|---|---|
-| Clockspire | Mayor Tock | Director (hub) | Rings the bell at 11:00 AM, skips idle agents, plans, verifies, writes the Chronicle recaps, sends the morning brief and urgent pushes, answers the quest board | — |
+| Clockspire | J.A.R.V.I.S. | Director (hub) | Rings the bell at 6:15 AM, skips idle agents, plans, verifies, writes the Chronicle recaps, sends the morning brief and urgent pushes, answers the quest board | — |
 | Lantern Peak | Abbot Quill | Academic-Core · 40% | Classroom deadlines, spaced-repetition study blocks on Google Calendar, Quizlet sets | Touch the school account |
 | Neon Hollow | Lumi | Social-Ops · 35% | Angie's: auto-edits new footage into finished posts, schedules them once the owner approves, reports | Send DMs, launch paid ads |
 | Copperhold | Grit Copperpot | Ledger-Fi · 20% | Income and spending from M&T alerts, Friday paychecks, savings crystals (Invest, Car insurance, Apartment fund) | Move money, store account numbers |
@@ -40,7 +40,7 @@ In the world: day and night follow New York time, the moon shows its real phase,
 ## How it runs
 
 ```
-Claude Routine "The Shack Operations" (11:00 America/New_York, once a day)
+Claude Routine "The Shack Operations" (6:15 AM America/New_York, once a day)
   → hub/ROUTINE.md → hub/DIRECTOR.md: quest board intake → plan → skip idle spokes → verify
   → active spokes in parallel (Hermes drafts, Claude reviews) → verify → recaps → push notifications
   → commit to ops/state → render DASHBOARD.md + world.html → republish the world page
@@ -51,7 +51,7 @@ Claude Routine "The Shack Operations" (11:00 America/New_York, once a day)
 ```
 shack/
 ├── config.json              settings from the setup questionnaires
-├── hub/DIRECTOR.md          Mayor Tock's cycle procedure
+├── hub/DIRECTOR.md          J.A.R.V.I.S.'s cycle procedure
 ├── hub/RULEBOOK.md          autonomy, privacy and failure rules
 ├── agents/<name>/SPEC.md    each spoke's job
 ├── agents/<name>/state.json each spoke's latest summary (no raw data)
