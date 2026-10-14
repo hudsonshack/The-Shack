@@ -164,7 +164,11 @@ git push -u origin ops/state
 ```
 If the push fails on the network, retry up to 4 times (2s, 4s, 8s, 16s).
 
-Then refresh the world page: call the `Artifact` tool with `action: "read"` on `config.json → world.artifact_url`, then `action: "publish"` with `url` set to it and `file_path` set to `shack/world/world.html`. Do not pass `capabilities` (omitting them keeps the page's quest-board database). If the Artifact tool is not available in this session, skip it. `dashboard/DASHBOARD.md` on GitHub is the fallback view.
+Then refresh the world page. It is published **split**, so the page you must read stays small: `render_dashboard.py` also writes `world/publish/index.html` (the page, about 50 KB), `world/publish/world.js` (all modules) and `world/publish/shack-data.js` (today's data).
+1. `Artifact` `action: "read"` on `config.json → world.artifact_url`. If it says the live version counts as viewed only once you have read every line of its saved copy, Read that whole file (it is the small page) before going on.
+2. `Artifact` `action: "list"`, `scope: "files"`, with the same `url` (so the two script files count as seen).
+3. `Artifact` `action: "publish"` with `url` set to it, `file_path` = `shack/world/publish/index.html` and `files` = `{"world.js": "shack/world/publish/world.js", "shack-data.js": "shack/world/publish/shack-data.js"}`. Do not pass `capabilities` (omitting them keeps the page's database: requests, ticks and Hudson's to-dos).
+If the Artifact tool is not available in this session, skip it. `dashboard/DASHBOARD.md` on GitHub is the fallback view.
 
 ### 9. Report
 End with a compact cycle report and no filler:

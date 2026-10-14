@@ -72,6 +72,7 @@
   function readData() {
     let d = null;
     if (DEBUG.data) d = DEBUG.data;
+    else if (window.SHACK_DATA && typeof window.SHACK_DATA === 'object') d = window.SHACK_DATA;   // split publish: shack-data.js
     else {
       const el = document.getElementById('shack-data');
       try { d = JSON.parse(el ? el.textContent : 'null'); } catch (e) { console.warn('SHACK: page data is not valid JSON', e); d = null; }

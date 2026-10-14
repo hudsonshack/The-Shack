@@ -8,7 +8,7 @@ Everything lives in this repo (`hudsonshack/The-Shack`). A new chat only needs t
 ## Links
 | What | Where |
 |---|---|
-| The world (the app) | https://claude.ai/artifact/EF5JTPV7CQnZa2jJZ6aFnH |
+| The world (the app) | https://claude.ai/artifact/86QegBn7tCzwcK18DrGVFQ (v3, published split: page + world.js + shack-data.js). The old link EF5JTPV7CQnZa2jJZ6aFnH is retired |
 | Progress doc | https://claude.ai/artifact/3YbwBMEfwMNnDD5PzGzv8K (Claude Docs project `149bdcf4-2b31-4896-b333-0a3becedd514`) |
 | Agent routine | "The Shack Operations", daily at 6:15 AM New York: https://claude.ai/code/routines/trig_019NHKog7ux3LF4JJ5azuktm |
 | Setup pull request | https://github.com/hudsonshack/The-Shack/pull/1 (branch `claude/autonomous-agent-team-setup-k424uv`) |
@@ -19,7 +19,7 @@ Everything lives in this repo (`hudsonshack/The-Shack`). A new chat only needs t
 - J.A.R.V.I.S. (hub, formerly Mayor Tock) skips agents whose feeds are empty, so quiet days cost little.
 - Agents: Abbot Quill (school, 40%), Lumi (Angie's social, 35%), Grit Copperpot (money, 20%), Cap'n Twirl (Fidgetly, maintenance mode, 5%).
 - Rules: agents never spend money or send DMs; emails to other people need Hudson's OK; private data stays in gitignored `shack/private/`; Hermes never gets bank details, grades or client contacts.
-- Republishing the world by hand: render from `origin/ops/state` merged with the latest code (`python3 shack/scripts/render_dashboard.py`), then publish `shack/world/world.html` to the world link without passing capabilities (that keeps the quest-board database). If the publish is refused because the routine published a newer version, carry its lines over and publish again.
+- Republishing the world by hand: render from `origin/ops/state` merged with the latest code (`python3 shack/scripts/render_dashboard.py`), read the world link, list its files, then publish `shack/world/publish/index.html` with `files` world.js and shack-data.js and without capabilities (that keeps the database). Same steps as DIRECTOR.md step 8.
 
 ## Accounts and feeds
 | Feed | Status |

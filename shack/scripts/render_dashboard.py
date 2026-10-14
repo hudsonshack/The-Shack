@@ -186,19 +186,15 @@ def render_md(d):
     return "\n".join(out)
 
 
-def build_world(d):
-    """One <script> per module, so an error in one module can't stop the others."""
-    shell = (WORLD / "shell.html").read_text()
-    scripts = []
-    for f in sorted((WORLD / "src").glob("*.js")):
-        code = f.read_text().replace("</script", "<\\/script")
-        scripts.append(f"<script>/* {f.name} */\n{code}\n</script>")
-    scripts.append("<script>SHACK.boot();</script>")
+def _data_blob(d):
     # Escape every <, > and & as a JSON \u escape (JSON.parse decodes them), so no data string
-    # ("</script>", "<!--", "<script") can end or re-open the data block.
-    blob = (json.dumps(d, ensure_ascii=False)
+    # ("</script>", "<!--", "<script") can end or re-open a script block; U+2028/9 keep it valid JS.
+    return (json.dumps(d, ensure_ascii=False)
             .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
             .replace("\u2028", "\\u2028").replace("\u2029", "\\u2029"))
+
+
+def _fill_shell(shell, data_part, scripts_part):
     # Substitute in one pass over the shell, so text inside the data (or the scripts) that
     # happens to read like a placeholder is never replaced again.
     head, sep, rest = shell.partition("__SHACK_DATA__")
@@ -207,7 +203,38 @@ def build_world(d):
     mid, sep, tail = rest.partition("__SHACK_SCRIPTS__")
     if not sep:
         raise ValueError("shell.html has no __SHACK_SCRIPTS__ placeholder after __SHACK_DATA__")
-    return head + blob + mid + "\n".join(scripts) + tail
+    return head + data_part + mid + scripts_part + tail
+
+
+def build_world(d):
+    """One file: one <script> per module, so an error in one module can't stop the others."""
+    shell = (WORLD / "shell.html").read_text()
+    scripts = []
+    for f in sorted((WORLD / "src").glob("*.js")):
+        code = f.read_text().replace("</script", "<\\/script")
+        scripts.append(f"<script>/* {f.name} */\n{code}\n</script>")
+    scripts.append("<script>SHACK.boot();</script>")
+    return _fill_shell(shell, _data_blob(d), "\n".join(scripts))
+
+
+def build_publish(d):
+    """The published Artifact, split so a daily republish stays small: a short page (shell + CSS)
+    that loads world.js (every module) and shack-data.js (today's data) from its own files.
+    Returns {published path: text}."""
+    import hashlib
+    shell = (WORLD / "shell.html").read_text()
+    mods = []
+    for f in sorted((WORLD / "src").glob("*.js")):
+        # each module in its own try, so one module failing at load can't stop the others
+        mods.append(f"/* {f.name} */\ntry {{\n{f.read_text()}\n}} catch (e) {{ console.error('SHACK module {f.name}', e); }}\n")
+    world_js = "\n".join(mods)
+    data_js = "window.SHACK_DATA = " + _data_blob(d) + ";\n"
+    v = lambda t: hashlib.sha1(t.encode()).hexdigest()[:10]
+    scripts = (f'<script src="shack-data.js?v={v(data_js)}"></script>\n'
+               f'<script src="world.js?v={v(world_js)}"></script>\n'
+               '<script>SHACK.boot();</script>')
+    page = _fill_shell(shell, "null", scripts)
+    return {"index.html": page, "world.js": world_js, "shack-data.js": data_js}
 
 
 def main():
@@ -218,6 +245,10 @@ def main():
         return
     (DASH / "DASHBOARD.md").write_text(render_md(d))
     (WORLD / "world.html").write_text(build_world(d))
+    pub = WORLD / "publish"
+    pub.mkdir(exist_ok=True)
+    for name, text in build_publish(d).items():
+        (pub / name).write_text(text)
     print("rendered:", (DASH / "DASHBOARD.md").relative_to(REPO), (WORLD / "world.html").relative_to(REPO))
 
 
