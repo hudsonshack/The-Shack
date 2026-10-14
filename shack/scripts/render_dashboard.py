@@ -194,8 +194,20 @@ def build_world(d):
         code = f.read_text().replace("</script", "<\\/script")
         scripts.append(f"<script>/* {f.name} */\n{code}\n</script>")
     scripts.append("<script>SHACK.boot();</script>")
-    blob = json.dumps(d, ensure_ascii=False).replace("</", "<\\/")
-    return shell.replace("__SHACK_DATA__", blob).replace("__SHACK_SCRIPTS__", "\n".join(scripts))
+    # Escape every <, > and & as a JSON \u escape (JSON.parse decodes them), so no data string
+    # ("</script>", "<!--", "<script") can end or re-open the data block.
+    blob = (json.dumps(d, ensure_ascii=False)
+            .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+            .replace("\u2028", "\\u2028").replace("\u2029", "\\u2029"))
+    # Substitute in one pass over the shell, so text inside the data (or the scripts) that
+    # happens to read like a placeholder is never replaced again.
+    head, sep, rest = shell.partition("__SHACK_DATA__")
+    if not sep:
+        raise ValueError("shell.html has no __SHACK_DATA__ placeholder")
+    mid, sep, tail = rest.partition("__SHACK_SCRIPTS__")
+    if not sep:
+        raise ValueError("shell.html has no __SHACK_SCRIPTS__ placeholder after __SHACK_DATA__")
+    return head + blob + mid + "\n".join(scripts) + tail
 
 
 def main():

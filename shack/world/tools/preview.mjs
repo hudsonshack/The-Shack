@@ -44,8 +44,12 @@ function buildPage(data) {
   const files = fs.readdirSync(path.join(worldDir, 'src')).filter((f) => f.endsWith('.js') && (!only || only.includes(f))).sort();
   const scripts = files.map((f) => `<script>/* ${f} */\n${fs.readFileSync(path.join(worldDir, 'src', f), 'utf8').replaceAll('</script', '<\\/script')}\n</script>`);
   scripts.push('<script>SHACK.boot();</script>');
-  const blob = JSON.stringify(data).replaceAll('</', '<\\/');
-  const html = shell.replace('__SHACK_DATA__', () => blob).replace('__SHACK_SCRIPTS__', () => scripts.join('\n'));
+  // Same escaping and one-pass substitution as render_dashboard.py's build_world.
+  const blob = JSON.stringify(data).replaceAll('<', '\\u003c').replaceAll('>', '\\u003e').replaceAll('&', '\\u0026')
+    .replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
+  const [head, ...restD] = shell.split('__SHACK_DATA__');
+  const [mid, ...restS] = restD.join('__SHACK_DATA__').split('__SHACK_SCRIPTS__');
+  const html = head + blob + mid + scripts.join('\n') + restS.join('__SHACK_SCRIPTS__');
   const file = path.join(os.tmpdir(), `shack-preview-${process.pid}-${Date.now()}.html`);
   fs.writeFileSync(file, html);
   return file;
