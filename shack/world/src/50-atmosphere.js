@@ -13,21 +13,24 @@
  *                         plus season particles over the island tops (autumn
  *                         leaves, winter snow, spring petals) that settle on the
  *                         ground or tumble off the edge into space
- *   dyn 600 (no island)   a faint cool night tint over everything, so vehicles
- *                         and spray out in space dim a little with the islands
  *   dyn 600 {island}      DARKNESS driven by S.time.light, built from the
- *                         island's own silhouette (S.islandLayers alpha): deep
- *                         blue at night, warm dusk, pink dawn, a pale moonlit
- *                         rim on the top-left edges, dithered light holes for
- *                         every S.lights entry. Then, over the dark: the hovering
- *                         rain cloud (warn) or storm cloud (critical) with rain
- *                         that keeps falling past the edge into space, lightning
- *                         flashes on that island only, summer-night fireflies.
+ *                         island's own silhouette (S.islandLayers alpha): a
+ *                         neutral cool multiply at night (about #8e98b8) with a
+ *                         thin navy veil (#0c1424, ~0.14), warm dusk, pink dawn,
+ *                         a pale moonlit rim on the top-left edges, and smooth
+ *                         light pools for every S.lights entry. Then, over the
+ *                         dark: a small light rain cloud on the island's back
+ *                         edge with a drizzle (warn) or the storm cloud with
+ *                         heavy rain and lightning (critical), rain that keeps
+ *                         falling past the edge into space, summer fireflies.
  *                         Clouds hang off every villager work spot and thin to
  *                         see-through while anyone walks under one.
  *
- * Space keeps its own day and night (the space module). Nothing here darkens
- * space except the faint night tint.
+ * Space is painted at screen resolution by the space module and keeps its own
+ * day and night; the world buffer is transparent there, so nothing here may
+ * draw a full-view multiply (it would paint over open space). The faint night
+ * tint that used to cover everything is folded into S.atmo.sky().mul, which
+ * every module that tints art out in space (vehicles, the rail bridge) uses.
  *
  * Cost: per island, the darkness is two cached box-sized canvases (multiply
  * tint and blue veil) rebuilt only when the sky level, a light's flicker step,
@@ -83,12 +86,15 @@
    * thin deep-blue film over it so night reads blue, not black. Islands sit on
    * dark space, so night stays a little lighter than v1 to keep them readable.
    */
-  const NIGHT = [0, '#6a76b8', '#101848', 0.22];
+  /* The multiply here is the whole night tint (it used to be this times a separate
+   * faint #d3d6f0 multiply over everything): brighter and more neutral than v2, so
+   * the ground keeps about 18-20 % luminance at full night against the darker space. */
+  const NIGHT = [0, '#8e98b8', '#0c1424', 0.14];
   const SKY = {
-    dusk: [[1, '#ffffff', '#ff9a4a', 0], [0.8, '#ffe8c8', '#ff9a4a', 0.03], [0.55, '#f6bc9c', '#ff6a4a', 0.06],
-           [0.32, '#b4949e', '#6a3a7a', 0.11], [0.12, '#6e79b0', '#1c2058', 0.19], NIGHT],
-    dawn: [[1, '#ffffff', '#ffb2a8', 0], [0.8, '#ffece4', '#ffa8b0', 0.04], [0.55, '#f6c0ca', '#ff86b4', 0.07],
-           [0.32, '#b49ed0', '#6a4aa8', 0.12], [0.12, '#6e79b0', '#1c2058', 0.19], NIGHT],
+    dusk: [[1, '#ffffff', '#ff9a4a', 0], [0.8, '#ffe9cc', '#ff9a4a', 0.025], [0.55, '#f2c3a6', '#ff7a4a', 0.045],
+           [0.32, '#b8a7b2', '#3a2a50', 0.08], [0.12, '#98a1bf', '#141c34', 0.12], NIGHT],
+    dawn: [[1, '#ffffff', '#ffb2a8', 0], [0.8, '#ffeee6', '#ffa8b0', 0.03], [0.55, '#f4c7cf', '#ff90b4', 0.05],
+           [0.32, '#b8aac6', '#40306a', 0.09], [0.12, '#98a1bf', '#141c34', 0.12], NIGHT],
   };
   function skyNow() {
     const T = S.time;
@@ -127,6 +133,17 @@
    */
   const G = {};
   let geomVersion = 0;
+  /* World-px rects around each end of the sky-rail bridge (S.nav.rails): the first
+   * point is Copperhold's station, the last Clockspire's south-east abutment. */
+  const RIM_KEEPOUT = (() => {
+    const R = (S.nav && Array.isArray(S.nav.rails)) ? S.nav.rails : [];
+    if (R.length < 2) return [];
+    const a = R[0], b = R[R.length - 1];
+    return [
+      { x: a[0] * TILE - 56, y: a[1] * TILE - 26, w: 84, h: 64 },
+      { x: b[0] * TILE - 30, y: b[1] * TILE - 26, w: 84, h: 64 },
+    ];
+  })();
   function buildGeometry() {
     geomVersion++;
     const layers = S.islandLayers || [];
@@ -177,6 +194,14 @@
         const a = ring2 ? 255 : ring3 && ((i + j) & 1) ? 150 : 0;
         if (!a) continue;
         rd[k * 4] = rd[k * 4 + 1] = rd[k * 4 + 2] = 255; rd[k * 4 + 3] = a;
+      }
+      // No moonlit rim where the static bridge stubs (Clockspire's abutment, Copperhold's
+      // station platform) continue into the dynamic sky-rail bridge: the rim would draw a
+      // pale seam across the rails there.
+      for (const z of RIM_KEEPOUT) {
+        const i0 = Math.max(0, z.x - box.x), i1 = Math.min(bw, z.x + z.w - box.x);
+        const j0 = Math.max(0, z.y - box.y), j1 = Math.min(bh, z.y + z.h - box.y);
+        for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) rd[(j * bw + i) * 4 + 3] = 0;
       }
       mxc.putImageData(mImg, 0, 0);
       rxc.putImageData(rImg, 0, 0);
@@ -239,13 +264,13 @@
   }
 
   /* ============================================================ LIGHTS
-   * Stamps are dithered radial alpha masks. The dither is world-aligned (the
-   * Bayer phase follows the stamp's top-left), so overlapping lights share one
-   * pattern instead of fighting.
+   * Stamps are smooth radial alpha masks (no dither): after the sharp-bilinear
+   * upscale they read as soft round pools, not checkerboards.
    */
   const stampCache = new Map();
-  function stampMask(kind, r, ox, oy) {
-    const key = kind + r + '|' + (ox & 3) + (oy & 3);
+  const LIGHT_GROW = 1.3;   // lamp pools ~30 % larger than the lights ask for
+  function stampMask(kind, r) {
+    const key = kind + r;
     let c = stampCache.get(key);
     if (c) return c;
     const s = 2 * r + 1;
@@ -256,21 +281,19 @@
       if (dd >= 1) continue;
       let f;
       if (kind === 'g') { f = 1 - dd; f = f * f * f; }          // bloom: tight bright core
-      else { f = 1 - dd * dd; f *= f; }                         // light pool: soft wide falloff
-      const q = dq(f, 6, i + ox, j + oy);
-      if (q <= 0) continue;
+      else { f = 1 - dd * dd; f *= f; f = f * (0.85 + 0.15 * f); } // light pool: soft wide falloff
       const k = (j * s + i) * 4;
-      d[k] = d[k + 1] = d[k + 2] = 255; d[k + 3] = Math.round(q * 255);
+      d[k] = d[k + 1] = d[k + 2] = 255; d[k + 3] = Math.round(clamp01(f) * 255);
     }
     x.putImageData(img, 0, 0);
     stampCache.set(key, c);
     return c;
   }
-  function stampColor(kind, r, ox, oy, color) {
-    const key = kind + r + '|' + (ox & 3) + (oy & 3) + color;
+  function stampColor(kind, r, color) {
+    const key = kind + r + '|' + color;
     let c = stampCache.get(key);
     if (c) return c;
-    const m = stampMask(kind, r, ox, oy);
+    const m = stampMask(kind, r);
     c = mk(m.width, m.height);
     const x = c.getContext('2d');
     x.drawImage(m, 0, 0);
@@ -306,7 +329,7 @@
       if (a <= 0) continue;
       const qa = Math.round(a * 40);
       if (!qa) continue;
-      const r = Math.max(3, Math.min(160, Math.round(+l.r || 24)));
+      const r = Math.max(3, Math.min(200, Math.round((+l.r || 24) * LIGHT_GROW)));
       active.push({ x: Math.round(l.x), y: Math.round(l.y) + S.bob(l.island), r, a: qa / 40, color: l.color || '#ffd27a' });
     }
   }
@@ -344,15 +367,15 @@
     for (const L of here) {
       const ox = L.x - L.r, oy = L.y - L.r;
       mx.globalAlpha = L.a;
-      mx.drawImage(stampColor('p', L.r, ox + bx, oy + g.box.y, poolTint(L.color)), ox, oy);
-      if (veil) { lx.globalAlpha = L.a; lx.drawImage(stampMask('p', L.r, ox + bx, oy + g.box.y), ox, oy); }
+      mx.drawImage(stampColor('p', L.r, poolTint(L.color)), ox, oy);
+      if (veil) { lx.globalAlpha = L.a; lx.drawImage(stampMask('p', L.r), ox, oy); }
     }
     lx.globalCompositeOperation = 'source-over';
     const bloomK = 0.1 + 0.28 * sky.n;
     for (const L of here) {
       const gr = Math.max(3, Math.round(L.r * 0.45)), gx = L.x - gr, gy = L.y - gr;
       lx.globalAlpha = L.a * bloomK;
-      lx.drawImage(stampColor('g', gr, gx + bx, gy + g.box.y, L.color), gx, gy);
+      lx.drawImage(stampColor('g', gr, L.color), gx, gy);
     }
     // Cut both to the island silhouette: space keeps its own sky.
     mx.globalAlpha = 1; lx.globalAlpha = 1;
@@ -427,7 +450,7 @@
    * a darker flat underside and a 1 px outline.
    */
   const CLOUD_PAL = {
-    rain:  { out: '#32374f', tones: ['#69718e', '#878fa9', '#a8afc5', '#d2d7e5'], base: '#555c78', seam: '#79819d' },
+    rain:  { out: '#58617a', tones: ['#949db3', '#b0b8ca', '#ccd3e0', '#eceff5'], base: '#838ca3', seam: '#a3abbf' },
     storm: { out: '#131425', tones: ['#2c2f48', '#464b70', '#656b96', '#959bc4'], base: '#20223a', seam: '#3a3e62' },
   };
   function cloudSprite(seed, w, h, kind) {
@@ -492,7 +515,11 @@
         col = rgb(pal.out);
       }
       if (!col) continue;
-      d[k * 4] = col[0]; d[k * 4 + 1] = col[1]; d[k * 4 + 2] = col[2]; d[k * 4 + 3] = 255;
+      // soft edges: a faint outline and a dithered half-transparent outer ring
+      let a = 255;
+      if (o < 0) a = 70;
+      else if (OW(i - 1, j) < 0 || OW(i + 1, j) < 0 || OW(i, j - 1) < 0 || OW(i, j + 1) < 0) a = (i + j) & 1 ? 150 : 215;
+      d[k * 4] = col[0]; d[k * 4 + 1] = col[1]; d[k * 4 + 2] = col[2]; d[k * 4 + 3] = a;
     }
     x.putImageData(img, 0, 0);
     // Opaque span per column (first and last drawn row, -1 if empty), so "is someone
@@ -504,7 +531,7 @@
   /** A long thin wisp of cloud for open space: streaky, lit on top, dithered alpha. */
   function wispSprite(seed, w, h) {
     const c = mk(w, h), x = c.getContext('2d'), img = x.createImageData(w, h), d = img.data;
-    const top = rgb('#fbfaff'), mid = rgb('#dedbf6'), low = rgb('#bdb9e3');
+    const top = rgb('#f4f7fc'), mid = rgb('#d6deeb'), low = rgb('#b3bfd3');
     const lump = (i) => 0.75 + 0.5 * vnoise(i / 22, 0.5, seed + 9);
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const u = (i + 0.5) / w, cy = h * (0.55 - 0.12 * Math.sin(u * Math.PI));
@@ -601,35 +628,36 @@
     }
     return best ? { tx: best.tx + 0.5, ty: best.ty + 0.5 } : { tx: r.x + r.w / 2, ty: r.y + r.h / 3 };
   }
-  /* Hand-picked clear sky over each biome island (tile coords of the cloud's
-   * centre): open grass, plaza or river, away from the name-defining landmark
-   * and from every place a villager stops to work (40-villagers' PL spots, the
-   * kid's kite meadow), so the rain cloud (warn) and the bigger storm cloud
-   * (critical) both keep at least ~12 px clear of them through their drift.
-   *   Lantern Peak      the south lawn below the bell pavilion and scroll board
-   *   Neon Hollow       the south strip below the blimp walkway
-   *   Spindrift Harbor  rain: over the river between the kid's kite and the
-   *                     lighthouse; storm (too wide for that gap): the cargo
-   *                     yard by the crane, south of Twirl's yellow stall
-   *   Copperhold        the open yard between the cottage and the crystals
+  /* Where each island's clouds hang (tile coords of the cloud's centre).
+   * The small warn cloud rides the island's back (north) edge, half over space,
+   * so it never sits on the island's middle art:
+   *   Lantern Peak      over the north-east rim, above the scroll house
+   *   Neon Hollow       over the north-west rim, above the old wagon
+   *   Spindrift Harbor  over the north rim, between the kid's kite and the lighthouse
+   *   Copperhold        over the north-west rim, above the cottage
+   * The storm cloud (critical only) glides to roomier spots on open ground, away
+   * from the name-defining landmarks and the villagers' work spots:
+   *   Lantern Peak the south lawn, Neon Hollow the south strip below the blimp
+   *   walkway, Spindrift Harbor the cargo yard by the crane, Copperhold the open
+   *   yard between the cottage and the crystals.
    * Anyone who still walks under a cloud is revealed by seeThrough(). */
-  const SPOTS = { monastery: [11, 15.75], market: [61.3, 16.1], port: [19.875, 30.625], mine: [65.5, 35.4] };
-  /** Storm-only spots where the big storm cloud needs more room (glides there with w.storm). */
-  const SPOTS_STORM = { port: [23.625, 40.5] };
+  const SPOTS = { monastery: [23.2, 2.3], market: [58.6, 2.1], port: [19.875, 30.625], mine: [58.8, 29.6] };
+  /** Spots for the big storm cloud (it glides there with w.storm). */
+  const SPOTS_STORM = { monastery: [11, 15.75], market: [61.3, 16.1], port: [23.625, 40.5], mine: [65.5, 35.4] };
   /** Where a storm's smaller second cloud sits relative to the main one (px), kept off buildings and work spots. */
   const SIDE = { monastery: [-60, -6], market: [-56, -2], port: [-56, 12] };
   function wxFor(id) {
     if (WX[id]) return WX[id];
     const seed = 7 + S.ISLANDS.indexOf(id) * 31;
     const crit = levelOf(id) === 'critical';
-    const main = { spr: cloudSprite(seed + 1, 84, 40, 'rain'), sprS: cloudSprite(seed + 2, 128, 56, 'storm'), ph: (seed % 10) / 10 * 6.28, dx: 0, dy: 0, see: 0 };
+    const main = { spr: cloudSprite(seed + 1, 60, 28, 'rain'), sprS: cloudSprite(seed + 2, 120, 52, 'storm'), ph: (seed % 10) / 10 * 6.28, dx: 0, dy: 0, see: 0 };
     const so = SIDE[id] || [50, -16];
     const side = { spr: null, sprS: cloudSprite(seed + 3, 76, 36, 'storm'), ph: main.ph + 1.7, dx: so[0], dy: so[1], see: 0 };
     const spot = SPOTS[id] ? { tx: SPOTS[id][0], ty: SPOTS[id][1] } : cloudSpot(id, crit ? 9 : 6, crit ? 4 : 3);
     const spotS = SPOTS_STORM[id] ? { tx: SPOTS_STORM[id][0], ty: SPOTS_STORM[id][1] } : spot;
     return (WX[id] = {
       id, seed, level: 'ok', spot, spotS,
-      shade: 0, mist: 0, rain: 0, storm: 0,
+      shade: 0, mist: 0, rain: 0, storm: 0, cloud: 0,
       shadeC: null, shadeKey: '', mistC: null, mistKey: '',
       clouds: [side, main],   // drawn back to front
       drops: [], splashes: [], acc: 0,
@@ -646,7 +674,7 @@
       const spr = stormy ? c.sprS : c.spr;
       c.cur = spr;
       if (!spr) { c.k = 0; continue; }
-      c.k = c.dx ? w.storm : Math.max(w.rain, w.shade);
+      c.k = c.dx ? w.storm : w.cloud;
       const drift = RM ? 0 : Math.round(Math.sin(t * 0.07 * SPD + c.ph) * 10);
       const bobY = RM ? 0 : Math.round(Math.sin(t * 0.6 + c.ph) * 1.2);
       c.x = Math.round(cx0 + c.dx + drift - spr.w / 2); c.y = Math.round(cy0 + c.dy + bobY - spr.h / 2);
@@ -701,7 +729,7 @@
     const gx = x0 + reach * slant, gy = y0 + reach;
     const lands = onTop(g, gx, gy);
     const fall = lands ? reach : reach + rnd(50, 110);   // past the edge: keep falling into space
-    w.drops.push({ x0, y0, fall, slant, len: storm ? 10 : 7, life: 0, dur: fall / ((storm ? 300 : 230) * (RM ? 0.6 : 1)), heavy: storm && Math.random() < 0.35, lands, reach });
+    w.drops.push({ x0, y0, fall, slant, len: storm ? 10 : 5, life: 0, dur: fall / ((storm ? 300 : 230) * (RM ? 0.6 : 1)), heavy: storm && Math.random() < 0.35, lands, reach });
   }
 
   function makeBolt(w) {
@@ -736,10 +764,11 @@
   function updateWeather(w, dt, t) {
     const level = levelOf(w.id);
     const tgt = {
-      shade: level === 'critical' ? 1 : level === 'warn' ? 1 : 0,
-      mist: level === 'idle' ? 1 : level === 'warn' ? 0.15 : 0,
-      rain: level === 'critical' ? 1 : level === 'warn' ? 0.6 : 0,
+      shade: level === 'critical' ? 1 : level === 'warn' ? 0.5 : 0,
+      mist: level === 'idle' ? 1 : 0,
+      rain: level === 'critical' ? 1 : level === 'warn' ? 0.26 : 0,
       storm: level === 'critical' ? 1 : 0,
+      cloud: level === 'critical' || level === 'warn' ? 1 : 0,
     };
     // Settle instantly on the first frame so a screenshot shows the real weather.
     const k = w.level === 'ok' && !w.started ? 1 : Math.min(1, dt * 0.8);
@@ -890,7 +919,7 @@
     for (const c of w.clouds) {
       if (!c.cur || c.k < 0.02) continue;
       const op = 1 - SEE_DIM * (c.see || 0);   // see-through while a villager is under it
-      ctx.globalAlpha = Math.min(1, c.k * 1.15) * op;
+      ctx.globalAlpha = Math.min(w.storm > 0.5 ? 0.86 : 0.74, c.k) * op;
       ctx.drawImage(tinted(c.cur, sky), c.x, c.y);
       if (fa > 0.01 && c === w.clouds[1]) { ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = fa * 0.35 * op; ctx.drawImage(flashSprite(c.cur), c.x, c.y); ctx.globalCompositeOperation = 'source-over'; }
     }
@@ -909,12 +938,21 @@
     const spr = wispSprite(500 + i * 13 + ((r() * 50) | 0), w, h);
     const lane = LANES[(Math.random() * LANES.length) | 0];
     const ty = rnd(lane[0], lane[1]) * TILE;
-    return { spr, x: initial ? rnd(-w, W) : -w - rnd(20, 400), y: ty, vx: rnd(4, 7) * SPD, a: rnd(0.4, 0.62), scratch: mk(w, h) };
+    return { spr, x: initial ? rnd(-w, W) : -w - rnd(20, 400), y: ty, vx: rnd(4, 7) * SPD, a: rnd(0.3, 0.48), scratch: mk(w, h) };
   }
+  /* The world buffer ends at the world edge, so wisps fade out over the last WISP_FADE px
+   * before it (the screen backdrop carries on past it). */
+  const WISP_FADE = 96;
+  const wispFade = (() => {
+    const c = mk(WISP_FADE, 1), x = c.getContext('2d'), img = x.createImageData(WISP_FADE, 1);
+    for (let i = 0; i < WISP_FADE; i++) { const u = 1 - (i + 0.5) / WISP_FADE; img.data[i * 4 + 3] = Math.round(u * u * (3 - 2 * u) * 255); }
+    x.putImageData(img, 0, 0);
+    return c;   // opaque at x = 0 (the edge), clear WISP_FADE px in
+  })();
   function drawWisps(ctx, dt, sky) {
     if (!WISPS.length) { const n = RM ? 2 : 4; for (let i = 0; i < n; i++) WISPS.push(newWisp(i, true)); }
-    // By day soft lavender-white; at night they fade to faint blue ghosts.
-    const vis = lerp(0.85, 0.35, sky.n);
+    // Faint: a hint of depth against the midnight space, never a grey smudge.
+    const vis = lerp(0.55, 0.3, sky.n);
     for (let i = 0; i < WISPS.length; i++) {
       let p = WISPS[i];
       p.x += p.vx * dt;
@@ -938,6 +976,10 @@
           if (gx > p.spr.w || gy > p.spr.h || gx + g.box.w < 0 || gy + g.box.h < 0) continue;
           sx.drawImage(g.maskC, gx, gy);
         }
+        if (x0 < WISP_FADE) sx.drawImage(wispFade, -x0, 0, WISP_FADE, p.spr.h);
+        if (x0 + p.spr.w > W - WISP_FADE) { sx.save(); sx.translate(W - x0, 0); sx.scale(-1, 1); sx.drawImage(wispFade, 0, 0, WISP_FADE, p.spr.h); sx.restore(); }
+        if (x0 < 0) sx.clearRect(0, 0, -x0, p.spr.h);
+        if (x0 + p.spr.w > W) sx.clearRect(W - x0, 0, x0 + p.spr.w - W, p.spr.h);
         sx.globalCompositeOperation = 'source-over';
       }
       ctx.globalAlpha = p.a * vis;
@@ -1160,17 +1202,6 @@
     const t0 = prof ? performance.now() : 0;
     drawWisps(ctx, dt || 0, sky);
     if (prof) prof.w500 += performance.now() - t0;
-  });
-
-  // 600: a faint cool night tint over everything (space included, kept subtle).
-  S.registerDynamic(600, (ctx, t) => {
-    frame(t);
-    const k = smooth(0.25, 1, sky.n);
-    if (k < 0.01) return;
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = CO.mix('#ffffff', '#d3d6f0', k);
-    ctx.fillRect(view.x, view.y, view.w, view.h);
-    ctx.globalCompositeOperation = 'source-over';
   });
 
   for (const id of S.ISLANDS) {

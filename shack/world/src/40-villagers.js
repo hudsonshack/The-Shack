@@ -409,6 +409,44 @@
   /* ================================================================ character designs */
   const GOLD = ramp(P.gold);
 
+  /* J.A.R.V.I.S. (the hub): painted like the others, then re-lit as a translucent cyan
+   * hologram by holoize() below: scan lines, a bright chest core, no hat. */
+  const JARVIS = {
+    build: 'normal', skin: '#a8e8ff', top: '#3fb6e8', sleeve: '#2f8fc4', pants: '#2a7fb0', shoes: '#1f6a96', hair: 'short', hairCol: '#6fd8ff', hatH: 2, eye: '#ffffff',
+    poses: ['raise', 'carry'], walkPoses: ['carry'],
+    torso(c) {
+      const { g, tx, ty, tw, th, dir } = c;
+      if (dir === 'down') {
+        const cx = tx + (tw >> 1);
+        R(g, tx + 2, ty, tw - 4, 1, '#d8f7ff');                       // collar line
+        R(g, cx - 1, ty + 2, 2, 2, '#ffffff'); D(g, cx - 2, ty + 3, '#d8f7ff'); D(g, cx + 1, ty + 2, '#d8f7ff'); // chest core
+        R(g, tx + 1, ty + th - 1, tw - 2, 1, '#1f6a96');               // belt seam
+      } else if (dir === 'side') { D(g, c.sx0 + 1, ty + 2, '#ffffff'); D(g, c.sx0 + 1, ty + 3, '#d8f7ff'); }
+      else R(g, tx + (tw >> 1), ty + 1, 1, th - 2, '#1f6a96');
+    },
+  };
+  /** Re-light every frame of a figure as a hologram: brightness mapped onto a cyan ramp,
+   *  ~80% opaque, every other row dimmer (scan lines). Runs once at load. */
+  function holoize(fr) {
+    const lo = [18, 92, 140], mid = [95, 212, 255], hi = [230, 251, 255];
+    for (const dir of ['down', 'up', 'left', 'right']) for (const k in fr[dir]) {
+      const src = fr[dir][k], cv = mk(src.width, src.height), g = cv.getContext('2d', { willReadFrequently: true });
+      g.drawImage(src, 0, 0); fr[dir][k] = cv;                     // a fresh canvas: one readback per context
+      const im = g.getImageData(0, 0, cv.width, cv.height), d = im.data;
+      for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+        const i = (y * cv.width + x) * 4;
+        if (!d[i + 3]) continue;
+        const l = (0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2]) / 255;
+        const a = l < 0.5 ? lo : mid, b = l < 0.5 ? mid : hi, u = l < 0.5 ? l / 0.5 : (l - 0.5) / 0.5;
+        const scan = y & 1 ? 0.8 : 1;
+        for (let j = 0; j < 3; j++) d[i + j] = Math.round((a[j] + (b[j] - a[j]) * u) * scan);
+        d[i + 3] = Math.round(d[i + 3] * (y & 1 ? 0.62 : 0.86));
+      }
+      g.putImageData(im, 0, 0);
+    }
+    return fr;
+  }
+
   const TOCK = {
     build: 'normal', skin: P.skin[0], top: '#80293b', sleeve: '#2d3459', pants: '#33313e', shoes: '#211d29', hair: 'side', hairCol: '#c9c6d2', hatH: 9,
     poses: ['raise', 'carry'], walkPoses: ['carry'],
@@ -1103,8 +1141,9 @@
   const MON = S.monastery || {};
   const td = ptOf(MON.templeDoor, [224, 158]), bd = ptOf(MON.board, [187, 206]), dk = ptOf(MON.desk, [303, 200]), bl = ptOf(MON.bell, [143, 206]);
   const PL = {
-    // Mayor Tock (Clockspire)
+    // J.A.R.V.I.S. (Clockspire)
     tower: place('TOWER', [[640, 312]], 'down'),
+    holo: place('TOWER', [[676, 318], [702, 322]], 'down'),     // in front of his holo-console
     quest: place('QUEST', [[576, 388]], 'up'),    // a step back from the board: the tag stays below its '!'
     mail: place('MAIL', [[700, 378]], 'up'),
     plaza: place('SQ', [[640, 392]], 'down'),
@@ -1266,6 +1305,12 @@
     return arr(data.alerts).filter((a) => a && a.msg && (a.agent === agent || a.agent === lab));
   }
   const openHumanTasks = () => arr(data.tasks).filter((t) => t && t.autonomy === 'human' && t.phase !== 'done');
+  /** Hudson's open to-dos as the Today list sees them (his own + agent tasks, ticks applied). */
+  function openTodosList() {
+    try { if (S.ui && typeof S.ui.openTodos === 'function') { const l = S.ui.openTodos(); if (Array.isArray(l)) return l; } } catch (e) { /* fall back */ }
+    return openHumanTasks();
+  }
+  const openTodosCount = () => openTodosList().length;
   const nyFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
   const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
   const deliveriesOf = (agent) => { const d = Number((metrics(agent).world || {}).deliveries); return isFinite(d) && d > 0 ? d : 0; };
@@ -1292,23 +1337,17 @@
   }
   function tockLines() {
     const out = [];
-    out.push(() => { const n = S.cycle && S.cycle.next; return n && n.at ? { text: 'Next bell at ' + nyFmt.format(n.at), tone: 'info' } : { text: 'No cycle times set', tone: 'quiet' }; });
+    out.push(() => { const n = S.cycle && S.cycle.next; return n && n.at ? { text: 'Next check-in at ' + nyFmt.format(n.at) + ', Mr. Shackelford.', tone: 'info', max: 2 } : { text: 'No check-in scheduled.', tone: 'quiet' }; });
     const runs = arr(data.runs);
-    if (runs.length && runs[0]) out.push({ text: 'Last cycle: ' + runs[0].cycle + ' (' + runs[0].result + ')', tone: runs[0].result === 'ok' ? 'info' : 'warn' });
-    else out.push({ text: 'No cycle has run yet', tone: 'quiet' });
-    const q = openHumanTasks().length;
-    out.push({ text: q ? plural(q, 'quest') + ' on the board' : 'Quest board is clear', tone: q ? 'info' : 'quiet' });
-    const al = arr(data.alerts).length;
-    if (al) out.push({ text: plural(al, 'alert') + ' on file', tone: arr(data.alerts).some((a) => a && a.level === 'critical') ? 'critical' : 'warn' });
+    if (runs.length && runs[0]) out.push({ text: runs[0].result === 'ok' ? 'Last check-in went smoothly.' : 'Last check-in hit a snag.', tone: runs[0].result === 'ok' ? 'info' : 'warn' });
+    out.push(() => { const q = openTodosCount(); return { text: q ? plural(q, 'to-do') + ' on your list.' : 'Your list is clear. Remarkable.', tone: q ? 'info' : 'quiet' }; });
+    const al = arr(data.alerts).filter((a) => a && a.level !== 'info').length;
+    if (al) out.push({ text: plural(al, 'item') + ' need attention.', tone: arr(data.alerts).some((a) => a && a.level === 'critical') ? 'critical' : 'warn' });
     return out;
   }
   function hudsonLines() {
-    const out = [], tasks = openHumanTasks();
-    if (tasks.length) {
-      out.push({ text: plural(tasks.length, 'quest') + ' for me', tone: 'info' });
-      const top = tasks.slice().sort((a, b) => (a.priority || 9) - (b.priority || 9))[0];
-      if (top && top.title) out.push({ text: 'Next: ' + top.title, tone: 'info', max: 2 });
-    } else out.push({ text: 'No quests for me right now', tone: 'quiet' });
+    const out = [];
+    out.push(() => { const n = openTodosCount(); return n ? { text: plural(n, 'to-do') + ' for me', tone: 'info' } : { text: 'To-do list is clear', tone: 'quiet' }; });
     out.push(() => (S.time.isPayday && paidToday() ? { text: 'Friday: payday!', tone: 'info' } : null));
     return out;
   }
@@ -1813,8 +1852,8 @@
   /* ================================================================ the characters */
   const roleOf = (agent, fb) => { const th = thread(agent); return (th && th.domain) || fb; };
   const tock = makeVillager({
-    id: 'hub', agent: 'hub', name: 'Mayor Tock', role: 'the Director', design: TOCK, speed: 28, stepLen: 5,
-    work: [PL.tower, PL.quest, PL.mail, PL.plaza, PL.chronicle], dwell: [7, 14], home: PL.tower, sleep: [23, 5.25], item: 'bell', homeIsland: 'square',
+    id: 'hub', agent: 'hub', name: 'J.A.R.V.I.S.', role: 'the hub', design: JARVIS, speed: 30, stepLen: 5, dust: false, shadowW: 10,
+    work: [PL.holo, PL.tower, PL.holo, PL.quest, PL.mail, PL.holo, PL.plaza, PL.chronicle], dwell: [7, 14], home: PL.tower, sleep: [23, 5.25], item: 'bell', homeIsland: 'square',
   });
   const quill = makeVillager({
     id: 'academic-core', agent: 'academic-core', name: 'Abbot Quill', role: 'School', design: QUILL, speed: 25, stepLen: 5,
@@ -1835,6 +1874,27 @@
   lumi.home = { node: 'BLIMP', island: 'market', via: [], face: 'down', stay: blimp, px: nodePx('BLIMP') };
   twirl.home = { node: 'SHIP', island: 'port', via: [], face: 'right', stay: ship, px: nodePx('SHIP') };
   const AGENTS = [tock, quill, grit, lumi, twirl];
+
+  // J.A.R.V.I.S. is a hologram: re-lit frames, a slow hover instead of a walk bounce, a
+  // projector glow at his feet and, now and then, a one-frame flicker.
+  holoize(tock.fr);
+  tock.drawFn = (v, ctx, t) => {
+    if (v.hidden) return;
+    const x = Math.round(v.x), y = Math.round(v.y);
+    const pulse = RM ? 0.5 : 0.5 + 0.5 * Math.sin(t * 2.1);
+    ctx.save();
+    ctx.globalAlpha = 0.22 + 0.12 * pulse;                       // projector pool under his feet
+    R(ctx, x - 6, y - 1, 13, 2, '#5fd4ff'); R(ctx, x - 4, y - 2, 9, 1, '#9be8ff'); R(ctx, x - 8, y, 17, 1, '#2f8fc4');
+    const blip = !RM && S.hash(Math.floor(t * 9), 7, 3) > 0.965;  // rare glitch frame
+    ctx.globalAlpha = blip ? 0.45 : 1;
+    const hover = RM ? -2 : -2 - Math.round((Math.sin(t * 1.7) + 1) * 0.9);
+    drawFigure(v, ctx, t, x + (blip ? 1 : 0), y + hover, null, null, true);
+    if (!RM) {                                                     // a bright scan line drifting up through him
+      const top = y + hover - v.h, k = (t * 0.45) % 1, sy = Math.round(y + hover - k * v.h);
+      if (sy > top) { ctx.globalAlpha = 0.28; R(ctx, x - 6, sy, 12, 1, '#e6fbff'); }
+    }
+    ctx.restore();
+  };
   const hudson = makeVillager({
     id: 'player', kind: 'player', name: (data.player && data.player.name) || 'Hudson', design: HUDSON, speed: 32, stepLen: 5,
     work: [PL.h1, PL.h2, PL.h3, PL.h4, PL.h5, PL.h6], dwell: [4, 9], home: PL.tower, sleep: [22.5, 6.5], homeIsland: 'square',
@@ -1846,7 +1906,7 @@
   const timers = [];
   function after(s, fn) { timers.push({ at: clock + s, fn }); }
 
-  /* ================================================================ deliveries + Mayor Tock's mail round */
+  /* ================================================================ deliveries + J.A.R.V.I.S.'s mail round */
   const AGENT_ITEM = { 'academic-core': 'scroll', 'ledger-fi': 'coins', 'social-ops': 'poster', 'hustle-engine': 'crate' };
   const DROP = {
     kite: { at: [518, 296], place: place('D_NW', [[530, 296]], 'left') },
@@ -2081,14 +2141,14 @@
   /** Tock's bell line. A scheduled ceremony names its cycle; a manual replay names the last
    *  cycle that really ran (data.runs), or just rings the bell when none has run yet. */
   function bellLine(c) {
-    if (c.name && c.name !== 'manual') return 'Ding! The ' + c.name + ' cycle';
+    if (c.name && c.name !== 'manual') return 'Check-in starting. Gathering reports.';
     let last = null;
     for (const r of arr(S.data && S.data.runs)) {
       if (!r || !r.cycle) continue;
       const ts = Date.parse(r.finished || r.started || '') || 0;
       if (!last || ts > last.ts) last = { name: String(r.cycle), ts };
     }
-    return last ? 'Ding! The ' + last.name + ' cycle' : 'Ding! Cycle bell';
+    return last ? 'Replaying the last check-in.' : 'Check-in bell.';
   }
   /** Something real to hand Tock at the council: deliveries, or a thread that has run. */
   function hasReport(agent) {
@@ -2163,7 +2223,7 @@
       }
       // only claim reports when someone really had one to hand over
       const any = [quill, grit, lumi, twirl].some((v) => hasReport(v.agent));
-      if (!CER.endSaid) { CER.endSaid = true; say(tock, { text: any ? 'Reports in. Back to work!' : 'All heard. Back to work!', tone: any ? 'info' : 'quiet' }, clock); }
+      if (!CER.endSaid) { CER.endSaid = true; say(tock, { text: any ? 'Reports filed. Carry on.' : 'All quiet. Carry on.', tone: any ? 'info' : 'quiet' }, clock); }
     }
   }
   function faceTo(v, x, y) {
@@ -2292,7 +2352,7 @@
   // soft personal glows so nobody vanishes into the dark at fit zoom (Tock's watch-chain lamp,
   // Twirl's pocket lantern, Hudson's phone screen); hidden or riding people switch theirs off
   const onFoot = (v) => () => !v.hidden && !v.riding && !(v.sleeping && v.home && !v.home.stay);
-  const tockGlow = light({ x: -99, y: -99, r: 20, color: '#ffd9a0', intensity: 0.6, on: onFoot(tock) });
+  const tockGlow = light({ x: -99, y: -99, r: 22, color: '#5fd4ff', intensity: 0.7, nightOnly: false, on: onFoot(tock) });
   const twirlGlow = light({ x: -99, y: -99, r: 20, color: P.lantern, intensity: 0.65, flicker: 0.08, on: () => !twirl.hidden && !(twirl.riding && twirl.riding.trip) });
   const hudsonGlow = light({ x: -99, y: -99, r: 17, color: '#cfe6ff', intensity: 0.5, on: onFoot(hudson) });
   // positions snap to a 3 px grid so a walking light rebuilds the island's darkness every few frames, not every frame
@@ -2326,7 +2386,7 @@
   }
   const tags = [];
   for (const v of AGENTS) {
-    addVillagerHotspot(v, v.name + ' · ' + (v === tock ? 'the Director' : roleOf(v.agent, v.role)), v.agent);
+    addVillagerHotspot(v, v.name + ' · ' + (v === tock ? 'your hub' : roleOf(v.agent, v.role)), v.agent);
     tags.push({ v, L: S.label(v, v.name, { color: (S.AGENTS[v.agent] || {}).color, dy: v.tagDy }) });
   }
   addVillagerHotspot(hudson, hudson.name + ' · that’s you', null);
@@ -2345,7 +2405,8 @@
     const v = T.v;
     if (indoorsAsleep(v)) {
       const H = v.home.px;
-      if (!T.door || T.door.x !== H[0] || T.door.y !== H[1]) T.door = { x: H[0], y: H[1], island: v.homeIsland, hidden: false };
+      // asleep indoors: the tag hides and the Zzz over the door says it (tags stacked on the clock face otherwise)
+      if (!T.door || T.door.x !== H[0] || T.door.y !== H[1]) T.door = { x: H[0], y: H[1], island: v.homeIsland, hidden: true };
       if (T.L.anchor !== T.door) { T.L.anchor = T.door; T.L.setText(v.name + ' · asleep'); T.off = 0; }
       return T.door;
     }
@@ -2376,7 +2437,7 @@
     for (const T of tags) {
       const v = T.v, a = tagAnchor(T), door = a !== v;
       if (T.off == null) T.off = 0;
-      if (!door && v.hidden) { T.off = 0; T.rank = null; T.L.dy = baseDy(v); continue; }
+      if (door || v.hidden) { T.off = 0; T.rank = null; T.L.dy = door ? DOOR_DY : baseDy(v); continue; }
       const dy = door ? DOOR_DY : baseDy(v);
       // widths are estimated from the text (13 px bold Atkinson Hyperlegible: ~6 px a character
       // plus padding and border, fitted to the measured tags) so this never forces a DOM layout;

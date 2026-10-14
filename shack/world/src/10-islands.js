@@ -1388,7 +1388,10 @@
         const i = y * g.bw + x;
         if (!g.top[i]) continue;
         const gx = x + g.ox, gy = y + g.oy;
-        if (hash(gx, gy, 33) < 0.005 && !S.onRoad((gx / T) | 0, (gy / T) | 0)) { c.fillStyle = hash(gx, gy, 34) < 0.5 ? '#3ef0ff' : '#ff6ac0'; c.fillRect(x, y, 1, 1); }
+        const ttx = (gx / T) | 0, tty = (gy / T) | 0;
+        // open turf only: never on paths, buildings or stalls, and at least 2 px inside the rim
+        if (hash(gx, gy, 33) < 0.0015 && !S.onRoad(ttx, tty) && !S.isReserved(ttx, tty) && S.isFree(ttx, tty)
+          && g.top[i - 2] && g.top[i + 2] && g.top[i - 2 * g.bw] && g.top[i + 2 * g.bw]) { c.fillStyle = hash(gx, gy, 34) < 0.5 ? '#3ef0ff' : '#ff6ac0'; c.fillRect(x, y, 1, 1); }
       }
     }
     return cv;

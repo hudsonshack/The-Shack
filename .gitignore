@@ -33,3 +33,6 @@ shack/private/*
 
 # The Shack world page is built by render_dashboard.py right before publishing
 shack/world/world.html
+
+# Split copy of the world page for publishing (render_dashboard.py)
+shack/world/publish/

@@ -234,7 +234,9 @@
     const m = S.metrics(AGENT) || {};
     const ads = m.store_ads || {};
     const clients = (Array.isArray(m.clients) ? m.clients : []).filter((c) => c && typeof c === 'object');
-    const angie = clients.find((c) => /angie/i.test(c.name || ''));
+    // Hudson's own brand (Fidgetly) isn't a client; the studio's cork board counts every client's posts
+    const inHouse = new Set(((S.data && Array.isArray(S.data.clients)) ? S.data.clients : []).filter((c) => c && c.type === 'in-house').map((c) => String(c.name || '').toLowerCase()));
+    const clientPosts = clients.filter((c) => !inHouse.has(String(c.name || '').toLowerCase()) && !/fidget/i.test(c.name || '')).reduce((n, c) => n + Math.max(0, Math.round(num(c.posts_next_7d))), 0);
     const list = clients.map((c, i) => ({ name: String(c.name || ''), n: Math.max(0, Math.round(num(c.posts_next_7d))), col: CLIENT_COL(c.name, i) }));
     const storeAds = ((S.data && S.data.store) || {}).ads || {};
     return {
@@ -243,7 +245,7 @@
       posted: Math.max(0, Math.round(num(ads.videos_posted_7d))),
       clicks: Math.max(0, Math.round(num(ads.link_clicks_7d))),
       clients: list,
-      angiePosts: angie ? Math.max(0, Math.round(num(angie.posts_next_7d))) : 0,
+      clientPosts,
       // Fidgetly is on hold unless the data explicitly says its ads are running.
       fidgetLive: /^(active|running|live|on)$/i.test(String(storeAds.status || '').trim()),
     };
@@ -501,6 +503,7 @@
     heart: mask(['.##...##.', '#..#.#..#', '#...#...#', '#.......#', '.#.....#.', '..#...#..', '...#.#...', '....#....']),
     star: mask(['....#....', '...#.#...', '...#.#...', '###...###', '.#.....#.', '..#...#..', '..#.#.#..', '.#.#.#.#.', '.##...##.']),
     note: mask(['..######', '..#....#', '..######', '..#....#', '..#....#', '###..###', '###..###']),
+    camera: mask(['...###....', '.########.', '#........#', '#...##...#', '#..#..#..#', '#...##...#', '#........#', '.########.']),
     cup: mask(['..#..#...', '...#..#..', '..#..#...', '.........', '#######..', '#.....###', '#.....#.#', '#.....###', '.#...#...', '..###....']),
     spinner: mask(['....###....', '...#...#...', '...#...#...', '....#.#....', '.##..#..##.', '#..#...#..#', '#...###...#', '.###...###.']),
     play: mask(['.#########.', '#...#.....#', '#...##....#', '#...#.#...#', '#...##....#', '#...#.....#', '.#########.']),
@@ -558,7 +561,7 @@
   const SIGNS = [];   // {icon, col, x, y (icon top-left), dim, opts}
   function sign(icon, col, bx, by, opts) { SIGNS.push({ icon, col, x: bx + 3, y: by + 3, opts: opts || {}, dim: !!(opts && opts.dim) }); return [bx, by]; }
 
-  const SIGN_ANG = sign('cup', NEON.amber, ANG.x + 37, ANG.y - 2);
+  const SIGN_ANG = sign('camera', NEON.amber, ANG.x + 37, ANG.y - 2);   // the studio's camera sign
   const SIGN_ANG2 = sign('heart', NEON.pink, ANG.x + 6, ANG.y + 2);
   const SIGN_FID1 = sign('spinner', NEON.cyan, FID.x + 18, FID.y - 2, { dim: PAUSED });
   const SIGN_FID2 = sign('play', NEON.pink, FID.x + 44, FID.y - 1, { dim: PAUSED });
@@ -1220,7 +1223,7 @@
   /* ============================================================ DATA BITS (static) */
   const ANG_CT = ANG.y + 13 + 14 + 10 + 12;  // matches angieSprite's counter top
   function drawAngiePins(ctx) {
-    const n = Math.min(6, F.angiePosts);
+    const n = Math.min(6, F.clientPosts);
     const bx = ANG.x + 30, by = ANG_CT + 6;
     for (let k = 0; k < n; k++) {
       const x = bx + 1 + k * 4, y = by + (k % 2);
@@ -1276,7 +1279,7 @@
     for (const [x, y] of BENCHES) add(y, () => place(ctx, benchSprite(), x - 9, y - 9, [2, 2, 0.24]));
     add(ANG.y + ANG.h, () => {
       place(ctx, angieSprite(), ANG.x, ANG.y, [3, 2, 0.26]);
-      neonBoard(ctx, ...SIGN_ANG, 'cup', NEON.amber);
+      neonBoard(ctx, ...SIGN_ANG, 'camera', NEON.amber);
       neonBoard(ctx, ...SIGN_ANG2, 'heart', NEON.pink);
       drawAngiePins(ctx);
     });
@@ -1384,13 +1387,14 @@
 
   /* ============================================================ HOTSPOTS */
   const hot = (key, label, x, y, w, h) => S.addHotspot({ id: 'landmark:' + key, kind: 'landmark', landmark: key, biome: ID, island: ID, agent: AGENT, label, x, y, w, h, priority: 1 });
-  const hTower = hot('broadcastTower', 'Broadcast Tower', HUT.x - 6, TWR.top - 12, HUT.w + 12, HUT.y + HUT.h - TWR.top + 14);
+  const hTower = hot('broadcastTower', 'Broadcast tower', HUT.x - 6, TWR.top - 12, HUT.w + 12, HUT.y + HUT.h - TWR.top + 14);
   // Angie's covers the stall, its sidewalk table and the A-frame, and starts east of the mast so the
   // two landmarks never overlap (equal priorities would hand the overlap to whichever registered first).
   const ANG_X0 = Math.max(MAST.x + 12, Math.min(ANG.x, TABLE.x) - 2), ANG_X1 = Math.max(ANG.x + ANG.w, TABLE.x + 20, AFRAME.x + 10) + 2;
   const ANG_Y1 = Math.max(ANG.y + ANG.h, TABLE.y + 18, AFRAME.y + 15) + 3;
-  const hAng = hot('angiesStall', "Angie's stall", ANG_X0, ANG.y - 4, ANG_X1 - ANG_X0, ANG_Y1 - (ANG.y - 4));
-  const hFid = hot('fidgetStall', 'Fidgetly promo stall', FID.x - 2, FID.y - 4, FID.w + 18, TRIPOD.y + 10 - FID.y + 4);
+  const BIZ = () => { const b = (S.data && S.data.business) || {}; return String(b.name || b.placeholder || 'Social media business'); };
+  const hAng = hot('angiesStall', BIZ(), ANG_X0, ANG.y - 4, ANG_X1 - ANG_X0, ANG_Y1 - (ANG.y - 4));
+  const hFid = hot('fidgetStall', 'Fidgetly stall', FID.x - 2, FID.y - 4, FID.w + 18, TRIPOD.y + 10 - FID.y + 4);
   const hBB = hot('billboard', 'Billboard', BB.x, BB.y, BB.w, BB.h);
   const hMast = hot('blimpMast', 'Blimp mast', DOCK.x - 6, MAST.top - 6, MAST.x + 12 - DOCK.x + 6, MAST.base - MAST.top + 8);
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
@@ -1401,10 +1405,10 @@
     if (F.planned || F.posted) bb.push(`${plural(F.planned, 'video')} planned`);
     if (F.clicks) bb.push(`${plural(F.clicks, 'link click')} in 7 days`);
     hBB.label = bb.length ? 'Billboard · ' + bb.join(' · ') : 'Billboard · standby, nothing queued yet';
-    hTower.label = F.posts ? `Broadcast Tower · ${plural(F.posts, 'post')} going out in 7 days` : 'Broadcast Tower · quiet, no posts scheduled';
-    hAng.label = F.angiePosts ? `Angie's stall · ${plural(F.angiePosts, 'post')} in the next 7 days` : "Angie's stall · no posts queued yet";
+    hTower.label = F.posts ? `Broadcast tower · ${plural(F.posts, 'post')} going out in 7 days` : 'Broadcast tower · quiet, no posts scheduled';
+    hAng.label = F.clientPosts ? `${BIZ()} · ${plural(F.clientPosts, 'client post')} in the next 7 days` : `${BIZ()} · no client posts queued yet`;
     const vids = F.planned || F.posted ? ` · ${plural(F.planned, 'video')} planned, ${F.posted} posted` : '';
-    hFid.label = (F.fidgetLive ? 'Fidgetly promo stall' : 'Fidgetly promo stall · on hold') + vids;
+    hFid.label = (F.fidgetLive ? 'Fidgetly stall' : 'Fidgetly stall · paused while you focus on clients') + vids;
     hMast.label = 'Blimp mast · Lumi flies to Clockspire from here';
   }
   updateLabels();
@@ -1433,17 +1437,19 @@
     const idx = Math.floor(t / DUR) % list.length, mode = list[idx], mt = t % DUR;
     const g = sg, W = SCR.w, H = SCR.h;
     if (mode === 'idle') {
-      // test card: an honest "no signal yet", with a slow scan bar
-      const bars = ['#b8b8b8', '#b8b83a', '#3ab8b8', '#3ab83a', '#b83ab8', '#b83a3a', '#3a3ab8'];
-      const bw = W / 7;
-      for (let k = 0; k < 7; k++) R(g, Math.round(k * bw), 0, Math.ceil(bw), 19, bars[k]);
-      for (let k = 0; k < 7; k++) R(g, Math.round(k * bw), 19, Math.ceil(bw), 2, k % 2 ? '#141428' : bars[6 - k]);
-      R(g, 0, 21, W, 6, '#101024'); R(g, 6, 21, 14, 6, '#e8e8f0'); R(g, 34, 21, 12, 6, '#2a1a5a');
-      const sy = Math.floor((t * 9) % (H + 8)) - 4;
-      g.globalAlpha = 0.22; R(g, 0, sy, W, 2, '#ffffff'); g.globalAlpha = 1;
-      if (!rm) for (let k = 0; k < 10; k++) D(g, (S.hash(k, Math.floor(t * 12), 730) * W) | 0, (S.hash(k, Math.floor(t * 12), 731) * H) | 0, '#ffffff');
-      const pulse = rm ? 0.7 : 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 2.4));
-      g.globalAlpha = pulse; R(g, W - 6, H - 5, 3, 3, '#ff3a3a'); g.globalAlpha = 1;
+      // standby: a calm studio ident (play badge + a slow equaliser), no "broken TV" test card
+      gradient(g, '#141a3a', '#090c20');
+      for (let y = 2; y < H; y += 4) for (let x = 2 + (y & 4 ? 2 : 0); x < W; x += 4) D(g, x, y, '#161d42');
+      const bx = 8, by = (H >> 1) - 5;
+      R(g, bx, by, 13, 11, '#3a1f4a'); R(g, bx + 1, by + 1, 11, 9, '#ff6fb5'); R(g, bx + 1, by + 1, 11, 1, '#ffb3d9');
+      for (let k = 0; k < 4; k++) R(g, bx + 5, by + 3 + k, 1 + Math.min(k, 3 - k) * 2, 1, '#ffffff');
+      for (let k = 0; k < 6; k++) {
+        const hgt = rm ? 3 + (k % 3) * 2 : 2 + Math.round((0.5 + 0.5 * Math.sin(t * 1.3 + k * 0.9)) * 9);
+        R(g, 28 + k * 6, by + 11 - hgt, 4, hgt, k & 1 ? '#5fd4ff' : '#a68cff');
+        R(g, 28 + k * 6, by + 11 - hgt, 4, 1, '#e6fbff');
+      }
+      const sy = Math.floor((t * 6) % (H + 8)) - 4;
+      g.globalAlpha = 0.12; R(g, 0, sy, W, 1, '#ffffff'); g.globalAlpha = 1;
     } else if (mode === 'posts') {
       gradient(g, '#241a5e', '#0c0a26');
       for (let y = 2; y < H; y += 4) for (let x = 2 + (y & 4 ? 2 : 0); x < W; x += 4) D(g, x, y, '#2c2468');
@@ -1542,7 +1548,7 @@
   function launch(big) {
     const [ox, oy] = MORTARS[(Math.random() * MORTARS.length) | 0];
     const tx = clamp(ox + (Math.random() - 0.5) * 170, 884, 1224);
-    const ty = clamp(oy - 170 - Math.random() * 110, 8, 76);
+    const ty = clamp(oy - 170 - Math.random() * 110, 40, 90);
     const kind = Math.random() < 0.18 ? 4 : (Math.random() * 4) | 0;   // 4 = a heart, for the likes
     fw.rockets.push({ x: ox, y: oy - 8, sx: ox, sy: oy - 8, tx, ty, t: 0, dur: 1.0 + Math.random() * 0.5, big: !!big, kind, col: kind === 4 ? [P.neonPink, '#ffd0e8'] : FW_COLS[(Math.random() * FW_COLS.length) | 0] });
     arcs.push({ born: S.t || 0 });
@@ -1572,7 +1578,8 @@
   function stepFireworks(t, dt) {
     const f = F;
     // steady launches: one per ~30 s / posts, never when nothing is queued
-    if (f.posts > 0) {
+    const daylight = S.time && S.time.light > 0.6;   // fireworks are for the evening sky
+    if (f.posts > 0 && !daylight) {
       const iv = Math.max(2.6, 30 / f.posts) * (rm ? 2.5 : 1);
       if (t >= fw.next) { launch(false); fw.next = t + iv * (0.7 + Math.random() * 0.6); }
     } else fw.next = t + 3;

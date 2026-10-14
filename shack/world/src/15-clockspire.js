@@ -1,4 +1,4 @@
-/* The Shack v2: CLOCKSPIRE, the hub island (id 'square'), home of Mayor Tock.
+/* The Shack v2: CLOCKSPIRE, the hub island (id 'square'), home of J.A.R.V.I.S. (formerly Mayor Tock).
  *
  * Owns (see WORLD_SPEC.md):
  *   static 15   the clock tower, fountain + overflow channel, quest board, mail
@@ -127,6 +127,7 @@
   S.reserve(39, 28, 3, 4);   // overflow channel to the south lip
   S.reserve(35, 20, 3, 3);   // quest board
   S.reserve(42, 21, 2, 2);   // mail post
+  S.reserve(43, 17, 2, 2);   // J.A.R.V.I.S.'s holo-console, east of the tower
   S.reserve(43, 28, 2, 2);   // chronicle lectern
   S.reserve(30, 16, 3, 3);   // kite landing pad + wind sock
   S.reserve(48, 16, 2, 3);   // blimp mast
@@ -1267,4 +1268,24 @@
     R(ctx, x + 3, y + 2, 1, 4, OUT); R(ctx, x + 3, y + 7, 1, 1, OUT);
     D(ctx, x + 3, y + 11 + (bob > 0 ? 1 : 0), 'rgba(20,16,30,0.35)');
   }, { island: ID });
+
+  /* ======================================================================
+   * dynamic 200: J.A.R.V.I.S.'s holo-console (a slim pedestal with a cyan lens
+   * that projects a faint cone; it opens the hub panel)
+   * ==================================================================== */
+  const HOLO = { x: 704, y: 300 };   // base centre, tile (44, 18)
+  S.registerDynamic(200, (ctx, t) => {
+    const { x, y } = HOLO, RM = S.reducedMotion;
+    const k = RM ? 0.5 : 0.5 + 0.5 * Math.sin(t * 2.4);
+    R(ctx, x - 9, y - 3, 18, 4, OUT); R(ctx, x - 8, y - 3, 16, 3, '#2a3348'); R(ctx, x - 8, y - 3, 16, 1, '#4a5874');   // plinth
+    R(ctx, x - 4, y - 15, 8, 12, OUT); R(ctx, x - 3, y - 15, 6, 12, '#38435c'); R(ctx, x - 3, y - 15, 1, 12, '#5a6a8a'); R(ctx, x + 2, y - 15, 1, 12, '#262e40'); // column
+    R(ctx, x - 2, y - 11, 4, 1, '#5fd4ff'); R(ctx, x - 2, y - 8, 3, 1, k > 0.5 ? '#c8f5ff' : '#2f8fc4'); D(ctx, x + 1, y - 6, '#ff6fb5');           // panel lights
+    R(ctx, x - 6, y - 18, 12, 3, OUT); R(ctx, x - 5, y - 18, 10, 2, '#46536f'); R(ctx, x - 3, y - 19, 6, 1, '#5fd4ff'); D(ctx, x - 1, y - 19, '#e6fbff'); // lens
+    ctx.save();
+    ctx.globalAlpha = 0.10 + 0.06 * k;                                   // projection cone
+    for (let i = 0; i < 14; i++) R(ctx, x - 2 - (i >> 1), y - 20 - i, 4 + (i & ~1), 1, '#5fd4ff');
+    ctx.restore();
+  }, { island: ID });
+  S.addLight({ x: HOLO.x, y: HOLO.y - 20, r: 22, color: '#5fd4ff', intensity: 0.6, nightOnly: false, island: ID });
+  S.addHotspot({ id: 'landmark:holoConsole', kind: 'biome', biome: ID, island: ID, agent: 'hub', label: "J.A.R.V.I.S.'s console", x: HOLO.x - 10, y: HOLO.y - 34, w: 20, h: 36, priority: 1 });
 })();

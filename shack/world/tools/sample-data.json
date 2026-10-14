@@ -464,12 +464,14 @@
   }
  ],
  "player": {
-  "name": "Hudson"
+  "name": "Hudson",
+  "surname": "Shackelford",
+  "address": "Mr. Shackelford"
  },
  "home_area": "Cold Spring, NY",
  "world": {
   "director": {
-   "character": "Mayor Tock",
+   "character": "J.A.R.V.I.S.",
    "biome": "square",
    "look": "clockmaker mayor who keeps the town-square clock tower and rings the cycle bell"
   },
@@ -697,6 +699,100 @@
   "use_for": [
    "Quizlet flashcard drafts",
    "caption and hashtag variations"
+  ]
+ },
+ "business": {
+  "name": null,
+  "placeholder": "Social media business"
+ },
+ "money_days": [
+  "Saturday"
+ ],
+ "brief": {
+  "date": "2026-10-09",
+  "written": "2026-10-09T06:18:00-04:00",
+  "greeting": "Good morning, Mr. Shackelford.",
+  "line": "A light Friday. I have taken the liberty of moving your study block after practice.",
+  "sections": [
+   {
+    "title": "Today",
+    "items": [
+     "Biology quiz, period 3",
+     "Study block: bio flashcards (4:00 PM)",
+     "Paycheck lands today"
+    ]
+   },
+   {
+    "title": "School",
+    "items": [
+     "Bio quiz today: 24 flashcards ready on Quizlet",
+     "Precalc unit 2 test on Wed, Oct 14"
+    ]
+   },
+   {
+    "title": "Social media business",
+    "items": [
+     "Angie's: 5 posts queued for next week",
+     "2 reels waiting for the owner's OK"
+    ]
+   },
+   {
+    "title": "Your to-dos",
+    "items": [
+     "Return library book (due today)"
+    ]
+   },
+   {
+    "title": "Needs you",
+    "items": [
+     "Tell me Angie's monthly retainer"
+    ]
+   }
+  ]
+ },
+ "calendar": {
+  "updated": "2026-10-09T06:18:00-04:00",
+  "events": [
+   {
+    "title": "Biology quiz",
+    "start": "2026-10-09T10:05:00-04:00",
+    "end": "2026-10-09T10:50:00-04:00",
+    "all_day": false,
+    "location": "Room 204",
+    "source": "classroom"
+   },
+   {
+    "title": "Study: bio flashcards",
+    "start": "2026-10-09T16:00:00-04:00",
+    "end": "2026-10-09T16:45:00-04:00",
+    "all_day": false,
+    "location": null,
+    "source": "study-block"
+   },
+   {
+    "title": "Shift at Hudson House Inn",
+    "start": "2026-10-09T17:30:00-04:00",
+    "end": "2026-10-09T21:30:00-04:00",
+    "all_day": false,
+    "location": "Cold Spring",
+    "source": "gmail"
+   },
+   {
+    "title": "Due: Precalc problem set 2.3",
+    "start": "2026-10-12",
+    "end": "2026-10-13",
+    "all_day": true,
+    "location": null,
+    "source": "classroom"
+   },
+   {
+    "title": "Precalc unit 2 test",
+    "start": "2026-10-14T08:00:00-04:00",
+    "end": "2026-10-14T08:45:00-04:00",
+    "all_day": false,
+    "location": null,
+    "source": "classroom"
+   }
   ]
  }
 }
