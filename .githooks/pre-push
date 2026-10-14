@@ -1,0 +1,6 @@
+#!/bin/sh
+# The Shack: refuse to push invalid state.
+ROOT=$(git rev-parse --show-toplevel) || exit 1
+command -v python3 >/dev/null 2>&1 || exit 0
+[ -f "$ROOT/shack/scripts/validate.py" ] || exit 0
+python3 "$ROOT/shack/scripts/validate.py"
