@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-14",
+  "written": "2026-10-14T06:30-04:00",
+  "greeting": "Good morning, Mr. Shackelford.",
+  "line": "Three assignments due today; the Geometry quiz is tomorrow.",
+  "sections": [
+    {
+      "title": "Today",
+      "items": [
+        "Geometry review 4:00 PM",
+        "Biology quiz prep 5:00 PM"
+      ]
+    },
+    {
+      "title": "School",
+      "items": [
+        "Due today: Geometry proofs, Money & You p.229, English vocab",
+        "Geometry quiz Thu, Biology quiz Fri"
+      ]
+    },
+    {
+      "title": "Needs you",
+      "items": [
+        "Send the English vocab word list",
+        "RSVP to Youth Court meeting Thu 5:45 PM"
+      ]
+    }
+  ]
+}

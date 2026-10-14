@@ -2,6 +2,32 @@
   "version": 1,
   "daily": [
     {
+      "period": "2026-10-14",
+      "chronicle": "Good morning, Mr. Shackelford. Overnight Classroom brought a Biology quiz for Friday and three assignments due today. Abbot Quill booked two Biology study blocks, tonight and tomorrow, beside the existing Geometry review. I added Thursday's Youth Court meeting to your calendar. The quest board was empty, the store logged no orders, and Neon Hollow still waits on connected networks and Angie's footage. The English vocab list remains the one thing I cannot conjure.",
+      "stats": {
+        "school": {
+          "deadlines": 5,
+          "study_blocks": 2
+        },
+        "store": {
+          "orders": 0
+        },
+        "system": {
+          "cycles": 1,
+          "skipped_spokes": 2,
+          "hermes_drafts": 0
+        }
+      },
+      "highlights": [
+        "2 Biology study blocks booked",
+        "Youth Court meeting added to calendar"
+      ],
+      "needs_you": [
+        "Send the English 10R vocab list",
+        "RSVP to Youth Court meeting"
+      ]
+    },
+    {
       "period": "2026-10-13",
       "chronicle": "The bell rang at eleven and Lantern Peak was busy: three new Classroom scrolls and a reminder arrived overnight. Abbot Quill laid four study blocks on the calendar, two tonight and one tomorrow for the Geometry quiz on Thursday, and prepared a 34-card Quizlet set on angle relationships. The English vocab list was not in the mail, so that set waits on Hudson. Copperhold, Neon Hollow and the harbor stayed quiet: no M&T alerts, no Metricool networks, no footage from Angie's, and no orders at the docks.",
       "stats": {

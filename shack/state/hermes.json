@@ -1,1 +1,6 @@
-{"available": false, "model": null, "reason": "OPENROUTER_API_KEY is not set in the environment", "checked": "2026-10-13T11:05-04:00"}
+{
+  "available": false,
+  "model": null,
+  "reason": "OPENROUTER_API_KEY is not set in the environment",
+  "checked": "2026-10-14T06:30-04:00"
+}
