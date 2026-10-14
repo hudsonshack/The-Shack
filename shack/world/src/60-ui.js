@@ -1871,7 +1871,15 @@
   /** Calendar events (state/calendar.json) with all-day spans and NY times resolved. */
   function calEvents() {
     const cal = rec(D().calendar);
-    return objs(cal.events).map((e) => {
+    // Until J.A.R.V.I.S. has written a calendar (no `updated` yet), show Abbot Quill's study blocks
+    // and due dates so Today is never emptier than the school data behind it.
+    let list = objs(cal.events);
+    if (!list.length && !cal.updated) {
+      const m = metricsOf('academic-core') || {};
+      list = objs(m.study_blocks).map((b) => ({ title: b.title, start: b.start, end: b.end, all_day: false, source: 'study-block' }))
+        .concat(objs(m.deadlines).map((d) => ({ title: 'Due: ' + str(d.title) + (d.course ? ' (' + str(d.course) + ')' : ''), start: d.due, all_day: true, source: 'classroom' })));
+    }
+    return list.map((e) => {
       const s = parseWhen(e.start);
       const title = plain(str(e.title));
       if (!s || !title) return null;
