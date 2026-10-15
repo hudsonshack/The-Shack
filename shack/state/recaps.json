@@ -2,6 +2,32 @@
   "version": 1,
   "daily": [
     {
+      "period": "2026-10-15",
+      "chronicle": "Good morning, Mr. Shackelford. Overnight Classroom confirmed today as quiz day: Geometry this afternoon, with Biology to follow on Friday. Abbot Quill added a Chapter 8 math prep block at 4:00 and moved tonight's Biology review to 7:30 so it clears Youth Court. The store logged no orders, the quest board was empty, and Neon Hollow still awaits connected networks. The English vocab list remains the one item beyond my reach.",
+      "stats": {
+        "school": {
+          "deadlines": 5,
+          "study_blocks": 3
+        },
+        "store": {
+          "orders": 0
+        },
+        "system": {
+          "cycles": 1,
+          "skipped_spokes": 2,
+          "hermes_drafts": 0
+        }
+      },
+      "highlights": [
+        "Math prep block added",
+        "Biology review moved clear of Youth Court"
+      ],
+      "needs_you": [
+        "Send the English 10R vocab list",
+        "Real stock counts for the Fidgetly squishies"
+      ]
+    },
+    {
       "period": "2026-10-14",
       "chronicle": "Good morning, Mr. Shackelford. Overnight Classroom brought a Biology quiz for Friday and three assignments due today. Abbot Quill booked two Biology study blocks, tonight and tomorrow, beside the existing Geometry review. I added Thursday's Youth Court meeting to your calendar. The quest board was empty, the store logged no orders, and Neon Hollow still waits on connected networks and Angie's footage. The English vocab list remains the one thing I cannot conjure.",
       "stats": {

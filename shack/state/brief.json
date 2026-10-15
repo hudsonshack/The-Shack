@@ -1,28 +1,31 @@
 {
-  "date": "2026-10-14",
-  "written": "2026-10-14T06:30-04:00",
+  "date": "2026-10-15",
+  "written": "2026-10-15T06:30-04:00",
   "greeting": "Good morning, Mr. Shackelford.",
-  "line": "Three assignments due today; the Geometry quiz is tomorrow.",
+  "line": "Quiz day: Geometry today, Biology tomorrow.",
   "sections": [
     {
       "title": "Today",
       "items": [
-        "Geometry review 4:00 PM",
-        "Biology quiz prep 5:00 PM"
+        "Math Ch. 8 test prep 4:00 PM",
+        "Youth Court meeting 5:45 PM",
+        "Biology review 7:30 PM"
       ]
     },
     {
       "title": "School",
       "items": [
-        "Due today: Geometry proofs, Money & You p.229, English vocab",
-        "Geometry quiz Thu, Biology quiz Fri"
+        "Geometry quiz today (Ch. 3 Lesson 1)",
+        "Due: Angle Relationship Practice, Raisin Voc 2",
+        "Math Unit 2 test prep due today",
+        "Biology quiz Friday"
       ]
     },
     {
       "title": "Needs you",
       "items": [
         "Send the English vocab word list",
-        "RSVP to Youth Court meeting Thu 5:45 PM"
+        "Real stock counts for the Fidgetly squishies"
       ]
     }
   ]
