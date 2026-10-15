@@ -1,0 +1,48 @@
+{
+  "agent": "ledger-fi",
+  "phase": "idle",
+  "last_run": "2026-10-15T06:15-04:00",
+  "next_run": null,
+  "summary": "Skipped: money runs on Saturdays only",
+  "alerts": [
+    {
+      "level": "warn",
+      "msg": "No M&T alert emails found; bank feed not connected. See SETUP.md step 3 (task T-0002)."
+    }
+  ],
+  "metrics": {
+    "month": "2026-10",
+    "month_income": 0,
+    "month_spend": 0,
+    "categories": [],
+    "savings": [
+      {
+        "name": "Invest",
+        "current": 0,
+        "target": null,
+        "deadline": null
+      },
+      {
+        "name": "Car insurance",
+        "current": 0,
+        "target": null,
+        "deadline": null
+      },
+      {
+        "name": "Apartment fund",
+        "current": 0,
+        "target": null,
+        "deadline": null
+      }
+    ],
+    "anomalies": [],
+    "bank_feed": "not connected",
+    "world": {
+      "bubbles": [
+        "Money checks Saturday"
+      ],
+      "deliveries": 0,
+      "growth": 0
+    }
+  }
+}

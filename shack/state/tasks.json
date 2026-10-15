@@ -1,0 +1,221 @@
+{
+  "version": 1,
+  "updated": "2026-10-14T06:30-04:00",
+  "goals": [
+    {
+      "id": "G-01",
+      "title": "Never miss a Classroom deadline; study ahead of every test",
+      "agent": "academic-core"
+    },
+    {
+      "id": "G-02",
+      "title": "Track every dollar automatically and grow the three savings goals",
+      "agent": "ledger-fi"
+    },
+    {
+      "id": "G-03",
+      "title": "Run social media clients on autopilot and add new clients",
+      "agent": "social-ops"
+    },
+    {
+      "id": "G-04",
+      "title": "Grow the fidget store: first ads, steady orders",
+      "agent": "hustle-engine"
+    },
+    {
+      "id": "G-00",
+      "title": "Finish one-time setup so every feed runs by itself",
+      "agent": "hub"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T-0006",
+      "agent": "hub",
+      "goal_ref": "G-00",
+      "title": "Attach the repo and the Gmail, Google Calendar, Google Drive, Shopify and Metricool connectors to the \"The Shack: Director cycle\" Routine (see SETUP.md step 1)",
+      "phase": "execute",
+      "priority": 1,
+      "due": "2026-10-08",
+      "autonomy": "human",
+      "verify": {
+        "check": "a cycle runs with all five connectors and pushes to ops/state",
+        "passed": null
+      },
+      "created": "2026-10-08T00:00:00-04:00",
+      "updated": "2026-10-08T00:00:00-04:00",
+      "notes": "Routines created from a chat can't carry connectors; they have to be added in the Routines settings."
+    },
+    {
+      "id": "T-0001",
+      "agent": "hub",
+      "goal_ref": "G-00",
+      "title": "Forward Google Classroom emails from school Gmail to personal Gmail (see SETUP.md step 2)",
+      "phase": "done",
+      "priority": 1,
+      "due": "2026-10-10",
+      "autonomy": "human",
+      "verify": {
+        "check": "Academic-Core finds a forwarded Classroom email",
+        "passed": true,
+        "evidence": "1 Classroom thread found 2026-10-12 (Global History 10 P4 announcement)"
+      },
+      "created": "2026-10-08T00:00:00-04:00",
+      "updated": "2026-10-12T15:16+00:00",
+      "notes": "Classroom feed live."
+    },
+    {
+      "id": "T-0002",
+      "agent": "hub",
+      "goal_ref": "G-00",
+      "title": "When ready: connect M&T alerts so Ledger-Fi sees purchases and Friday paychecks (ask Claude for a walkthrough)",
+      "phase": "blocked",
+      "priority": 3,
+      "due": null,
+      "autonomy": "human",
+      "verify": {
+        "check": "Ledger-Fi parses at least one M&T alert email",
+        "passed": null
+      },
+      "created": "2026-10-08T00:00:00-04:00",
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": "Cycle night: 0 M&T alert threads. Waiting on SETUP.md step 3."
+    },
+    {
+      "id": "T-0003",
+      "agent": "hub",
+      "goal_ref": "G-00",
+      "title": "Merge the setup pull request so scheduled runs use main",
+      "phase": "execute",
+      "priority": 1,
+      "due": "2026-10-09",
+      "autonomy": "human",
+      "verify": {
+        "check": "shack/ exists on origin/main",
+        "passed": null
+      },
+      "created": "2026-10-08T00:00:00-04:00",
+      "updated": "2026-10-08T00:00:00-04:00",
+      "notes": ""
+    },
+    {
+      "id": "T-0004",
+      "agent": "ledger-fi",
+      "goal_ref": "G-02",
+      "title": "Set dollar targets and deadlines for Invest, Car insurance, Apartment fund",
+      "phase": "plan",
+      "priority": 2,
+      "due": null,
+      "autonomy": "human",
+      "verify": {
+        "check": "all savings_goals have target set in config.json",
+        "passed": null
+      },
+      "created": "2026-10-08T00:00:00-04:00",
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": "Waiting on the user. When Invest gets a target, mention a real brokerage account would be a custodial account opened with a parent."
+    },
+    {
+      "id": "T-0005",
+      "agent": "social-ops",
+      "goal_ref": "G-03",
+      "title": "Tell Claude Angie's monthly retainer",
+      "phase": "plan",
+      "priority": 2,
+      "due": null,
+      "autonomy": "human",
+      "verify": {
+        "check": "social-ops state lists every Metricool brand with a retainer",
+        "passed": null
+      },
+      "created": "2026-10-08T00:00:00-04:00",
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": "Waiting on user for retainer; also blocked by T-0007."
+    },
+    {
+      "id": "T-0007",
+      "agent": "social-ops",
+      "goal_ref": "G-03",
+      "title": "Connect social networks (Angie's, Fidgetly) in Metricool brand blogId 7176689",
+      "phase": "plan",
+      "priority": 1,
+      "due": "2026-10-09",
+      "autonomy": "human",
+      "verify": {
+        "check": "see title",
+        "passed": null
+      },
+      "created": "2026-10-07T22:30:00-04:00",
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": "Metricool brand 7176689 has no connected networks; due 2026-10-09."
+    },
+    {
+      "id": "T-0008",
+      "agent": "hustle-engine",
+      "goal_ref": "G-04",
+      "title": "Review Fidgetly stock: hide or restock 14 zero-stock variants, fix 99,996 placeholder quantities on Viral Dumpling",
+      "phase": "execute",
+      "priority": 2,
+      "due": "2026-10-10",
+      "autonomy": "human",
+      "verify": {
+        "check": "see title",
+        "passed": null
+      },
+      "created": "2026-10-07T22:30:00-04:00",
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": "Live count 12 zero-stock variants (task said 14); 55 at <=5. Placeholder qty on Dumpling buns, Butter, Popsicle squishies. Read-only; needs real counts from user."
+    },
+    {
+      "id": "T-0009",
+      "agent": "hustle-engine",
+      "goal_ref": "G-04",
+      "title": "Provide real stock counts for placeholder-quantity squishies (Dumpling, Butter, Popsicle) and decide restock for the 12 zero-stock variants",
+      "phase": "plan",
+      "priority": 2,
+      "due": "2026-10-15",
+      "autonomy": "human",
+      "verify": {
+        "check": "Inventory shows real quantities and no sold-out variants are published unintentionally",
+        "passed": null
+      },
+      "created": "2026-10-07T22:10:00-04:00",
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": ""
+    },
+    {
+      "id": "T-0010",
+      "agent": "social-ops",
+      "goal_ref": "G-03",
+      "title": "Feature healthy-stock Fidgetly products in first content (Pop Tubes, Mini Pop Its, Galaxy Cube, Chain Gear Silver); avoid Pop It Bracelets, Turbo Car Shifter, Spiral w/ Hook L, Spinners",
+      "phase": "plan",
+      "priority": 3,
+      "due": null,
+      "autonomy": "draft",
+      "verify": {
+        "check": "draft caption plan in social-ops outbox",
+        "passed": null
+      },
+      "created": "2026-10-07T22:10:00-04:00",
+      "updated": "2026-10-07T22:10:00-04:00",
+      "notes": "Relayed by hub from Hustle-Engine; blocked until T-0007 networks connected."
+    },
+    {
+      "id": "T-0011",
+      "agent": "academic-core",
+      "goal_ref": "G-01",
+      "title": "Get the English 10R vocab word list and build a Quizlet set (quiz after Oct 14 HW)",
+      "phase": "plan",
+      "priority": 2,
+      "due": "2026-10-14",
+      "autonomy": "human",
+      "verify": {
+        "check": "Vocab list supplied and set file exists in outbox/quizlet/",
+        "passed": null
+      },
+      "created": "2026-10-13T11:10-04:00",
+      "updated": "2026-10-14T06:30-04:00",
+      "notes": "List not in the Classroom email; still waiting on it (quiz after today's HW)."
+    }
+  ]
+}

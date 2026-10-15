@@ -1,0 +1,34 @@
+Parallel lines	Coplanar lines that never intersect and have the same slope
+Perpendicular lines	Lines that intersect at a 90 degree angle; slopes are negative reciprocals
+Skew lines	Non-coplanar lines that are not parallel and never intersect
+Parallel planes	Planes that do not intersect
+Transversal	A line that crosses two or more coplanar lines at different points
+Vertical angles	Opposite angles formed by two intersecting lines; always congruent
+Linear pair	Two adjacent angles whose non-shared sides form a straight line; supplementary (sum 180)
+Alternate interior angles	Angles between the two lines on opposite sides of the transversal; congruent if lines are parallel
+Alternate exterior angles	Angles outside the two lines on opposite sides of the transversal; congruent if lines are parallel
+Corresponding angles	Angles in the same position at each intersection of the transversal; congruent if lines are parallel
+Same side interior angles	Angles between the two lines on the same side of the transversal; supplementary if lines are parallel
+Same side exterior angles	Angles outside the two lines on the same side of the transversal; supplementary if lines are parallel
+Supplementary angles	Two angles whose measures add to 180 degrees
+Complementary angles	Two angles whose measures add to 90 degrees
+Congruent angles	Angles with equal measures
+Adjacent angles	Angles that share a vertex and a side and have no interior points in common
+If two parallel lines are cut by a transversal, corresponding angles are...	Congruent
+If two parallel lines are cut by a transversal, alternate interior angles are...	Congruent
+If two parallel lines are cut by a transversal, same side interior angles are...	Supplementary
+Converse of corresponding angles postulate	If corresponding angles are congruent, the lines are parallel
+Two lines are cut by a transversal and one pair of alternate interior angles is 70 and 70. Are the lines parallel?	Yes, congruent alternate interior angles imply parallel lines
+Angle 1 = 55 and is vertical to angle 3. Angle 3 = ?	55 degrees
+Angle 1 = 55 forms a linear pair with angle 2. Angle 2 = ?	125 degrees
+Same side interior angles are 4x and 5x+9 with parallel lines. Find x.	4x + 5x + 9 = 180, so x = 19
+Slope of parallel lines	Equal slopes
+Slope of perpendicular lines	Product of slopes is -1 (negative reciprocals)
+Line with slope 2/3: slope of a perpendicular line?	-3/2
+Are skew lines coplanar?	No
+Can two parallel lines be skew?	No, parallel lines are coplanar
+In a rectangular box, an edge and a non-touching edge that is not parallel to it are...	Skew
+Vertical angles theorem	Vertical angles are congruent
+Linear pair postulate	If two angles form a linear pair, they are supplementary
+Angle relationships that are congruent for parallel lines	Alternate interior, alternate exterior, corresponding
+Angle relationships that are supplementary for parallel lines	Same side interior, same side exterior, linear pair

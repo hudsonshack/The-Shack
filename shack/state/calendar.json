@@ -1,0 +1,29 @@
+{
+  "updated": "2026-10-15T06:30-04:00",
+  "events": [
+    {
+      "title": "Math Money & You: Unit 2 (Chapter 8) test prep",
+      "start": "2026-10-15T16:00:00-04:00",
+      "end": "2026-10-15T16:45:00-04:00",
+      "all_day": false,
+      "location": "",
+      "source": "study-block"
+    },
+    {
+      "title": "Youth Court general meeting (escape room)",
+      "start": "2026-10-15T17:45:00-04:00",
+      "end": "2026-10-15T19:15:00-04:00",
+      "all_day": false,
+      "location": "Philipstown Justice Court",
+      "source": "gmail"
+    },
+    {
+      "title": "Biology: final quiz review (quiz tomorrow)",
+      "start": "2026-10-15T19:30:00-04:00",
+      "end": "2026-10-15T20:15:00-04:00",
+      "all_day": false,
+      "location": "",
+      "source": "study-block"
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "agent": "academic-core",
+  "phase": "idle",
+  "last_run": "2026-10-15T06:20-04:00",
+  "next_run": null,
+  "summary": "Geometry quiz today, Biology quiz Friday; 3 homework items due today; 3 study blocks booked",
+  "alerts": [
+    {
+      "level": "warn",
+      "msg": "Geometry quiz on angle relationships is today. Your flashcards are ready if you want a last look."
+    },
+    {
+      "level": "warn",
+      "msg": "Biology quiz is tomorrow, Friday (15 to 20 multiple choice). Review block tonight 7:30 to 8:15 PM, moved so it does not clash with Youth Court."
+    },
+    {
+      "level": "warn",
+      "msg": "Due today: Geometry Angle Relationship Practice, English Raisin Vocab 2 Four Square, and Math Money & You study for the Chapter 8 test. Math prep block is 4:00 to 4:45 PM."
+    },
+    {
+      "level": "info",
+      "msg": "English vocab flashcards need the word list from Classroom. Copy it over if you want a set made."
+    }
+  ],
+  "metrics": {
+    "deadlines": [
+      {
+        "course": "Geometry P7",
+        "title": "Quiz on Lesson 1 from Chapter 3",
+        "due": "2026-10-15",
+        "type": "quiz",
+        "source_subject": "Due tomorrow: \"Quiz on Lesson 1 from Chapter 3 \""
+      },
+      {
+        "course": "Geometry P7",
+        "title": "Angle Relationship Practice",
+        "due": "2026-10-15",
+        "type": "assignment",
+        "source_subject": "New assignment: \"Angle Relationship Practice \""
+      },
+      {
+        "course": "Math Money & You P6",
+        "title": "Study for Test -- Unit 2 (Chapter 8)",
+        "due": "2026-10-15",
+        "type": "test",
+        "source_subject": "Due tomorrow: \"Study for Test -- Unit 2 (Chapter 8)\""
+      },
+      {
+        "course": "English 10R P2",
+        "title": "HW-Raisin Voc 2 Four Square",
+        "due": "2026-10-15",
+        "type": "assignment",
+        "source_subject": "New assignment: \"HW-Raisin Voc 2 Four Square\""
+      },
+      {
+        "course": "Regents Biology P9",
+        "title": "Study for Quiz on Friday! (15-20 multiple choice)",
+        "due": "2026-10-16",
+        "type": "quiz",
+        "source_subject": "New assignment: \"Study for Quiz on Friday!\""
+      }
+    ],
+    "study_blocks": [
+      {
+        "title": "Math Money & You: Unit 2 (Chapter 8) test prep",
+        "start": "2026-10-15T16:00",
+        "end": "2026-10-15T16:45"
+      },
+      {
+        "title": "Biology: final quiz review (quiz tomorrow)",
+        "start": "2026-10-15T19:30",
+        "end": "2026-10-15T20:15"
+      }
+    ],
+    "prep_sets": [
+      {
+        "title": "Geometry Ch3 L1 angle relationships",
+        "cards": 34,
+        "file": "outbox/quizlet/2026-10-15-geometry-ch3-lesson1-angle-relationships.txt"
+      }
+    ],
+    "classroom_feed": "connected",
+    "world": {
+      "bubbles": [
+        "Geometry quiz today",
+        "Bio quiz tomorrow",
+        "3 homework due today",
+        "2 blocks tonight"
+      ],
+      "deliveries": 1,
+      "growth": 2
+    }
+  }
+}
