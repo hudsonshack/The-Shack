@@ -1,31 +1,30 @@
 {
-  "date": "2026-10-15",
-  "written": "2026-10-15T06:30-04:00",
+  "date": "2026-10-16",
+  "written": "2026-10-16T06:20-04:00",
   "greeting": "Good morning, Mr. Shackelford.",
-  "line": "Quiz day: Geometry today, Biology tomorrow.",
+  "line": "Friday: one quiz, one worksheet, and the weekend within reach.",
   "sections": [
     {
       "title": "Today",
       "items": [
-        "Math Ch. 8 test prep 4:00 PM",
-        "Youth Court meeting 5:45 PM",
-        "Biology review 7:30 PM"
+        "Biology quiz (15-20 multiple choice)",
+        "Debate Club, 10th period (Butterfield Library)"
       ]
     },
     {
       "title": "School",
       "items": [
-        "Geometry quiz today (Ch. 3 Lesson 1)",
-        "Due: Angle Relationship Practice, Raisin Voc 2",
-        "Math Unit 2 test prep due today",
-        "Biology quiz Friday"
+        "Due: Raisin Act Two Scene Two Questions",
+        "Human Geography quiz due Oct 27 (reviews Oct 22, 26)",
+        "Chess tournament Tuesday"
       ]
     },
     {
       "title": "Needs you",
       "items": [
         "Send the English vocab word list",
-        "Real stock counts for the Fidgetly squishies"
+        "Real stock counts for the Fidgetly squishies",
+        "Winter sports sign-up closes Nov 9"
       ]
     }
   ]

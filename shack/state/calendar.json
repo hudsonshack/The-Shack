@@ -1,26 +1,42 @@
 {
-  "updated": "2026-10-15T06:30-04:00",
+  "updated": "2026-10-16T06:20-04:00",
   "events": [
     {
-      "title": "Math Money & You: Unit 2 (Chapter 8) test prep",
-      "start": "2026-10-15T16:00:00-04:00",
-      "end": "2026-10-15T16:45:00-04:00",
-      "all_day": false,
+      "title": "Biology quiz (15-20 multiple choice)",
+      "start": "2026-10-16T00:00:00-04:00",
+      "end": "2026-10-17T00:00:00-04:00",
+      "all_day": true,
       "location": "",
-      "source": "study-block"
-    },
-    {
-      "title": "Youth Court general meeting (escape room)",
-      "start": "2026-10-15T17:45:00-04:00",
-      "end": "2026-10-15T19:15:00-04:00",
-      "all_day": false,
-      "location": "Philipstown Justice Court",
       "source": "gmail"
     },
     {
-      "title": "Biology: final quiz review (quiz tomorrow)",
-      "start": "2026-10-15T19:30:00-04:00",
-      "end": "2026-10-15T20:15:00-04:00",
+      "title": "Due: Raisin Act Two Scene Two Questions",
+      "start": "2026-10-16T00:00:00-04:00",
+      "end": "2026-10-17T00:00:00-04:00",
+      "all_day": true,
+      "location": "",
+      "source": "classroom"
+    },
+    {
+      "title": "Debate Club meeting (10th period)",
+      "start": "2026-10-16T00:00:00-04:00",
+      "end": "2026-10-17T00:00:00-04:00",
+      "all_day": true,
+      "location": "Butterfield Library",
+      "source": "classroom"
+    },
+    {
+      "title": "Chess Club tournament",
+      "start": "2026-10-20T00:00:00-04:00",
+      "end": "2026-10-21T00:00:00-04:00",
+      "all_day": true,
+      "location": "",
+      "source": "classroom"
+    },
+    {
+      "title": "Human Geography quiz review (Population)",
+      "start": "2026-10-22T16:00:00-04:00",
+      "end": "2026-10-22T16:45:00-04:00",
       "all_day": false,
       "location": "",
       "source": "study-block"

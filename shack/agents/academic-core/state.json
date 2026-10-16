@@ -1,75 +1,57 @@
 {
   "agent": "academic-core",
   "phase": "idle",
-  "last_run": "2026-10-15T06:20-04:00",
+  "last_run": "2026-10-16T06:20-04:00",
   "next_run": null,
-  "summary": "Geometry quiz today, Biology quiz Friday; 3 homework items due today; 3 study blocks booked",
+  "summary": "Biology quiz today; Raisin questions due; Human Geography quiz Oct 27 with 2 study blocks booked",
   "alerts": [
     {
       "level": "warn",
-      "msg": "Geometry quiz on angle relationships is today. Your flashcards are ready if you want a last look."
-    },
-    {
-      "level": "warn",
-      "msg": "Biology quiz is tomorrow, Friday (15 to 20 multiple choice). Review block tonight 7:30 to 8:15 PM, moved so it does not clash with Youth Court."
-    },
-    {
-      "level": "warn",
-      "msg": "Due today: Geometry Angle Relationship Practice, English Raisin Vocab 2 Four Square, and Math Money & You study for the Chapter 8 test. Math prep block is 4:00 to 4:45 PM."
+      "msg": "Biology quiz is today (15 to 20 multiple choice). Raisin Act Two Scene Two Questions are due today."
     },
     {
       "level": "info",
-      "msg": "English vocab flashcards need the word list from Classroom. Copy it over if you want a set made."
+      "msg": "Human Geography Quiz #2 (Population) is due Oct 27. Review blocks booked Oct 22 and Oct 26, 4:00 PM."
+    },
+    {
+      "level": "info",
+      "msg": "English vocab flashcards still need the word list from Classroom."
     }
   ],
   "metrics": {
     "deadlines": [
       {
-        "course": "Geometry P7",
-        "title": "Quiz on Lesson 1 from Chapter 3",
-        "due": "2026-10-15",
+        "course": "Regents Biology",
+        "title": "Quiz (15-20 multiple choice)",
+        "due": "2026-10-16",
         "type": "quiz",
-        "source_subject": "Due tomorrow: \"Quiz on Lesson 1 from Chapter 3 \""
-      },
-      {
-        "course": "Geometry P7",
-        "title": "Angle Relationship Practice",
-        "due": "2026-10-15",
-        "type": "assignment",
-        "source_subject": "New assignment: \"Angle Relationship Practice \""
-      },
-      {
-        "course": "Math Money & You P6",
-        "title": "Study for Test -- Unit 2 (Chapter 8)",
-        "due": "2026-10-15",
-        "type": "test",
-        "source_subject": "Due tomorrow: \"Study for Test -- Unit 2 (Chapter 8)\""
+        "source_subject": "Due tomorrow: \"Study for Quiz on Friday!\""
       },
       {
         "course": "English 10R P2",
-        "title": "HW-Raisin Voc 2 Four Square",
-        "due": "2026-10-15",
+        "title": "Raisin Act Two Scene Two Questions",
+        "due": "2026-10-16",
         "type": "assignment",
-        "source_subject": "New assignment: \"HW-Raisin Voc 2 Four Square\""
+        "source_subject": "New assignment: \"HW-Raisin Act Two Scene Two Questions\""
       },
       {
-        "course": "Regents Biology P9",
-        "title": "Study for Quiz on Friday! (15-20 multiple choice)",
-        "due": "2026-10-16",
+        "course": "Human Geography P3",
+        "title": "Quiz #2: Population",
+        "due": "2026-10-27",
         "type": "quiz",
-        "source_subject": "New assignment: \"Study for Quiz on Friday!\""
+        "source_subject": "New assignment: \"Quiz #2: Population\""
       }
     ],
     "study_blocks": [
       {
-        "title": "Math Money & You: Unit 2 (Chapter 8) test prep",
-        "start": "2026-10-15T16:00",
-        "end": "2026-10-15T16:45"
+        "title": "Human Geography quiz review (Population)",
+        "start": "2026-10-22T16:00:00-04:00",
+        "end": "2026-10-22T16:45:00-04:00"
       },
       {
-        "title": "Biology: final quiz review (quiz tomorrow)",
-        "start": "2026-10-15T19:30",
-        "end": "2026-10-15T20:15"
+        "title": "Human Geography quiz review (Population)",
+        "start": "2026-10-26T16:00:00-04:00",
+        "end": "2026-10-26T16:45:00-04:00"
       }
     ],
     "prep_sets": [
@@ -82,10 +64,9 @@
     "classroom_feed": "connected",
     "world": {
       "bubbles": [
-        "Geometry quiz today",
-        "Bio quiz tomorrow",
-        "3 homework due today",
-        "2 blocks tonight"
+        "Bio quiz today",
+        "Raisin Qs due today",
+        "Geo quiz Oct 27"
       ],
       "deliveries": 1,
       "growth": 2
