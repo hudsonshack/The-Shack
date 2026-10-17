@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-10-14T06:30-04:00",
+  "updated": "2026-10-17T06:25-04:00",
   "goals": [
     {
       "id": "G-01",
@@ -34,16 +34,17 @@
       "agent": "hub",
       "goal_ref": "G-00",
       "title": "Attach the repo and the Gmail, Google Calendar, Google Drive, Shopify and Metricool connectors to the \"The Shack: Director cycle\" Routine (see SETUP.md step 1)",
-      "phase": "execute",
+      "phase": "done",
       "priority": 1,
       "due": "2026-10-08",
       "autonomy": "human",
       "verify": {
         "check": "a cycle runs with all five connectors and pushes to ops/state",
-        "passed": null
+        "passed": true,
+        "evidence": "Gmail, Calendar, Drive, Shopify and Metricool all answered in the 2026-10-17 cycle"
       },
       "created": "2026-10-08T00:00:00-04:00",
-      "updated": "2026-10-08T00:00:00-04:00",
+      "updated": "2026-10-17T06:25-04:00",
       "notes": "Routines created from a chat can't carry connectors; they have to be added in the Routines settings."
     },
     {

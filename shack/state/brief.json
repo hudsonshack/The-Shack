@@ -1,27 +1,34 @@
 {
-  "date": "2026-10-16",
-  "written": "2026-10-16T06:20-04:00",
+  "date": "2026-10-17",
+  "written": "2026-10-17T06:25-04:00",
   "greeting": "Good morning, Mr. Shackelford.",
-  "line": "Friday: one quiz, one worksheet, and the weekend within reach.",
+  "line": "Saturday: the calendar is quiet, and so is the bank feed.",
   "sections": [
     {
       "title": "Today",
       "items": [
-        "Biology quiz (15-20 multiple choice)",
-        "Debate Club, 10th period (Butterfield Library)"
+        "No events on the calendar"
       ]
     },
     {
       "title": "School",
       "items": [
-        "Due: Raisin Act Two Scene Two Questions",
-        "Human Geography quiz due Oct 27 (reviews Oct 22, 26)",
-        "Chess tournament Tuesday"
+        "Car Buying Project (Math) due Wed Oct 21",
+        "Chess tournament Tuesday",
+        "Human Geography quiz due Oct 27",
+        "Healthy Restaurant Menu (Health) posted"
+      ]
+    },
+    {
+      "title": "Money",
+      "items": [
+        "No M&T alerts yet; nothing to total"
       ]
     },
     {
       "title": "Needs you",
       "items": [
+        "Connect a social network in Metricool",
         "Send the English vocab word list",
         "Real stock counts for the Fidgetly squishies",
         "Winter sports sign-up closes Nov 9"

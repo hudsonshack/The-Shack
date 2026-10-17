@@ -1,34 +1,18 @@
 {
-  "updated": "2026-10-16T06:20-04:00",
+  "updated": "2026-10-17T06:25-04:00",
   "events": [
-    {
-      "title": "Biology quiz (15-20 multiple choice)",
-      "start": "2026-10-16T00:00:00-04:00",
-      "end": "2026-10-17T00:00:00-04:00",
-      "all_day": true,
-      "location": "",
-      "source": "gmail"
-    },
-    {
-      "title": "Due: Raisin Act Two Scene Two Questions",
-      "start": "2026-10-16T00:00:00-04:00",
-      "end": "2026-10-17T00:00:00-04:00",
-      "all_day": true,
-      "location": "",
-      "source": "classroom"
-    },
-    {
-      "title": "Debate Club meeting (10th period)",
-      "start": "2026-10-16T00:00:00-04:00",
-      "end": "2026-10-17T00:00:00-04:00",
-      "all_day": true,
-      "location": "Butterfield Library",
-      "source": "classroom"
-    },
     {
       "title": "Chess Club tournament",
       "start": "2026-10-20T00:00:00-04:00",
       "end": "2026-10-21T00:00:00-04:00",
+      "all_day": true,
+      "location": "",
+      "source": "classroom"
+    },
+    {
+      "title": "Due: Complete Car Buying Project (Math)",
+      "start": "2026-10-21T00:00:00-04:00",
+      "end": "2026-10-22T00:00:00-04:00",
       "all_day": true,
       "location": "",
       "source": "classroom"

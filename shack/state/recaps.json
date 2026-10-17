@@ -2,6 +2,38 @@
   "version": 1,
   "daily": [
     {
+      "period": "2026-10-17",
+      "chronicle": "A quiet Saturday, Mr. Shackelford. The Classroom feed produced one new due date, the Car Buying Project on Wednesday, which is now on your calendar. The bank feed remains silent, with no M&T alerts in thirty days, so there is no money summary to give. Fidgetly saw no orders, and Metricool still has no connected network, so Lumi stayed home.",
+      "stats": {
+        "school": {
+          "new_deadlines": 1
+        },
+        "money": {
+          "alerts": 0
+        },
+        "social": {
+          "posts": 0
+        },
+        "store": {
+          "orders_7d": 0,
+          "unfulfilled": 0
+        },
+        "system": {
+          "cycles": 1,
+          "skipped_spokes": 1,
+          "hermes_drafts": 0
+        }
+      },
+      "highlights": [
+        "Car Buying Project added to calendar"
+      ],
+      "needs_you": [
+        "Connect a social network in Metricool",
+        "Send the English vocab word list",
+        "Real stock counts for the Fidgetly squishies"
+      ]
+    },
+    {
       "period": "2026-10-16",
       "chronicle": "Good morning, Mr. Shackelford. Biology is the day's main event, and Classroom confirms the Raisin questions fall due as well. Overnight I added a Human Geography quiz for October 27 and booked two review blocks, on the 22nd and 26th. The Chess Club tournament Tuesday and winter sports registration, open until November 9, are now on your calendar. The store logged no orders, the quest board was quiet, and Neon Hollow still awaits connected networks.",
       "stats": {

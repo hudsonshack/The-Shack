@@ -1,9 +1,9 @@
 {
   "agent": "ledger-fi",
   "phase": "idle",
-  "last_run": "2026-10-16T06:20-04:00",
+  "last_run": "2026-10-17T06:25-04:00",
   "next_run": null,
-  "summary": "Skipped: money runs on Saturdays only",
+  "summary": "Saturday check by hub: 0 M&T alerts in 30 days; bank feed not connected",
   "alerts": [
     {
       "level": "warn",
@@ -39,7 +39,7 @@
     "bank_feed": "not connected",
     "world": {
       "bubbles": [
-        "Money day is Saturday"
+        "No bank alerts yet"
       ],
       "deliveries": 0,
       "growth": 0
