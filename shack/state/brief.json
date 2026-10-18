@@ -1,8 +1,8 @@
 {
-  "date": "2026-10-17",
-  "written": "2026-10-17T06:25-04:00",
+  "date": "2026-10-18",
+  "written": "2026-10-18T06:20-04:00",
   "greeting": "Good morning, Mr. Shackelford.",
-  "line": "Saturday: the calendar is quiet, and so is the bank feed.",
+  "line": "Sunday: nothing new overnight, which I find restful.",
   "sections": [
     {
       "title": "Today",
@@ -13,16 +13,10 @@
     {
       "title": "School",
       "items": [
-        "Car Buying Project (Math) due Wed Oct 21",
-        "Chess tournament Tuesday",
-        "Human Geography quiz due Oct 27",
+        "Chess tournament Tue Oct 20",
+        "Car Buying Project due Wed Oct 21",
+        "Human Geography quiz Oct 27 (review Thu 4 PM)",
         "Healthy Restaurant Menu (Health) posted"
-      ]
-    },
-    {
-      "title": "Money",
-      "items": [
-        "No M&T alerts yet; nothing to total"
       ]
     },
     {
@@ -30,8 +24,7 @@
       "items": [
         "Connect a social network in Metricool",
         "Send the English vocab word list",
-        "Real stock counts for the Fidgetly squishies",
-        "Winter sports sign-up closes Nov 9"
+        "Real stock counts for the Fidgetly squishies"
       ]
     }
   ]

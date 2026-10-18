@@ -2,6 +2,36 @@
   "version": 1,
   "daily": [
     {
+      "period": "2026-10-18",
+      "chronicle": "A quiet Sunday, Mr. Shackelford. No new Classroom mail has arrived since Friday, so the calendar stands as it was: chess on Tuesday, the Car Buying Project on Wednesday. Fidgetly still has no orders, and Shopify's bill of $42.27 posted this morning. Metricool remains without a connected network, so Lumi stayed home.",
+      "stats": {
+        "school": {
+          "new_deadlines": 0
+        },
+        "money": {
+          "alerts": 0
+        },
+        "social": {
+          "posts": 0
+        },
+        "store": {
+          "orders_7d": 0,
+          "unfulfilled": 0
+        },
+        "system": {
+          "cycles": 1,
+          "skipped_spokes": 3,
+          "hermes_drafts": 0
+        }
+      },
+      "highlights": [],
+      "needs_you": [
+        "Connect a social network in Metricool",
+        "Send the English vocab word list",
+        "Real stock counts for the Fidgetly squishies"
+      ]
+    },
+    {
       "period": "2026-10-17",
       "chronicle": "A quiet Saturday, Mr. Shackelford. The Classroom feed produced one new due date, the Car Buying Project on Wednesday, which is now on your calendar. The bank feed remains silent, with no M&T alerts in thirty days, so there is no money summary to give. Fidgetly saw no orders, and Metricool still has no connected network, so Lumi stayed home.",
       "stats": {
@@ -224,6 +254,38 @@
       ]
     }
   ],
-  "weekly": [],
+  "weekly": [
+    {
+      "period": "2026-W42",
+      "chronicle": "A measured week, Mr. Shackelford. Classroom delivered the Human Geography quiz (Oct 27), the Car Buying Project (Oct 21) and the Health menu assignment, all calendared, with review blocks booked for the quiz. Biology and Geometry quizzes passed; English vocab work graded 75 and 95. The bank feed and Metricool are still unconnected, and Fidgetly recorded no orders.",
+      "stats": {
+        "school": {
+          "new_deadlines": 4
+        },
+        "money": {
+          "alerts": 0
+        },
+        "social": {
+          "posts": 0
+        },
+        "store": {
+          "orders_7d": 0
+        },
+        "system": {
+          "cycles": 7,
+          "skipped_spokes": "most",
+          "hermes_drafts": 0
+        }
+      },
+      "highlights": [
+        "Quiz review blocks booked",
+        "Calendar kept current"
+      ],
+      "needs_you": [
+        "Connect a social network in Metricool",
+        "Send the English vocab word list"
+      ]
+    }
+  ],
   "monthly": []
 }

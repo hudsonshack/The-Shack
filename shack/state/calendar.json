@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-17T06:25-04:00",
+  "updated": "2026-10-18T06:20-04:00",
   "events": [
     {
       "title": "Chess Club tournament",
@@ -24,6 +24,14 @@
       "all_day": false,
       "location": "",
       "source": "study-block"
+    },
+    {
+      "title": "BABY CARMELO",
+      "start": "2026-10-24T14:00:00-04:00",
+      "end": "2026-10-24T16:00:00-04:00",
+      "all_day": false,
+      "location": "68 bryant street, poughquake",
+      "source": "other"
     }
   ]
 }
