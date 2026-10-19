@@ -2,6 +2,36 @@
   "version": 1,
   "daily": [
     {
+      "period": "2026-10-19",
+      "chronicle": "Good morning, Mr. Shackelford. The inbox held no new Classroom mail, so the week stands as filed: chess tomorrow, the Car Buying Project on Wednesday, and Human Geography review on Thursday. Fidgetly has no orders and no unfulfilled ones. Metricool still lacks a connected network, so Lumi remained at the stall.",
+      "stats": {
+        "school": {
+          "new_deadlines": 0
+        },
+        "money": {
+          "alerts": 0
+        },
+        "social": {
+          "posts": 0
+        },
+        "store": {
+          "orders_7d": 0,
+          "unfulfilled": 0
+        },
+        "system": {
+          "cycles": 1,
+          "skipped_spokes": 3,
+          "hermes_drafts": 0
+        }
+      },
+      "highlights": [],
+      "needs_you": [
+        "Connect a social network in Metricool",
+        "Send the English vocab word list",
+        "Real stock counts for the Fidgetly squishies"
+      ]
+    },
+    {
       "period": "2026-10-18",
       "chronicle": "A quiet Sunday, Mr. Shackelford. No new Classroom mail has arrived since Friday, so the calendar stands as it was: chess on Tuesday, the Car Buying Project on Wednesday. Fidgetly still has no orders, and Shopify's bill of $42.27 posted this morning. Metricool remains without a connected network, so Lumi stayed home.",
       "stats": {

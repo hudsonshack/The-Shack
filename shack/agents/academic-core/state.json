@@ -1,14 +1,10 @@
 {
   "agent": "academic-core",
   "phase": "idle",
-  "last_run": "2026-10-18T06:20-04:00",
+  "last_run": "2026-10-19T06:20-04:00",
   "next_run": null,
   "summary": "Skipped: no new Classroom mail since Oct 16",
   "alerts": [
-    {
-      "level": "warn",
-      "msg": "Biology quiz is today (15 to 20 multiple choice). Raisin Act Two Scene Two Questions are due today."
-    },
     {
       "level": "info",
       "msg": "Human Geography Quiz #2 (Population) is due Oct 27. Review blocks booked Oct 22 and Oct 26, 4:00 PM."
